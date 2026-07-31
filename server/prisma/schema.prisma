@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  phone         String?
+  avatar        String?
+  role          String         @default("user") // user | admin
+  balance       Float          @default(10000)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  transactions  Transaction[]
+  bets          Bet[]
+  bankDetails   BankDetail[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // deposit | withdrawal | bet | win | bonus
+  amount      Float
+  status      String   @default("completed") // pending | completed | failed | cancelled
+  description String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("transactions")
+}
+
+model Bet {
+  id          String   @id @default(uuid())
+  userId      String
+  gameType    String   // color-prediction | matka | wingo | lottery
+  period      String
+  selection   String
+  amount      Float
+  result      String?  // win | loss | pending
+  payout      Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([gameType])
+  @@map("bets")
+}
+
+model GameResult {
+  id          String   @id @default(uuid())
+  gameType    String
+  period      String
+  result      String
+  color       String?
+  number      Int?
+  size        String?
+  createdAt   DateTime @default(now())
+
+  @@index([gameType])
+  @@map("game_results")
+}
+
+model BankDetail {
+  id            String   @id @default(uuid())
+  userId        String
+  bankName      String
+  accountNumber String
+  ifscCode      String
+  accountHolder String
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bank_details")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info | success | warning | error
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}

@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Outfit:wght@600;700;800;900&display=swap');
+@import "tailwindcss";
+
+/* ========================================
+   PREMIUM CASINO WEBSITE THEME
+   Tiranga / WinGo / Matka Platform
+   ======================================== */
+
+@theme {
+  --color-app-bg: #0A0E1A;
+  --color-app-card: #12172A;
+  --color-app-card-light: #1A2035;
+
+  --color-gold: #F5B92C;
+  --color-gold-dark: #E8943A;
+
+  --color-tiranga-green: #22C55E;
+  --color-tiranga-green-dark: #16A34A;
+  
+  --color-tiranga-red: #EF4444;
+  --color-tiranga-red-dark: #DC2626;
+
+  --color-tiranga-violet: #A855F7;
+  --color-tiranga-violet-dark: #9333EA;
+
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Roboto', sans-serif;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #0A0E1A;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(245, 185, 44, 0.06) 0%, transparent 50%);
+  background-attachment: fixed;
+  color: #FFFFFF;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabular figures for numbers, timers, odds */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 3D Glossy Buttons & Shimmer */
+.btn-gold-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #F5B92C 0%, #E8943A 100%);
+  box-shadow: 0 4px 15px rgba(245, 185, 44, 0.3);
+}
+
+.btn-gold-shimmer::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg);
+  animation: shimmerSweep 4s infinite ease-in-out;
+}
+
+@keyframes shimmerSweep {
+  0% { transform: translateX(-100%) rotate(30deg); }
+  20% { transform: translateX(100%) rotate(30deg); }
+  100% { transform: translateX(100%) rotate(30deg); }
+}
+
+.btn-3d-green {
+  background: linear-gradient(180deg, #4ADE80 0%, #22C55E 50%, #16A34A 100%);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+.btn-3d-red {
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 50%, #DC2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+.btn-3d-violet {
+  background: linear-gradient(180deg, #C084FC 0%, #A855F7 50%, #9333EA 100%);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+/* Glass & Card styles */
+.app-card {
+  background: #12172A;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FFE57F 0%, #F5B92C 50%, #E8943A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Marquee Auto-Scroll Animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Scrollbar hide */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
