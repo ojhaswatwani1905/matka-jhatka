@@ -116,7 +116,7 @@ export const OtpVerificationStep: React.FC<OtpVerificationStepProps> = ({
             onChange={(e) => handleChange(idx, e.target.value)}
             onKeyDown={(e) => handleKeyDown(idx, e)}
             onPaste={handlePaste}
-            className={`w-11 h-13 text-center font-black text-xl text-white font-mono bg-slate-900 border rounded-xl outline-none transition-all ${
+            className={`w-10 h-12 text-center font-black text-xl text-white font-mono bg-slate-900 border rounded-xl outline-none transition-all ${
               digit ? 'border-gold shadow-[0_0_12px_rgba(245,185,44,0.3)] bg-slate-950' : 'border-slate-800 focus:border-gold/60'
             }`}
             autoFocus={idx === 0}
@@ -124,7 +124,27 @@ export const OtpVerificationStep: React.FC<OtpVerificationStepProps> = ({
         ))}
       </div>
 
-      <div className="pt-2">
+      {/* Demo OTP Banner & Auto-Fill CTA */}
+      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-1.5 my-2">
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-400">
+          Demo OTP Code: <span className="font-mono text-gold font-black underline tracking-wider">123456</span>
+        </div>
+        <p className="text-[10px] text-slate-400">
+          Enter <span className="text-white font-bold">123456</span> (or any 6 digits) to complete registration.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setDigits(['1', '2', '3', '4', '5', '6']);
+            triggerSubmit('123456');
+          }}
+          className="w-full py-1.5 rounded-lg font-bold text-xs text-black bg-gold hover:bg-amber-400 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+        >
+          Auto-Fill Code (123456)
+        </button>
+      </div>
+
+      <div className="pt-1">
         <button
           type="button"
           disabled={timer > 0}

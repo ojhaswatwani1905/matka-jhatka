@@ -22,7 +22,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   const [imgFailed, setImgFailed] = useState(false);
 
   return (
-    <div className="w-full min-h-screen bg-[#0B0D14] text-white flex flex-col lg:flex-row relative overflow-x-hidden selection:bg-gold selection:text-black">
+    <div className="w-full min-h-screen lg:h-screen lg:max-h-screen bg-[#0B0D14] text-white flex flex-col lg:flex-row relative overflow-x-hidden lg:overflow-hidden selection:bg-gold selection:text-black">
       {/* Mobile Header */}
       <header className="lg:hidden w-full h-14 bg-[#0B0D14]/95 border-b border-white/10 px-4 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md">
         <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
@@ -43,21 +43,21 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         </div>
       </header>
 
-      {/* Form Zone (Left Column: 42% Width on Desktop) */}
-      <div className="w-full lg:w-[42%] flex flex-col justify-between p-6 sm:p-10 lg:p-14 min-h-screen relative z-10">
+      {/* Form Zone (Left Column: 45% Width on Desktop) */}
+      <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col justify-between p-5 sm:p-8 lg:px-10 lg:py-6 h-full max-h-screen overflow-y-auto lg:overflow-hidden relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="w-full max-w-[400px] mx-auto space-y-8 my-auto"
+          className="w-full max-w-[380px] mx-auto space-y-4 my-auto"
         >
-          {/* Brand Logo & Wordmark (Minimal & Modest) */}
+          {/* Brand Logo & Wordmark */}
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-black transition-all">
-                <Gamepad2 className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-black transition-all">
+                <Gamepad2 className="w-4 h-4" />
               </div>
-              <span className="text-lg font-black font-heading tracking-tight text-white">PLAYARENA</span>
+              <span className="text-base font-black font-heading tracking-tight text-white">PLAYARENA</span>
             </Link>
 
             <Link to="/" className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors">
@@ -67,22 +67,22 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           </div>
 
           {/* Headline & Subtext */}
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-white font-heading tracking-tight">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-white font-heading tracking-tight">
               {title}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">{subtitle}</p>
+            <p className="text-xs text-slate-400 leading-relaxed">{subtitle}</p>
           </div>
 
-          {/* Form Content (Directly on dark page background - NO boxed card container) */}
-          <div className="w-full space-y-6">
+          {/* Form Content */}
+          <div className="w-full space-y-4">
             {children}
           </div>
         </motion.div>
       </div>
 
-      {/* Hero Visual Zone (Full Bleed Image: 58% Width on Desktop) */}
-      <div className="hidden lg:block lg:w-[58%] relative bg-[#06080F] overflow-hidden min-h-screen border-l border-white/5">
+      {/* Hero Visual Zone (Full Bleed Image: 55% Width on Desktop) */}
+      <div className="hidden lg:block lg:w-[55%] xl:w-[60%] relative bg-[#06080F] overflow-hidden h-screen max-h-screen border-l border-white/5">
         {!imgFailed ? (
           <img
             src={heroImage}
@@ -104,7 +104,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
         {/* Subtle Bottom Gradient Scrim & Single Caption */}
         {heroCaption && !imgFailed && (
-          <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-between">
+          <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-between">
             <p className="text-xs font-medium text-slate-300/90 tracking-wide drop-shadow-md">
               {heroCaption}
             </p>
