@@ -58,11 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user: JSON.parse(savedUser), token: 'demo-token-123' } });
       } catch {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: { user: DEMO_USER, token: 'demo-token-123' } });
+        localStorage.removeItem('playarena_user');
+        dispatch({ type: 'LOGOUT' });
       }
     } else {
-      localStorage.setItem('playarena_user', JSON.stringify(DEMO_USER));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: { user: DEMO_USER, token: 'demo-token-123' } });
+      dispatch({ type: 'LOGOUT' });
     }
   }, []);
 

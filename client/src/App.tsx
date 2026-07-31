@@ -6,6 +6,8 @@ import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+
 // Eagerly import main app pages for instant navigation without loading delays
 import HomePage from './pages/home/HomePage';
 import GamesPage from './pages/games/GamesPage';
@@ -64,16 +66,18 @@ export default function App() {
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/games" element={<GamesPage />} />
-                    <Route path="/games/color-prediction" element={<ColorPredictionPage />} />
-                    <Route path="/games/matka" element={<MatkaPage />} />
-                    <Route path="/games/wingo" element={<WinGoPage />} />
-                    <Route path="/games/lottery" element={<LotteryPage />} />
-                    <Route path="/wallet" element={<WalletPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/support" element={<SupportPage />} />
-                    <Route path="/notifications" element={<NotificationsPage />} />
+
+                    {/* Protected Game & Account Routes */}
+                    <Route path="/games/color-prediction" element={<ProtectedRoute><ColorPredictionPage /></ProtectedRoute>} />
+                    <Route path="/games/matka" element={<ProtectedRoute><MatkaPage /></ProtectedRoute>} />
+                    <Route path="/games/wingo" element={<ProtectedRoute><WinGoPage /></ProtectedRoute>} />
+                    <Route path="/games/lottery" element={<ProtectedRoute><LotteryPage /></ProtectedRoute>} />
+                    <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+                    <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
                   </Route>
 
                   {/* Catch-all redirect to Home */}
