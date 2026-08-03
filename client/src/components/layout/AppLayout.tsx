@@ -4,18 +4,18 @@ import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
-import { Flame, Spade, Search, Ticket, Send, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
+import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
 
 const iconRailItems = [
-  { icon: Flame,         label: 'Popular',   path: '/games',               activeMatch: '/games',               exact: true  },
-  { icon: Spade,         label: 'Card Games', path: '/games/color-prediction', activeMatch: '/games/color-prediction', exact: false },
-  { icon: Search,        label: 'Search',    path: '/games',               activeMatch: null,                   exact: false },
-  { icon: Ticket,        label: 'Promos',    path: '/wallet',              activeMatch: '/wallet',              exact: false },
-  { icon: Send,          label: 'Telegram',  path: '/support',             activeMatch: null,                   exact: false },
-  { icon: MessageCircle, label: 'Support',   path: '/support',             activeMatch: '/support',             exact: false },
-  { icon: Medal,         label: 'VIP',       path: '/profile',             activeMatch: '/profile',             exact: false },
-  { icon: Users,         label: 'Referral',  path: '/profile',             activeMatch: null,                   exact: false },
-  { icon: Crown,         label: 'Royal VIP', path: '/profile',             activeMatch: null,                   exact: false },
+  { icon: Flame,         label: 'Popular',   path: '/games',               activeMatch: '/games',    exact: true  },
+  { icon: Dice1,         label: 'Matka',     path: '/games/matka',         activeMatch: '/games/matka',      exact: false },
+  { icon: Palette,       label: 'WinGo',     path: '/games/color-prediction', activeMatch: '/games/color-prediction', exact: false },
+  { icon: Ticket,        label: 'Bonus',     path: '/wallet',              activeMatch: '/wallet',   exact: false },
+  { icon: History,       label: 'History',   path: '/history',             activeMatch: '/history',  exact: false },
+  { icon: MessageCircle, label: 'Support',   path: '/support',             activeMatch: '/support',  exact: false },
+  { icon: Medal,         label: 'VIP',       path: '/profile',             activeMatch: '/profile',  exact: false },
+  { icon: Users,         label: 'Referral',  path: '/profile',             activeMatch: null,        exact: false },
+  { icon: Crown,         label: 'Royal VIP', path: '/profile',             activeMatch: null,        exact: false },
 ];
 
 function IconRail() {
