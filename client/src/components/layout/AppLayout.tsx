@@ -8,14 +8,14 @@ import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Cr
 
 const iconRailItems = [
   { icon: Flame,         label: 'Popular',   path: '/games',               activeMatch: '/games',    exact: true  },
-  { icon: Dice1,         label: 'Matka',     path: '/games/matka',         activeMatch: '/games/matka',      exact: false },
+  { icon: Dice1,         label: 'Matka',     path: '/games/matka',         activeMatch: '/games/matka',           exact: false },
   { icon: Palette,       label: 'WinGo',     path: '/games/color-prediction', activeMatch: '/games/color-prediction', exact: false },
   { icon: Ticket,        label: 'Bonus',     path: '/wallet',              activeMatch: '/wallet',   exact: false },
   { icon: History,       label: 'History',   path: '/history',             activeMatch: '/history',  exact: false },
   { icon: MessageCircle, label: 'Support',   path: '/support',             activeMatch: '/support',  exact: false },
-  { icon: Medal,         label: 'VIP',       path: '/profile',             activeMatch: '/profile',  exact: false },
-  { icon: Users,         label: 'Referral',  path: '/profile',             activeMatch: null,        exact: false },
-  { icon: Crown,         label: 'Royal VIP', path: '/profile',             activeMatch: null,        exact: false },
+  { icon: Medal,         label: 'VIP',       path: '/vip',                 activeMatch: '/vip',      exact: false },
+  { icon: Users,         label: 'Referral',  path: '/referral',            activeMatch: '/referral', exact: false },
+  { icon: Crown,         label: 'Royal VIP', path: '/vip',                 activeMatch: null,        exact: false },
 ];
 
 function IconRail() {

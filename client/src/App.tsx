@@ -26,6 +26,8 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import VIPPage from './pages/vip/VIPPage';
+import ReferralPage from './pages/referral/ReferralPage';
 
 // Premium glowing loading fallback
 function PageLoader() {
@@ -76,6 +78,8 @@ export default function App() {
                     <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
                     <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/vip" element={<ProtectedRoute><VIPPage /></ProtectedRoute>} />
+                    <Route path="/referral" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                     <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
                   </Route>
