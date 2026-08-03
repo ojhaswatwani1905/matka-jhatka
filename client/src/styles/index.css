@@ -2,31 +2,48 @@
 @import "tailwindcss";
 
 /* ========================================
-   PREMIUM CASINO WEBSITE THEME
-   Tiranga / WinGo / Matka Platform
+   PLAYARENA — GREEN & GOLD "ROYAL KING" THEME
+   Inspired by K3.com ornate palace aesthetic
    ======================================== */
 
 @theme {
-  --color-app-bg: #0A0E1A;
-  --color-app-card: #12172A;
-  --color-app-card-light: #1A2035;
+  /* ── Royal Green Palette ── */
+  --color-royal-bg:     #0B2318;
+  --color-royal-bg2:    #0F3324;
+  --color-royal-bg3:    #123A29;
+  --color-royal-panel:  #132D22;
+  --color-royal-panel2: #0d2419;
+  --color-royal-border: rgba(212,175,55,0.25);
 
-  --color-gold: #F5B92C;
-  --color-gold-dark: #E8943A;
+  /* ── Gold Palette ── */
+  --color-gold:       #D4AF37;
+  --color-gold-light: #F5D576;
+  --color-gold-mid:   #E8C160;
+  --color-gold-dark:  #B8860B;
+  --color-gold-shine: #FFE57F;
 
-  --color-tiranga-green: #22C55E;
-  --color-tiranga-green-dark: #16A34A;
-  
-  --color-tiranga-red: #EF4444;
-  --color-tiranga-red-dark: #DC2626;
+  /* ── Emerald CTA (contrast button) ── */
+  --color-emerald-cta:      #2ECC71;
+  --color-emerald-cta-dark: #27AE60;
 
-  --color-tiranga-violet: #A855F7;
-  --color-tiranga-violet-dark: #9333EA;
+  /* ── Text ── */
+  --color-text-primary:  #F5F1E6;
+  --color-text-gold:     #E8C97A;
+  --color-text-muted:    #7A9E8A;
+
+  /* ── Legacy compatibility (keep game colors) ── */
+  --color-tiranga-green:      #2ECC71;
+  --color-tiranga-green-dark: #27AE60;
+  --color-tiranga-red:        #FF4D6D;
+  --color-tiranga-red-dark:   #E0364F;
+  --color-tiranga-violet:     #A855F7;
+  --color-tiranga-violet-dark:#9333EA;
 
   --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Roboto', sans-serif;
+  --font-body:    'Roboto', sans-serif;
 }
 
+/* ── Base Reset ── */
 html, body, #root {
   width: 100%;
   min-height: 100vh;
@@ -36,13 +53,13 @@ html, body, #root {
 
 body {
   font-family: var(--font-body);
-  background-color: #0A0E1A;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
-    radial-gradient(circle at 50% 85%, rgba(245, 185, 44, 0.06) 0%, transparent 50%);
+  background-color: #0B2318;
+  background-image:
+    radial-gradient(ellipse at 0% 0%,   rgba(212,175,55,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(18,58,41,0.9)    0%, transparent 60%),
+    radial-gradient(ellipse at 50% 100%,rgba(212,175,55,0.05) 0%, transparent 50%);
   background-attachment: fixed;
-  color: #FFFFFF;
+  color: #F5F1E6;
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
 }
@@ -52,92 +69,265 @@ body {
   flex-direction: column;
 }
 
-/* Tabular figures for numbers, timers, odds */
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0B2318; }
+::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.55); }
+
+/* ── Tabular nums ── */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* 3D Glossy Buttons & Shimmer */
+/* ────────────────────────────────
+   ROYAL PANEL (replaces app-card)
+──────────────────────────────── */
+.royal-panel {
+  background: linear-gradient(145deg, #132D22 0%, #0d2419 100%);
+  border: 1px solid rgba(212,175,55,0.25);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.08);
+}
+
+/* ── Keep legacy app-card as alias ── */
+.app-card {
+  background: linear-gradient(145deg, #132D22 0%, #0d2419 100%);
+  border: 1px solid rgba(212,175,55,0.22);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.07);
+}
+
+/* ────────────────────────────────
+   GOLD GRADIENT TEXT
+──────────────────────────────── */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FFE57F 0%, #D4AF37 40%, #F5D576 70%, #B8860B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ────────────────────────────────
+   GOLD 3D BEVEL TEXT (hero/popups)
+──────────────────────────────── */
+.text-gold-3d {
+  color: #F5D576;
+  text-shadow:
+    0 1px 0   #B8860B,
+    0 2px 0   #9a6f09,
+    0 3px 0   #7a5607,
+    0 4px 8px rgba(0,0,0,0.6),
+    0 0  20px rgba(212,175,55,0.4);
+}
+
+/* ────────────────────────────────
+   GOLD PILL BUTTON (K3-style)
+──────────────────────────────── */
+.btn-royal-gold {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #F5D576 0%, #D4AF37 50%, #B8860B 100%);
+  box-shadow:
+    0 4px 15px rgba(212,175,55,0.4),
+    inset 0 1px 1px rgba(255,255,255,0.45),
+    inset 0 -2px 3px rgba(0,0,0,0.25);
+  color: #0B2318;
+  font-weight: 900;
+  border-radius: 999px;
+  transition: all 0.2s;
+}
+.btn-royal-gold:hover {
+  background: linear-gradient(180deg, #FFE57F 0%, #F5D576 50%, #D4AF37 100%);
+  box-shadow: 0 6px 20px rgba(212,175,55,0.6), inset 0 1px 1px rgba(255,255,255,0.5);
+  transform: translateY(-1px);
+}
+.btn-royal-gold::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: linear-gradient(60deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+  transform: rotate(30deg);
+  animation: shimmerSweep 3.5s infinite ease-in-out;
+}
+
+/* ── Keep legacy shimmer ── */
 .btn-gold-shimmer {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #F5B92C 0%, #E8943A 100%);
-  box-shadow: 0 4px 15px rgba(245, 185, 44, 0.3);
+  background: linear-gradient(180deg, #F5D576 0%, #D4AF37 50%, #B8860B 100%);
+  box-shadow: 0 4px 15px rgba(212,175,55,0.4), inset 0 1px 1px rgba(255,255,255,0.45);
+  color: #0B2318;
 }
-
 .btn-gold-shimmer::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    60deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 70%
-  );
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: linear-gradient(60deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
   transform: rotate(30deg);
   animation: shimmerSweep 4s infinite ease-in-out;
 }
 
 @keyframes shimmerSweep {
-  0% { transform: translateX(-100%) rotate(30deg); }
-  20% { transform: translateX(100%) rotate(30deg); }
-  100% { transform: translateX(100%) rotate(30deg); }
+  0%   { transform: translateX(-100%) rotate(30deg); }
+  20%  { transform: translateX(100%)  rotate(30deg); }
+  100% { transform: translateX(100%)  rotate(30deg); }
 }
 
-.btn-3d-green {
-  background: linear-gradient(180deg, #4ADE80 0%, #22C55E 50%, #16A34A 100%);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+/* ────────────────────────────────
+   EMERALD CTA BUTTON
+──────────────────────────────── */
+.btn-emerald-cta {
+  background: linear-gradient(180deg, #3DE081 0%, #2ECC71 50%, #27AE60 100%);
+  box-shadow: 0 4px 16px rgba(46,204,113,0.45), inset 0 1px 1px rgba(255,255,255,0.4);
+  color: #062312;
+  font-weight: 900;
+  border-radius: 999px;
+  transition: all 0.2s;
 }
-.btn-3d-red {
-  background: linear-gradient(180deg, #F87171 0%, #EF4444 50%, #DC2626 100%);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-}
-.btn-3d-violet {
-  background: linear-gradient(180deg, #C084FC 0%, #A855F7 50%, #9333EA 100%);
-  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-}
-
-/* Glass & Card styles */
-.app-card {
-  background: #12172A;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+.btn-emerald-cta:hover {
+  box-shadow: 0 6px 22px rgba(46,204,113,0.6);
+  transform: translateY(-1px);
 }
 
-.text-gradient-gold {
-  background: linear-gradient(135deg, #FFE57F 0%, #F5B92C 50%, #E8943A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* ── Keep legacy 3D buttons ── */
+.btn-3d-green  { background: linear-gradient(180deg, #4ADE80 0%, #22C55E 50%, #16A34A 100%); box-shadow: 0 4px 12px rgba(34,197,94,0.4),  inset 0 1px 1px rgba(255,255,255,0.4); }
+.btn-3d-red    { background: linear-gradient(180deg, #F87171 0%, #EF4444 50%, #DC2626 100%); box-shadow: 0 4px 12px rgba(239,68,68,0.4),   inset 0 1px 1px rgba(255,255,255,0.4); }
+.btn-3d-violet { background: linear-gradient(180deg, #C084FC 0%, #A855F7 50%, #9333EA 100%); box-shadow: 0 4px 12px rgba(168,85,247,0.4),  inset 0 1px 1px rgba(255,255,255,0.4); }
+
+/* ────────────────────────────────
+   ORNATE GOLD FRAME
+──────────────────────────────── */
+.ornate-frame {
+  position: relative;
+  border: 1px solid rgba(212,175,55,0.5);
+  box-shadow: 0 0 0 1px rgba(212,175,55,0.15), inset 0 0 0 1px rgba(212,175,55,0.1);
+}
+.ornate-frame::before,
+.ornate-frame::after {
+  content: '✦';
+  position: absolute;
+  color: #D4AF37;
+  font-size: 14px;
+  line-height: 1;
+}
+.ornate-frame::before { top: -8px; left: -8px; }
+.ornate-frame::after  { bottom: -8px; right: -8px; }
+
+/* ────────────────────────────────
+   GOLD HAIRLINE DIVIDER
+──────────────────────────────── */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent);
+  margin: 4px 0;
 }
 
-/* Marquee Auto-Scroll Animation */
+/* ────────────────────────────────
+   CATEGORY PILL ROW (K3-style)
+──────────────────────────────── */
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  transition: all 0.2s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.category-pill-active {
+  background: linear-gradient(180deg, #F5D576 0%, #D4AF37 100%);
+  color: #0B2318;
+  box-shadow: 0 3px 12px rgba(212,175,55,0.4);
+}
+.category-pill-inactive {
+  background: transparent;
+  color: #E8C97A;
+  border: 1px solid rgba(212,175,55,0.2);
+}
+.category-pill-inactive:hover {
+  background: rgba(212,175,55,0.1);
+  border-color: rgba(212,175,55,0.4);
+}
+
+/* ────────────────────────────────
+   SCROLL RIBBON FRAME (K3 subtitle)
+──────────────────────────────── */
+.ribbon-frame {
+  position: relative;
+  background: linear-gradient(90deg, #8B6914, #D4AF37, #F5D576, #D4AF37, #8B6914);
+  padding: 4px 24px;
+  clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0% 50%);
+  color: #0B2318;
+  font-weight: 900;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+/* ────────────────────────────────
+   FLOATING COINS ANIMATION
+──────────────────────────────── */
+@keyframes floatCoin {
+  0%   { transform: translateY(0)   rotate(0deg)   scale(1);    opacity: 0.9; }
+  50%  { transform: translateY(-18px) rotate(180deg) scale(1.1); opacity: 1;   }
+  100% { transform: translateY(0)   rotate(360deg) scale(1);    opacity: 0.9; }
+}
+.coin-float { animation: floatCoin 3s ease-in-out infinite; }
+.coin-float-2 { animation: floatCoin 4s ease-in-out infinite 1s; }
+.coin-float-3 { animation: floatCoin 3.5s ease-in-out infinite 0.5s; }
+
+/* ────────────────────────────────
+   SPARKLING PARTICLE
+──────────────────────────────── */
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50%       { opacity: 1; transform: scale(1); }
+}
+.sparkle { animation: sparkle 2s ease-in-out infinite; }
+.sparkle-2 { animation: sparkle 2.5s ease-in-out infinite 0.7s; }
+.sparkle-3 { animation: sparkle 3s ease-in-out infinite 1.3s; }
+
+/* ────────────────────────────────
+   MARQUEE / TICKER
+──────────────────────────────── */
 @keyframes marquee {
-  0% { transform: translateX(0%); }
+  0%   { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
 }
-
 .animate-marquee {
   display: flex;
   width: max-content;
   animation: marquee 25s linear infinite;
 }
+.animate-marquee:hover { animation-play-state: paused; }
 
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
+/* ────────────────────────────────
+   SCROLLBAR HIDE
+──────────────────────────────── */
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* Scrollbar hide */
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* ────────────────────────────────
+   GOLD BADGE (K3-style trust badges)
+──────────────────────────────── */
+.gold-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(212,175,55,0.12);
+  border: 1px solid rgba(212,175,55,0.35);
+  color: #E8C97A;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-

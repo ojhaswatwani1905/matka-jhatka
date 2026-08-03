@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import type { RecentWinner } from '../../types';
 
@@ -18,43 +18,37 @@ export default function RecentWinners() {
   return (
     <div className="overflow-hidden space-y-2">
       <div className="flex items-center gap-2 px-1">
-        <Trophy className="w-4 h-4 text-amber-400" />
-        <h3 className="text-sm font-bold text-white font-heading">Recent Winners</h3>
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1" />
+        <Crown className="w-4 h-4 text-gold" />
+        <h3 className="text-sm font-bold text-[#E8C97A] font-heading">Recent Winners</h3>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#2ECC71] animate-pulse ml-1" />
+        <span className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold">LIVE</span>
       </div>
 
       <div className="relative overflow-hidden py-1">
-        {/* Gradient edge masks */}
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-navy-950 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-navy-950 to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#0B2318] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#0B2318] to-transparent z-10 pointer-events-none" />
 
         <motion.div
           className="flex gap-3"
           animate={{ x: ['0%', '-50%'] }}
-          transition={{
-            x: {
-              duration: 25,
-              repeat: Infinity,
-              ease: 'linear',
-            },
-          }}
+          transition={{ x: { duration: 25, repeat: Infinity, ease: 'linear' } }}
         >
           {allWinners.map((winner, i) => (
             <div
               key={`${winner.id}-${i}`}
-              className="flex-shrink-0 flex items-center gap-3 bg-surface border border-border rounded-xl px-3.5 py-2.5 min-w-[200px]"
+              className="flex-shrink-0 flex items-center gap-3 rounded-xl px-3.5 py-2.5 min-w-[200px] border border-[rgba(212,175,55,0.2)] bg-[#0d2419]"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet to-gold flex items-center justify-center text-xs font-bold text-navy-950 flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#F5D576] to-[#B8860B] flex items-center justify-center text-xs font-bold text-[#0B2318] flex-shrink-0 shadow-[0_0_8px_rgba(212,175,55,0.3)]">
                 {winner.name.charAt(0)}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white truncate">{winner.name}</span>
-                  <span className="text-[10px] text-neon-green font-bold bg-neon-green/10 px-1 rounded">Won</span>
+                  <span className="text-xs font-semibold text-[#F5F1E6] truncate">{winner.name}</span>
+                  <span className="text-[10px] text-[#2ECC71] font-bold bg-[rgba(46,204,113,0.1)] px-1 rounded">Won</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-xs font-bold text-gold">{formatCurrency(winner.amount)}</span>
-                  <span className="text-[10px] text-navy-500">• {winner.game}</span>
+                  <span className="text-xs font-bold text-gold">₹{formatCurrency(winner.amount)}</span>
+                  <span className="text-[10px] text-[rgba(212,175,55,0.45)]">• {winner.game}</span>
                 </div>
               </div>
             </div>

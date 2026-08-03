@@ -1,29 +1,92 @@
 import { Outlet } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
-import { ParticleBackground } from '../ui/ParticleBackground';
+import { Flame, Spade, Search, Ticket, Send, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
+
+const iconRailItems = [
+  { icon: Flame,         label: 'Popular',   path: '/games',         color: 'text-orange-400' },
+  { icon: Spade,         label: 'Card Games', path: '/games/color-prediction', color: 'text-gold' },
+  { icon: Search,        label: 'Search',    path: '/games',         color: 'text-gold' },
+  { icon: Ticket,        label: 'Promos',    path: '/wallet',        color: 'text-gold' },
+  { icon: Send,          label: 'Telegram',  path: '/support',       color: 'text-sky-400' },
+  { icon: MessageCircle, label: 'Support',   path: '/support',       color: 'text-gold' },
+  { icon: Medal,         label: 'VIP',       path: '/profile',       color: 'text-gold' },
+  { icon: Users,         label: 'Referral',  path: '/profile',       color: 'text-gold' },
+  { icon: Crown,         label: 'Royal VIP', path: '/profile',       color: 'text-gold' },
+];
+
+function IconRail() {
+  const location = useLocation();
+
+  return (
+    <aside className="hidden lg:flex flex-col items-center w-16 fixed left-0 top-16 bottom-0 z-40 bg-[#0d2419] border-r border-[rgba(212,175,55,0.2)] shadow-xl overflow-y-auto scrollbar-none">
+      {/* Rail Items */}
+      <div className="flex flex-col items-center gap-1 py-4 flex-1 w-full">
+        {iconRailItems.map(({ icon: Icon, label, path, color }) => {
+          const isActive = location.pathname === path || location.pathname.startsWith(path + '/');
+          return (
+            <Link
+              key={label}
+              to={path}
+              title={label}
+              className={`group flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 relative ${
+                isActive
+                  ? 'bg-[rgba(212,175,55,0.18)] shadow-[0_0_12px_rgba(212,175,55,0.25)]'
+                  : 'hover:bg-[rgba(212,175,55,0.1)]'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isActive ? 'text-gold' : color} group-hover:text-gold transition-colors`} />
+              <span className="text-[8px] font-bold text-center leading-tight mt-0.5 text-[rgba(212,175,55,0.6)] group-hover:text-gold transition-colors">
+                {label}
+              </span>
+              {isActive && (
+                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-gold rounded-r-full" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Language pin at bottom */}
+      <div className="pb-4">
+        <button
+          title="Language"
+          className="flex flex-col items-center justify-center w-12 h-12 rounded-xl hover:bg-[rgba(212,175,55,0.1)] transition-all group"
+        >
+          <Globe className="w-5 h-5 text-[rgba(212,175,55,0.6)] group-hover:text-gold transition-colors" />
+          <span className="text-[8px] font-bold text-[rgba(212,175,55,0.6)] group-hover:text-gold mt-0.5">EN</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 export default function AppLayout() {
   return (
-    <div className="w-full min-h-screen bg-[#0A0E1A] text-white flex flex-col relative overflow-x-hidden">
-      {/* Particle Canvas Background */}
-      <ParticleBackground />
-
+    <div className="w-full min-h-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-x-hidden">
       {/* Age & Compliance Modal */}
       <AgeGateModal />
 
       {/* Top Website Header */}
       <Navbar />
 
-      {/* Main Website Container */}
-      <main className="flex-1 w-full pt-24 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <Outlet />
+      {/* Left Icon Rail (desktop) */}
+      <IconRail />
+
+      {/* Main Website Container — offset left on desktop for sidebar */}
+      <main className="flex-1 w-full pt-24 pb-20 lg:pl-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Outlet />
+        </div>
       </main>
 
       {/* Footer */}
-      <Footer />
+      <div className="lg:pl-16">
+        <Footer />
+      </div>
 
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden relative z-50">
@@ -32,4 +95,3 @@ export default function AppLayout() {
     </div>
   );
 }
-

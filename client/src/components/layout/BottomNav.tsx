@@ -19,7 +19,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0A0E1A]/95 backdrop-blur-xl border-t border-white/10 shadow-2xl">
+    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0d2419]/97 backdrop-blur-xl border-t border-[rgba(212,175,55,0.22)] shadow-[0_-4px_30px_rgba(0,0,0,0.5)]">
       <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
         {tabs.map((tab) => {
           const active = isActive(tab.path);
@@ -34,18 +34,19 @@ export default function BottomNav() {
               {active && (
                 <motion.div
                   layoutId="bottomNavIndicator"
-                  className="absolute inset-x-2 inset-y-1 rounded-xl bg-gold/15 border border-gold/40 shadow-inner"
+                  className="absolute inset-x-2 inset-y-1 rounded-xl"
+                  style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.35)' }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
               <Icon
-                className={`w-5 h-5 relative z-10 transition-transform duration-200 ${
-                  active ? 'text-gold scale-110' : 'text-slate-400 group-hover:text-slate-200'
+                className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                  active ? 'text-gold scale-110' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
                 }`}
               />
               <span
                 className={`text-[10px] font-bold relative z-10 transition-colors duration-200 ${
-                  active ? 'text-gold' : 'text-slate-400 group-hover:text-slate-200'
+                  active ? 'text-gold' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
                 }`}
               >
                 {tab.label}
