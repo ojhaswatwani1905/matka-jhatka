@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle, MessageCircle, Mail, ChevronDown, Send, ShieldCheck } from 'lucide-react';
+import { HelpCircle, MessageCircle, Mail, ChevronDown, Send, ShieldCheck, Crown } from 'lucide-react';
 import Input from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
 
@@ -28,49 +28,50 @@ export default function SupportPage() {
 
   return (
     <div className="space-y-6 pb-6">
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-black text-white font-heading flex items-center gap-2.5">
+        <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
           <HelpCircle className="w-6 h-6 text-gold" /> Support & Help Center
         </h1>
-        <p className="text-xs text-slate-400 mt-1">24/7 Assistance, Provably Fair documentation, & FAQs</p>
+        <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">24/7 Assistance, Provably Fair documentation, & FAQs</p>
       </motion.div>
 
-      {/* Quick Contact Chips */}
+      {/* Quick Contact Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="app-card p-4 rounded-2xl border border-white/5 flex items-center gap-4 hover:border-gold/30 transition-all">
-          <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+        <div className="royal-panel p-4 rounded-2xl flex items-center gap-4 hover:border-[rgba(212,175,55,0.5)] transition-all cursor-pointer">
+          <div className="p-3 rounded-xl bg-[rgba(212,175,55,0.1)] text-gold border border-[rgba(212,175,55,0.25)]">
             <MessageCircle className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white font-heading">24/7 Live Agent Chat</h3>
-            <p className="text-xs text-slate-400">Instant response time • Support in 8 languages</p>
+            <h3 className="text-sm font-bold text-[#E8C97A] font-heading">24/7 Live Agent Chat</h3>
+            <p className="text-xs text-[rgba(212,175,55,0.5)]">Instant response time • Support in 8 languages</p>
           </div>
         </div>
 
-        <div className="app-card p-4 rounded-2xl border border-white/5 flex items-center gap-4 hover:border-gold/30 transition-all">
-          <div className="p-3 rounded-xl bg-gold/10 text-gold border border-gold/20">
+        <div className="royal-panel p-4 rounded-2xl flex items-center gap-4 hover:border-[rgba(212,175,55,0.5)] transition-all cursor-pointer">
+          <div className="p-3 rounded-xl bg-[rgba(212,175,55,0.1)] text-gold border border-[rgba(212,175,55,0.25)]">
             <Mail className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white font-heading">Email Support Desk</h3>
-            <p className="text-xs text-slate-400">support@playarena.com • 24hr SLA</p>
+            <h3 className="text-sm font-bold text-[#E8C97A] font-heading">Email Support Desk</h3>
+            <p className="text-xs text-[rgba(212,175,55,0.5)]">support@playarena.com • 24hr SLA</p>
           </div>
         </div>
       </div>
 
-      {/* Smooth Height-Animated FAQ Accordion */}
-      <div className="app-card p-5 rounded-2xl border border-white/10 space-y-3">
-        <h2 className="text-base font-bold text-white font-heading mb-3 flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-emerald-400" /> Frequently Asked Questions
+      {/* FAQ Accordion — pa-panel-alt items */}
+      <div className="royal-panel p-5 rounded-2xl space-y-3">
+        <h2 className="text-base font-bold text-[#E8C97A] font-heading mb-3 flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-gold" /> Frequently Asked Questions
         </h2>
         <div className="space-y-2.5">
           {faqs.map((faq, i) => (
-            <div key={i} className="rounded-xl bg-slate-900/80 border border-white/5 overflow-hidden">
+            <div key={i} className="rounded-xl bg-[rgba(212,175,55,0.05)] border border-[rgba(212,175,55,0.15)] overflow-hidden">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="w-full flex items-center justify-between p-4 cursor-pointer text-left hover:bg-slate-800/50 transition-colors"
+                className="w-full flex items-center justify-between p-4 cursor-pointer text-left hover:bg-[rgba(212,175,55,0.08)] transition-colors"
               >
-                <span className="text-xs font-bold text-white font-heading pr-4">{faq.q}</span>
+                <span className="text-xs font-bold text-[#F5F1E6] font-heading pr-4">{faq.q}</span>
                 <ChevronDown className={`w-4 h-4 text-gold flex-shrink-0 transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence initial={false}>
@@ -82,7 +83,7 @@ export default function SupportPage() {
                     transition={{ duration: 0.25, ease: [0.04, 0.62, 0.23, 0.98] }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 pt-1 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+                    <div className="px-4 pb-4 pt-1 text-xs text-[rgba(212,175,55,0.75)] leading-relaxed border-t border-[rgba(212,175,55,0.15)]">
                       {faq.a}
                     </div>
                   </motion.div>
@@ -94,8 +95,10 @@ export default function SupportPage() {
       </div>
 
       {/* Contact Form */}
-      <form onSubmit={handleSendMessage} className="app-card p-5 rounded-2xl border border-white/10 space-y-4">
-        <h2 className="text-base font-bold text-white font-heading">Submit Support Inquiry</h2>
+      <form onSubmit={handleSendMessage} className="royal-panel p-5 rounded-2xl space-y-4">
+        <h2 className="text-base font-bold text-[#E8C97A] font-heading flex items-center gap-2">
+          <Crown className="w-4 h-4 text-gold" /> Submit Support Inquiry
+        </h2>
         <Input
           label="Subject"
           placeholder="e.g. Question regarding Provably Fair verification"
@@ -103,18 +106,18 @@ export default function SupportPage() {
           onChange={(e) => setSubject(e.target.value)}
         />
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Inquiry Details</label>
+          <label className="block text-xs font-bold text-[rgba(212,175,55,0.7)] mb-1.5">Inquiry Details</label>
           <textarea
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Please describe your question or issue in detail..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold resize-none"
+            className="w-full bg-[#0E2A1E] border border-[rgba(212,175,55,0.25)] rounded-xl px-4 py-3 text-[#F5F1E6] text-xs placeholder:text-[rgba(212,175,55,0.25)] focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[rgba(212,175,55,0.3)] resize-none transition-all"
           />
         </div>
         <button
           type="submit"
-          className="w-full py-3 rounded-xl font-bold text-black btn-gold-shimmer flex items-center justify-center gap-2 cursor-pointer text-xs"
+          className="btn-royal-gold w-full py-3 rounded-xl font-black cursor-pointer text-xs flex items-center justify-center gap-2"
         >
           <Send className="w-4 h-4" /> Send Ticket Message
         </button>
@@ -122,4 +125,3 @@ export default function SupportPage() {
     </div>
   );
 }
-
