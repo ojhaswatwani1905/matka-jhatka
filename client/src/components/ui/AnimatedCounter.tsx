@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useSpring, useMotionValue } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 
 interface AnimatedCounterProps {
   value: number;
@@ -15,35 +14,47 @@ export default function AnimatedCounter({
   prefix = '',
   suffix = '',
   decimals = 0,
-  duration = 1.5,
+  duration = 1200,
   className = '',
 }: AnimatedCounterProps) {
-  const motionValue = useMotionValue(0);
-  const spring = useSpring(motionValue, {
-    stiffness: 50,
-    damping: 20,
-    duration: duration * 1000,
-  });
+  const [display, setDisplay] = useState(() => format(value, decimals, prefix, suffix));
+  const rafRef    = useRef<number | null>(null);
+  const startRef  = useRef<number | null>(null);
+  const fromRef   = useRef(value);
 
-  const [displayValue, setDisplayValue] = useState(() => {
-    const num = decimals > 0 ? (value || 0).toFixed(decimals) : Math.floor(value || 0).toLocaleString('en-IN');
-    return `${prefix}${num}${suffix}`;
-  });
+  function format(v: number, d: number, pre: string, suf: string) {
+    const num = d > 0 ? v.toFixed(d) : Math.floor(v).toLocaleString('en-IN');
+    return `${pre}${num}${suf}`;
+  }
 
   useEffect(() => {
-    motionValue.set(value);
-  }, [value, motionValue]);
+    const from  = fromRef.current;
+    const to    = value;
+    if (from === to) return;
 
-  useEffect(() => {
-    const unsubscribe = spring.on('change', (latest) => {
-      const val = typeof latest === 'number' && !isNaN(latest) ? latest : 0;
-      const num = decimals > 0
-        ? val.toFixed(decimals)
-        : Math.floor(val).toLocaleString('en-IN');
-      setDisplayValue(`${prefix}${num}${suffix}`);
-    });
-    return () => unsubscribe();
-  }, [spring, prefix, suffix, decimals]);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    startRef.current = null;
 
-  return <span className={className}>{displayValue}</span>;
+    const step = (timestamp: number) => {
+      if (!startRef.current) startRef.current = timestamp;
+      const elapsed  = timestamp - startRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease out cubic
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      const current  = from + (to - from) * eased;
+      setDisplay(format(current, decimals, prefix, suffix));
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      } else {
+        fromRef.current = to;
+        setDisplay(format(to, decimals, prefix, suffix));
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [value, decimals, prefix, suffix, duration]);
+
+  return <span className={className}>{display}</span>;
 }

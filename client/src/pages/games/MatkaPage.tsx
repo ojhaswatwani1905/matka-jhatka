@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Dice1, Clock, Lock, Unlock, Volume2, VolumeX, ShieldCheck, Check } from 'lucide-react';
+import { Dice1, Clock, LockKeyhole, Unlock, Volume2, VolumeX, ShieldCheck, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
 import { useWallet } from '../../store/WalletContext';
@@ -196,7 +196,7 @@ export default function MatkaPage() {
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
-                      <Lock className="w-2.5 h-2.5" /> CLOSED
+                      <LockKeyhole className="w-2.5 h-2.5" /> CLOSED
                     </span>
                   )}
                 </div>

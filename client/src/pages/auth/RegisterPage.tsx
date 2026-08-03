@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Phone, Lock, User, Eye, EyeOff, ArrowRight, Gift, Tag, Check, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, LockKeyhole, User, Eye, EyeOff, ArrowRight, Gift, Tag, Check, ShieldCheck } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { CountryCodeSelect, COUNTRIES, type CountryCode } from '../../components/auth/CountryCodeSelect';
 import { OtpVerificationStep } from '../../components/auth/OtpVerificationStep';
@@ -175,7 +175,7 @@ export default function RegisterPage() {
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <LockKeyhole className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
@@ -218,7 +218,7 @@ export default function RegisterPage() {
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">Confirm Password</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <LockKeyhole className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     autoComplete="new-password"

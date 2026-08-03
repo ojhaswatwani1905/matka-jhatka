@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, HelpCircle, Lock, Crown } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LockKeyhole, Crown } from 'lucide-react';
 import { ProvablyFairModal } from '../ui/ProvablyFairModal';
 
 export const Footer: React.FC = () => {
@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
             </button>
             <span className="text-[rgba(212,175,55,0.2)]">|</span>
             <div className="flex items-center gap-1.5">
-              <Lock className="w-4 h-4 text-[#2ECC71]" />
+              <LockKeyhole className="w-4 h-4 text-[#2ECC71]" />
               <span>SSL 256-Bit Encrypted</span>
             </div>
           </div>

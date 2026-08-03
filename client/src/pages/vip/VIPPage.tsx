@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Crown, Star, Zap, Shield, Gift, Lock, TrendingUp,
+  Crown, Star, Zap, Shield, Gift, LockKeyhole, TrendingUp,
   ChevronRight, Sparkles, Flame, Trophy,
 } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
@@ -225,7 +225,7 @@ export default function VIPPage() {
                   <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
                     {isUnlocked
                       ? <span className="text-[10px] font-black text-[#2ECC71]">✓ Active</span>
-                      : <Lock className="w-3.5 h-3.5 text-[rgba(212,175,55,0.3)]" />
+                      : <LockKeyhole className="w-3.5 h-3.5 text-[rgba(212,175,55,0.3)]" />
                     }
                     <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
                       <ChevronRight className="w-3.5 h-3.5 text-[rgba(212,175,55,0.35)]" />
@@ -283,7 +283,7 @@ export default function VIPPage() {
               >
                 {!unlocked && (
                   <div className="absolute top-2 right-2">
-                    <Lock className="w-3 h-3 text-[rgba(212,175,55,0.35)]" />
+                    <LockKeyhole className="w-3 h-3 text-[rgba(212,175,55,0.35)]" />
                   </div>
                 )}
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2.5 border ${

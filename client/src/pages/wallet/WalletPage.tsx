@@ -55,7 +55,7 @@ export default function WalletPage() {
       </motion.div>
 
       {/* Wallet Hero Card */}
-      <WalletCard />
+      <WalletCard onDeposit={() => setShowDeposit(true)} onWithdraw={() => addToast({ type: 'info', title: 'Withdrawal Initiated', message: 'Withdrawal requests process within 15 minutes.' })} />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3">

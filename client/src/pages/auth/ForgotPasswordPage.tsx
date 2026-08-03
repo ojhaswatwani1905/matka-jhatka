@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ArrowRight, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowRight, LockKeyhole, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { OtpVerificationStep } from '../../components/auth/OtpVerificationStep';
 import { useToast } from '../../components/ui/Toast';
@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
             <div>
               <label className="block text-slate-300 mb-1 font-medium">Create New Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <LockKeyhole className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}

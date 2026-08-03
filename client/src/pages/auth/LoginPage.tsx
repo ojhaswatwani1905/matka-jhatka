@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
+import { Mail, Phone, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { CountryCodeSelect, COUNTRIES, type CountryCode } from '../../components/auth/CountryCodeSelect';
 import { useAuth } from '../../store/AuthContext';
@@ -178,7 +178,7 @@ export default function LoginPage() {
           </div>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(212,175,55,0.5)]">
-              <Lock className="w-3.5 h-3.5" />
+              <LockKeyhole className="w-3.5 h-3.5" />
             </div>
             <input
               type={showPassword ? 'text' : 'password'}
