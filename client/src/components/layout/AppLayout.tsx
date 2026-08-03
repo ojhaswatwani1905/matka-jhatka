@@ -7,11 +7,11 @@ import { AgeGateModal } from '../ui/AgeGateModal';
 import { Flame, Spade, Search, Ticket, Send, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
 
 const iconRailItems = [
-  { icon: Flame,         label: 'Popular',   path: '/games',         color: 'text-orange-400' },
+  { icon: Flame,         label: 'Popular',   path: '/games',         color: 'text-gold' },
   { icon: Spade,         label: 'Card Games', path: '/games/color-prediction', color: 'text-gold' },
   { icon: Search,        label: 'Search',    path: '/games',         color: 'text-gold' },
   { icon: Ticket,        label: 'Promos',    path: '/wallet',        color: 'text-gold' },
-  { icon: Send,          label: 'Telegram',  path: '/support',       color: 'text-sky-400' },
+  { icon: Send,          label: 'Telegram',  path: '/support',       color: 'text-gold' },
   { icon: MessageCircle, label: 'Support',   path: '/support',       color: 'text-gold' },
   { icon: Medal,         label: 'VIP',       path: '/profile',       color: 'text-gold' },
   { icon: Users,         label: 'Referral',  path: '/profile',       color: 'text-gold' },
@@ -32,7 +32,7 @@ function IconRail() {
               key={label}
               to={path}
               title={label}
-              className={`group flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 relative ${
+              className={`group flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 relative outline-none focus-visible:ring-1 focus-visible:ring-[rgba(212,175,55,0.6)] ${
                 isActive
                   ? 'bg-[rgba(212,175,55,0.18)] shadow-[0_0_12px_rgba(212,175,55,0.25)]'
                   : 'hover:bg-[rgba(212,175,55,0.1)]'

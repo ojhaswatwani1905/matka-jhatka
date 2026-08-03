@@ -51,6 +51,19 @@ html, body, #root {
   padding: 0;
 }
 
+/* ── Global Focus Ring Override — kill browser blue, use gold ── */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+a, button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   font-family: var(--font-body);
   background-color: #0B2318;
