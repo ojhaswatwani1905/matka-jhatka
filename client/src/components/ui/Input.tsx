@@ -19,11 +19,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-navy-500 mb-2">{label}</label>
+          <label className="block text-xs font-bold text-[rgba(212,175,55,0.75)] mb-1.5">{label}</label>
         )}
         <div className="relative group">
           {icon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-500 group-focus-within:text-violet transition-colors">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgba(212,175,55,0.45)] group-focus-within:text-gold transition-colors">
               {icon}
             </div>
           )}
@@ -31,13 +31,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             type={isPassword && showPassword ? 'text' : type}
             className={cn(
-              'w-full bg-surface border border-border rounded-[var(--radius-md)] px-4 py-3.5 text-white text-base',
-              'placeholder:text-navy-600 transition-all duration-200',
-              'focus:outline-none focus:border-violet/50 focus:ring-2 focus:ring-violet/20',
-              'hover:border-border-light',
-              icon ? 'pl-12' : undefined,
+              'w-full bg-[#0E2A1E] border border-[rgba(212,175,55,0.25)] rounded-xl px-4 py-3 text-[#F5F1E6] text-sm',
+              'placeholder:text-[rgba(212,175,55,0.3)] transition-all duration-200',
+              'focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[rgba(212,175,55,0.3)]',
+              'hover:border-[rgba(212,175,55,0.4)]',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              icon ? 'pl-10' : undefined,
               (isPassword || rightIcon) ? 'pr-12' : undefined,
-              error ? 'border-neon-red/50 focus:border-neon-red/50 focus:ring-neon-red/20' : undefined,
+              error ? 'border-[rgba(255,77,109,0.5)] focus:border-[rgba(255,77,109,0.7)] focus:ring-[rgba(255,77,109,0.2)]' : undefined,
               className
             )}
             {...props}
@@ -46,13 +47,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-500 hover:text-white transition-colors cursor-pointer"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[rgba(212,175,55,0.45)] hover:text-gold transition-colors cursor-pointer"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           )}
           {rightIcon && !isPassword && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-500">
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[rgba(212,175,55,0.45)]">
               {rightIcon}
             </div>
           )}
@@ -61,7 +62,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <motion.p
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-2 text-sm text-neon-red"
+            className="mt-1.5 text-xs text-[#FF4D6D]"
           >
             {error}
           </motion.p>

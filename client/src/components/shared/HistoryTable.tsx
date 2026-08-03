@@ -112,17 +112,17 @@ export default function HistoryTable<T extends { id?: string }>({
 // Status badge helper
 export function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    win: 'bg-neon-green/10 text-neon-green border-neon-green/20',
-    loss: 'bg-neon-red/10 text-neon-red border-neon-red/20',
-    pending: 'bg-gold/10 text-gold border-gold/20',
-    completed: 'bg-neon-green/10 text-neon-green border-neon-green/20',
-    failed: 'bg-neon-red/10 text-neon-red border-neon-red/20',
-    cancelled: 'bg-navy-600/10 text-navy-500 border-navy-600/20',
+    win:       'bg-[rgba(46,204,113,0.12)] text-[#2ECC71] border-[rgba(46,204,113,0.3)]',
+    loss:      'bg-[rgba(255,77,109,0.12)] text-[#FF4D6D] border-[rgba(255,77,109,0.3)]',
+    pending:   'bg-[rgba(212,175,55,0.12)] text-[#D4AF37] border-[rgba(212,175,55,0.3)]',
+    completed: 'bg-[rgba(46,204,113,0.12)] text-[#2ECC71] border-[rgba(46,204,113,0.3)]',
+    failed:    'bg-[rgba(255,77,109,0.12)] text-[#FF4D6D] border-[rgba(255,77,109,0.3)]',
+    cancelled: 'bg-[rgba(212,175,55,0.08)] text-[rgba(212,175,55,0.5)] border-[rgba(212,175,55,0.2)]',
   };
 
   return (
     <span className={cn(
-      'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border capitalize',
+      'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize',
       styles[status.toLowerCase()] || styles.pending
     )}>
       {status}
