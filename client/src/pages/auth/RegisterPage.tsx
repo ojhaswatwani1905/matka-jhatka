@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Phone, LockKeyhole, User, Eye, EyeOff, ArrowRight, Gift, Tag, Check, ShieldCheck } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { CountryCodeSelect, COUNTRIES, type CountryCode } from '../../components/auth/CountryCodeSelect';
@@ -22,6 +22,8 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/';
 
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRIES[0]);
   const [showPassword, setShowPassword] = useState(false);
@@ -77,7 +79,7 @@ export default function RegisterPage() {
         title: 'Account Created!',
         message: `Welcome to PlayArena, ${formData.name}! $10,000 Demo Bonus credited.`,
       });
-      navigate('/');
+      navigate(decodeURIComponent(returnTo));
     } catch {
       addToast({ type: 'error', title: 'Registration Failed', message: 'An account with this email already exists.' });
       setStep('form');
@@ -293,7 +295,7 @@ export default function RegisterPage() {
             <div className="pt-3 border-t border-white/10 text-center space-y-2">
               <p className="text-slate-400">
                 Already have an account?{' '}
-                <Link to="/auth/login" className="text-gold font-bold hover:underline">
+                <Link to={`/auth/login${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} className="text-gold font-bold hover:underline">
                   Sign In Here
                 </Link>
               </p>

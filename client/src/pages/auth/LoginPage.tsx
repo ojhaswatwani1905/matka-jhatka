@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Phone, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { CountryCodeSelect, COUNTRIES, type CountryCode } from '../../components/auth/CountryCodeSelect';
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/';
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRIES[0]);
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +35,7 @@ export default function LoginPage() {
       const fullIdentifier = loginMethod === 'phone' ? `${selectedCountry.dialCode}${data.identifier}` : data.identifier;
       await login(fullIdentifier, data.password);
       addToast({ type: 'success', title: 'Welcome Back!', message: 'Successfully signed in to PlayArena.' });
-      navigate('/');
+      navigate(decodeURIComponent(returnTo));
     } catch {
       setServerError('Invalid email/phone or password. Please try again.');
     } finally {
@@ -47,7 +49,7 @@ export default function LoginPage() {
     try {
       await login('demoplayer@playarena.com', 'password123');
       addToast({ type: 'success', title: 'Demo Logged In', message: 'Logged in as Demo Player with $10,000 balance.' });
-      navigate('/');
+      navigate(decodeURIComponent(returnTo));
     } catch {
       setServerError('Demo login failed.');
     } finally {
@@ -263,7 +265,7 @@ export default function LoginPage() {
         <div className="pt-3 mt-4 border-t border-[rgba(212,175,55,0.15)] space-y-2">
           <p className="text-center text-[rgba(212,175,55,0.65)] text-[11px]">
             Don't have an account yet?{' '}
-            <Link to="/auth/register" className="text-gold font-bold hover:text-[#F5D576] transition-colors">
+            <Link to={`/auth/register${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} className="text-gold font-bold hover:text-[#F5D576] transition-colors">
               Create Account
             </Link>
           </p>

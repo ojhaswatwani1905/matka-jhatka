@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LockKeyhole, ArrowRight, UserPlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from './Toast';
 
@@ -14,6 +14,8 @@ interface AuthGateModalProps {
 export function AuthGateModal({ isOpen, onClose, onSuccess }: AuthGateModalProps) {
   const { login } = useAuth();
   const { addToast } = useToast();
+  const location = useLocation();
+  const returnTo = encodeURIComponent(location.pathname + location.search);
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -163,11 +165,11 @@ export function AuthGateModal({ isOpen, onClose, onSuccess }: AuthGateModalProps
 
               <div className="mt-4 flex items-center justify-center gap-3">
                 <Link
-                  to="/auth/login"
+                  to={`/auth/login?returnTo=${returnTo}`}
                   onClick={onClose}
                   className="flex items-center gap-1.5 text-[11px] text-[rgba(212,175,55,0.5)] hover:text-gold transition-colors"
                 >
-                  <UserPlus className="w-3.5 h-3.5" /> Full registration page →
+                  <UserPlus className="w-3.5 h-3.5" /> Open full sign in page →
                 </Link>
               </div>
             </div>
