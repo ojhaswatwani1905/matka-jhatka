@@ -1,9 +1,7 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Gift, Trophy, Wallet, User } from 'lucide-react';
-import { useState } from 'react';
 import { useAuth } from '../../store/AuthContext';
-import { AuthGateModal } from '../ui/AuthGateModal';
 
 const PUBLIC_TABS = ['/', '/games'];
 
@@ -19,8 +17,6 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [authGateOpen, setAuthGateOpen] = useState(false);
-  const [pendingPath, setPendingPath] = useState('');
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -30,21 +26,12 @@ export default function BottomNav() {
   const handleTabClick = (e: React.MouseEvent, path: string) => {
     if (!isAuthenticated && !PUBLIC_TABS.includes(path)) {
       e.preventDefault();
-      setPendingPath(path);
-      setAuthGateOpen(true);
-    }
-  };
-
-  const handleAuthSuccess = () => {
-    setAuthGateOpen(false);
-    if (pendingPath) {
-      navigate(pendingPath);
-      setPendingPath('');
+      const returnTo = encodeURIComponent(path);
+      navigate(`/auth/register?returnTo=${returnTo}`);
     }
   };
 
   return (
-    <>
       <nav className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0d2419]/97 backdrop-blur-xl border-t border-[rgba(212,175,55,0.22)] shadow-[0_-4px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
           {tabs.map((tab) => {
@@ -83,11 +70,5 @@ export default function BottomNav() {
           })}
         </div>
       </nav>
-      <AuthGateModal
-        isOpen={authGateOpen}
-        onClose={() => setAuthGateOpen(false)}
-        onSuccess={handleAuthSuccess}
-      />
-    </>
   );
 }
