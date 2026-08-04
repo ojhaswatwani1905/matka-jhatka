@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import { generateId } from '../lib/utils';
 import type { Transaction, WalletState } from '../types';
 
@@ -7,6 +7,7 @@ type WalletAction =
   | { type: 'SET_BALANCE'; payload: number }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'SET_TRANSACTIONS'; payload: Transaction[] }
+  | { type: 'UPDATE_TRANSACTION'; payload: { id: string; updates: Partial<Transaction> } }
   | { type: 'SET_LOADING'; payload: boolean };
 
 const defaultDemoTxns: Transaction[] = [
@@ -34,6 +35,13 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
       };
     case 'SET_TRANSACTIONS':
       return { ...state, transactions: action.payload };
+    case 'UPDATE_TRANSACTION':
+      return {
+        ...state,
+        transactions: state.transactions.map(t =>
+          t.id === action.payload.id ? { ...t, ...action.payload.updates } : t
+        ),
+      };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     default:
@@ -44,7 +52,12 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 interface WalletContextType extends WalletState {
   addBalance: (amount: number, description?: string, type?: 'deposit' | 'win' | 'bonus') => void;
   deductBalance: (amount: number, description?: string) => boolean;
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => string;
+  deposit: (amount: number) => void;
+  withdraw: (amount: number) => string | null;
+  approveWithdrawal: (txId: string) => void;
+  rejectWithdrawal: (txId: string) => void;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => void;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -57,6 +70,9 @@ export function useWallet() {
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(walletReducer, initialState);
+  // Use ref to avoid stale closure issues
+  const balanceRef = useRef(state.balance);
+  balanceRef.current = state.balance;
 
   // Load from localStorage
   useEffect(() => {
@@ -78,50 +94,95 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Persist to localStorage
+  // Persist to localStorage (also store in global transactions for admin)
   useEffect(() => {
     localStorage.setItem('wallet', JSON.stringify({
       balance: state.balance,
-      transactions: state.transactions.slice(0, 100),
+      transactions: state.transactions.slice(0, 200),
     }));
+    // Write transactions to global admin-readable store
+    localStorage.setItem('playarena_all_transactions', JSON.stringify(state.transactions.slice(0, 200)));
   }, [state.balance, state.transactions]);
 
-  const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+  const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'createdAt'>): string => {
     const transaction: Transaction = {
       ...tx,
       id: generateId(),
       createdAt: new Date().toISOString(),
     };
     dispatch({ type: 'ADD_TRANSACTION', payload: transaction });
+    return transaction.id;
+  }, []);
+
+  const updateTransaction = useCallback((id: string, updates: Partial<Transaction>) => {
+    dispatch({ type: 'UPDATE_TRANSACTION', payload: { id, updates } });
   }, []);
 
   const addBalance = useCallback((amount: number, description?: string, type: 'deposit' | 'win' | 'bonus' = 'deposit') => {
-    dispatch({ type: 'SET_BALANCE', payload: state.balance + amount });
+    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
     const isWin = description?.toLowerCase().includes('won') || description?.toLowerCase().includes('win');
     addTransaction({
       userId: 'demo',
       type: isWin ? 'win' : type,
       amount,
       status: 'completed',
-      description: description || `Added $${amount}`,
+      description: description || `Added ₹${amount}`,
     });
-  }, [state.balance, addTransaction]);
+  }, [addTransaction]);
 
   const deductBalance = useCallback((amount: number, description?: string): boolean => {
-    if (state.balance < amount) return false;
-    dispatch({ type: 'SET_BALANCE', payload: state.balance - amount });
+    if (balanceRef.current < amount) return false;
+    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current - amount });
     addTransaction({
       userId: 'demo',
       type: 'bet',
       amount,
       status: 'completed',
-      description: description || `Bet $${amount}`,
+      description: description || `Bet ₹${amount}`,
     });
     return true;
-  }, [state.balance, addTransaction]);
+  }, [addTransaction]);
+
+  const deposit = useCallback((amount: number) => {
+    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
+    addTransaction({
+      userId: 'demo',
+      type: 'deposit',
+      amount,
+      status: 'completed',
+      description: `Instant Deposit — ₹${amount}`,
+    });
+  }, [addTransaction]);
+
+  const withdraw = useCallback((amount: number): string | null => {
+    if (balanceRef.current < amount) return null;
+    // Deduct immediately and hold as pending
+    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current - amount });
+    const txId = addTransaction({
+      userId: 'demo',
+      type: 'withdrawal',
+      amount,
+      status: 'pending',
+      description: `Withdrawal Request — ₹${amount}`,
+    });
+    return txId;
+  }, [addTransaction]);
+
+  const approveWithdrawal = useCallback((txId: string) => {
+    dispatch({ type: 'UPDATE_TRANSACTION', payload: { id: txId, updates: { status: 'completed' } } });
+  }, []);
+
+  const rejectWithdrawal = useCallback((txId: string) => {
+    // Find tx and refund
+    const tx = state.transactions.find(t => t.id === txId);
+    if (tx && tx.status === 'pending') {
+      dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + tx.amount });
+      dispatch({ type: 'UPDATE_TRANSACTION', payload: { id: txId, updates: { status: 'failed', description: tx.description + ' (Rejected — Refunded)' } } });
+    }
+  }, [state.transactions]);
 
   return (
-    <WalletContext.Provider value={{ ...state, addBalance, deductBalance, addTransaction }}>
+    <WalletContext.Provider value={{ ...state, addBalance, deductBalance, addTransaction, deposit, withdraw, approveWithdrawal, rejectWithdrawal, updateTransaction }}>
       {children}
     </WalletContext.Provider>
   );

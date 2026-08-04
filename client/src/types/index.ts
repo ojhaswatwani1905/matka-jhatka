@@ -9,7 +9,9 @@ export interface User {
   phone?: string;
   avatar?: string;
   role: 'user' | 'admin';
+  isAdmin?: boolean;
   balance: number;
+  isActive?: boolean;
   createdAt: string;
 }
 
@@ -145,4 +147,35 @@ export interface RecentWinner {
   amount: number;
   game: string;
   timestamp: string;
+}
+
+// KYC
+export type KYCStatus = 'not_started' | 'pending' | 'verified' | 'rejected';
+
+export interface KYCData {
+  userId: string;
+  fullName: string;
+  dob: string;
+  idType: 'aadhaar' | 'pan' | 'passport' | 'voter_id';
+  idNumber: string;
+  frontDoc?: string;
+  backDoc?: string;
+  selfie?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface KYCState {
+  status: KYCStatus;
+  data: KYCData | null;
+}
+
+// Game Config (admin-controlled)
+export interface GameConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  odds: Record<string, number>;
+  timerDuration?: number; // seconds
 }

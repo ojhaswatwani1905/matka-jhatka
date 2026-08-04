@@ -7,6 +7,8 @@ import Button from '../../components/ui/Button';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import Modal from '../../components/ui/Modal';
 import { StatusBadge } from '../../components/shared/HistoryTable';
+import { AuthGateModal } from '../../components/ui/AuthGateModal';
+import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId, generatePeriod } from '../../lib/utils';
 
@@ -24,6 +26,7 @@ interface WinGoBet {
 
 export default function WinGoPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [period, setPeriod] = useState(generatePeriod());
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [betAmount, setBetAmount] = useState(100);
@@ -78,16 +81,17 @@ export default function WinGoPage() {
   useEffect(() => { callbackRef.current = handleRoundComplete; }, [handleRoundComplete]);
 
   const placeBet = () => {
-    if (selectedNumber === null || isLocked) return;
-    if (!deductBalance(betAmount, `WinGo - Number ${selectedNumber}`)) return;
-
-    setBets(prev => [{
-      id: generateId(),
-      period,
-      selection: selectedNumber,
-      amount: betAmount,
-    }, ...prev]);
-    setSelectedNumber(null);
+    requireAuth(() => {
+      if (selectedNumber === null || isLocked) return;
+      if (!deductBalance(betAmount, `WinGo - Number ${selectedNumber}`)) return;
+      setBets(prev => [{
+        id: generateId(),
+        period,
+        selection: selectedNumber,
+        amount: betAmount,
+      }, ...prev]);
+      setSelectedNumber(null);
+    });
   };
 
   const getNumberColor = (n: number) => {
@@ -221,6 +225,7 @@ export default function WinGoPage() {
           </div>
         )}
       </Modal>
+      <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );
 }

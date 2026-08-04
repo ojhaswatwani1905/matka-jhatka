@@ -1,6 +1,11 @@
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Gift, Trophy, Wallet, User } from 'lucide-react';
+import { useState } from 'react';
+import { useAuth } from '../../store/AuthContext';
+import { AuthGateModal } from '../ui/AuthGateModal';
+
+const PUBLIC_TABS = ['/', '/games'];
 
 const tabs = [
   { path: '/', icon: Home, label: 'Home' },
@@ -12,49 +17,77 @@ const tabs = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [pendingPath, setPendingPath] = useState('');
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0d2419]/97 backdrop-blur-xl border-t border-[rgba(212,175,55,0.22)] shadow-[0_-4px_30px_rgba(0,0,0,0.5)]">
-      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
-        {tabs.map((tab) => {
-          const active = isActive(tab.path);
-          const Icon = tab.icon;
+  const handleTabClick = (e: React.MouseEvent, path: string) => {
+    if (!isAuthenticated && !PUBLIC_TABS.includes(path)) {
+      e.preventDefault();
+      setPendingPath(path);
+      setAuthGateOpen(true);
+    }
+  };
 
-          return (
-            <Link
-              key={tab.path}
-              to={tab.path}
-              className="relative flex flex-col items-center justify-center min-h-[44px] min-w-[44px] flex-1 py-1 group cursor-pointer"
-            >
-              {active && (
-                <motion.div
-                  layoutId="bottomNavIndicator"
-                  className="absolute inset-x-2 inset-y-1 rounded-xl"
-                  style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.35)' }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-              <Icon
-                className={`w-5 h-5 relative z-10 transition-all duration-200 ${
-                  active ? 'text-gold scale-110' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
-                }`}
-              />
-              <span
-                className={`text-[10px] font-bold relative z-10 transition-colors duration-200 ${
-                  active ? 'text-gold' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
-                }`}
+  const handleAuthSuccess = () => {
+    setAuthGateOpen(false);
+    if (pendingPath) {
+      navigate(pendingPath);
+      setPendingPath('');
+    }
+  };
+
+  return (
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0d2419]/97 backdrop-blur-xl border-t border-[rgba(212,175,55,0.22)] shadow-[0_-4px_30px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
+          {tabs.map((tab) => {
+            const active = isActive(tab.path);
+            const Icon = tab.icon;
+
+            return (
+              <Link
+                key={tab.path}
+                to={tab.path}
+                onClick={(e) => handleTabClick(e, tab.path)}
+                className="relative flex flex-col items-center justify-center min-h-[44px] min-w-[44px] flex-1 py-1 group cursor-pointer"
               >
-                {tab.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+                {active && (
+                  <motion.div
+                    layoutId="bottomNavIndicator"
+                    className="absolute inset-x-2 inset-y-1 rounded-xl"
+                    style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.35)' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <Icon
+                  className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                    active ? 'text-gold scale-110' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] font-bold relative z-10 transition-colors duration-200 ${
+                    active ? 'text-gold' : 'text-[rgba(212,175,55,0.45)] group-hover:text-[#E8C97A]'
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+      <AuthGateModal
+        isOpen={authGateOpen}
+        onClose={() => setAuthGateOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+    </>
   );
 }

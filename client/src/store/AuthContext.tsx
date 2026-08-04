@@ -7,13 +7,28 @@ type AuthAction =
   | { type: 'LOGOUT' }
   | { type: 'UPDATE_USER'; payload: Partial<User> };
 
+// Demo admin user — can be set via localStorage flag
 const DEMO_USER: User = {
   id: 'usr_84920194',
   name: 'Demo Player',
   email: 'player@tirangagames.com',
   phone: '+91 98765 43210',
   role: 'user',
-  balance: 10000,
+  isAdmin: false,
+  isActive: true,
+  balance: 0, // balance is owned by WalletContext; keep 0 here to avoid confusion
+  createdAt: new Date().toISOString(),
+};
+
+const ADMIN_USER: User = {
+  id: 'usr_admin_001',
+  name: 'Admin',
+  email: 'admin@playarena.com',
+  phone: '+91 99999 00000',
+  role: 'admin',
+  isAdmin: true,
+  isActive: true,
+  balance: 0,
   createdAt: new Date().toISOString(),
 };
 
@@ -66,13 +81,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email?: string) => {
+  const login = useCallback(async (email?: string, password?: string) => {
+    // Admin login shortcut
+    if (email === 'admin@playarena.com' && password === 'admin123') {
+      localStorage.setItem('playarena_user', JSON.stringify(ADMIN_USER));
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user: ADMIN_USER, token: 'admin-token-abc' } });
+      return;
+    }
+
     const userToLogin: User = {
       ...DEMO_USER,
       name: email?.split('@')[0] || 'Demo Player',
       email: email || DEMO_USER.email,
     };
     localStorage.setItem('playarena_user', JSON.stringify(userToLogin));
+
+    // Register user in multi-user store
+    const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+    if (!users.find(u => u.email === userToLogin.email)) {
+      localStorage.setItem('playarena_users', JSON.stringify([...users, userToLogin]));
+    }
+
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userToLogin, token: 'demo-token-123' } });
   }, []);
 
@@ -83,8 +112,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: data.name || 'New Player',
       email: data.email || DEMO_USER.email,
       phone: data.phone || DEMO_USER.phone,
+      createdAt: new Date().toISOString(),
     };
     localStorage.setItem('playarena_user', JSON.stringify(newUser));
+
+    // Register user in multi-user store
+    const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+    if (!users.find(u => u.email === newUser.email)) {
+      localStorage.setItem('playarena_users', JSON.stringify([...users, newUser]));
+    }
+
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user: newUser, token: 'demo-token-123' } });
   }, []);
 
@@ -96,7 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = useCallback((data: Partial<User>) => {
     dispatch({ type: 'UPDATE_USER', payload: data });
     if (state.user) {
-      localStorage.setItem('playarena_user', JSON.stringify({ ...state.user, ...data }));
+      const updated = { ...state.user, ...data };
+      localStorage.setItem('playarena_user', JSON.stringify(updated));
+      // Sync to multi-user store
+      const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+      const idx = users.findIndex(u => u.id === updated.id);
+      if (idx >= 0) users[idx] = updated;
+      localStorage.setItem('playarena_users', JSON.stringify(users));
     }
   }, [state.user]);
 

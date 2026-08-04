@@ -104,8 +104,7 @@ export default function BannerSlider() {
             <img
               src="/royal-queen-hero.png"
               alt="Royal Queen"
-              className="h-full w-full object-cover object-top opacity-90"
-              style={{ objectPosition: 'center top' }}
+              className="sm:h-full sm:w-full sm:object-cover sm:object-top h-[85%] w-auto object-contain object-bottom opacity-90 max-h-full"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#0B2318]/90 via-transparent to-transparent" />
           </div>

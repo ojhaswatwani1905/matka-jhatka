@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Dice1, Clock, LockKeyhole, Unlock, Volume2, VolumeX, ShieldCheck, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
+import { AuthGateModal } from '../../components/ui/AuthGateModal';
+import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
@@ -31,6 +33,7 @@ const markets: Market[] = [
 export default function MatkaPage() {
   const { balance, deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
+  const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(markets[0]);
   const [marketType, setMarketType] = useState<MarketType>('single');
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
@@ -43,25 +46,26 @@ export default function MatkaPage() {
   const currentMultiplier = marketType === 'single' ? 9 : marketType === 'jodi' ? 90 : 900;
 
   const handleNumberSelect = (num: number) => {
-    if (soundEnabled) sounds.playChip();
-
-    if (marketType === 'single') {
-      if (selectedNumbers.includes(num)) {
-        setSelectedNumbers([]);
-      } else {
-        setSelectedNumbers([num]);
-      }
-    } else {
-      if (selectedNumbers.includes(num)) {
-        setSelectedNumbers(selectedNumbers.filter(n => n !== num));
-      } else {
-        if (selectedNumbers.length < requiredCount) {
-          setSelectedNumbers([...selectedNumbers, num]);
+    requireAuth(() => {
+      if (soundEnabled) sounds.playChip();
+      if (marketType === 'single') {
+        if (selectedNumbers.includes(num)) {
+          setSelectedNumbers([]);
         } else {
           setSelectedNumbers([num]);
         }
+      } else {
+        if (selectedNumbers.includes(num)) {
+          setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+        } else {
+          if (selectedNumbers.length < requiredCount) {
+            setSelectedNumbers([...selectedNumbers, num]);
+          } else {
+            setSelectedNumbers([num]);
+          }
+        }
       }
-    }
+    });
   };
 
   const placeBet = () => {
@@ -347,6 +351,7 @@ export default function MatkaPage() {
       )}
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
+      <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );
 }

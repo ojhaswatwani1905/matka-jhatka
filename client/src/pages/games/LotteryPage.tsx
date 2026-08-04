@@ -4,6 +4,8 @@ import { Ticket, Clock, Trophy, Sparkles } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
+import { AuthGateModal } from '../../components/ui/AuthGateModal';
+import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId } from '../../lib/utils';
 import confetti from 'canvas-confetti';
@@ -24,6 +26,7 @@ interface LotteryTicket {
 
 export default function LotteryPage() {
   const { deductBalance, addBalance } = useWallet();
+  const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [tickets, setTickets] = useState<LotteryTicket[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -31,34 +34,39 @@ export default function LotteryPage() {
   const [, setShowDraw] = useState(false);
 
   const toggleNumber = (num: number) => {
-    setSelectedNumbers(prev =>
-      prev.includes(num)
-        ? prev.filter(n => n !== num)
-        : prev.length < MAX_NUMBERS
-        ? [...prev, num]
-        : prev
-    );
+    requireAuth(() => {
+      setSelectedNumbers(prev =>
+        prev.includes(num)
+          ? prev.filter(n => n !== num)
+          : prev.length < MAX_NUMBERS
+          ? [...prev, num]
+          : prev
+      );
+    });
   };
 
   const quickPick = () => {
-    const nums: number[] = [];
-    while (nums.length < MAX_NUMBERS) {
-      const n = getRandomNumber(1, NUMBER_RANGE);
-      if (!nums.includes(n)) nums.push(n);
-    }
-    setSelectedNumbers(nums.sort((a, b) => a - b));
+    requireAuth(() => {
+      const nums: number[] = [];
+      while (nums.length < MAX_NUMBERS) {
+        const n = getRandomNumber(1, NUMBER_RANGE);
+        if (!nums.includes(n)) nums.push(n);
+      }
+      setSelectedNumbers(nums.sort((a, b) => a - b));
+    });
   };
 
   const buyTicket = () => {
-    if (selectedNumbers.length !== MAX_NUMBERS) return;
-    if (!deductBalance(TICKET_PRICE, 'Lottery ticket')) return;
-
-    setTickets(prev => [{
-      id: generateId(),
-      numbers: [...selectedNumbers].sort((a, b) => a - b),
-      timestamp: new Date().toISOString(),
-    }, ...prev]);
-    setSelectedNumbers([]);
+    requireAuth(() => {
+      if (selectedNumbers.length !== MAX_NUMBERS) return;
+      if (!deductBalance(TICKET_PRICE, 'Lottery ticket')) return;
+      setTickets(prev => [{
+        id: generateId(),
+        numbers: [...selectedNumbers].sort((a, b) => a - b),
+        timestamp: new Date().toISOString(),
+      }, ...prev]);
+      setSelectedNumbers([]);
+    });
   };
 
   const drawLottery = () => {
@@ -252,6 +260,7 @@ export default function LotteryPage() {
           ))}
         </div>
       )}
+      <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );
 }

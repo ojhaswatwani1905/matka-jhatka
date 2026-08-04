@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './store/AuthContext';
 import { WalletProvider } from './store/WalletContext';
+import { KYCProvider } from './store/KYCContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -26,8 +27,13 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminKYCPage from './pages/admin/AdminKYCPage';
+import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
+import AdminGamesPage from './pages/admin/AdminGamesPage';
 import VIPPage from './pages/vip/VIPPage';
 import ReferralPage from './pages/referral/ReferralPage';
+import KYCPage from './pages/kyc/KYCPage';
 
 // Premium glowing loading fallback
 function PageLoader() {
@@ -48,47 +54,57 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <WalletProvider>
-            <ToastProvider>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  {/* Auth routes (no layout) */}
-                  <Route path="/auth/login" element={<LoginPage />} />
-                  <Route path="/auth/register" element={<RegisterPage />} />
-                  <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <KYCProvider>
+              <ToastProvider>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    {/* Auth routes (no layout) */}
+                    <Route path="/auth/login" element={<LoginPage />} />
+                    <Route path="/auth/register" element={<RegisterPage />} />
+                    <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-                  {/* Admin routes */}
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboard />} />
-                  </Route>
+                    {/* Admin routes (isAdmin guard inside AdminLayout) */}
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="users" element={<AdminUsersPage />} />
+                      <Route path="kyc" element={<AdminKYCPage />} />
+                      <Route path="transactions" element={<AdminTransactionsPage />} />
+                      <Route path="games" element={<AdminGamesPage />} />
+                    </Route>
 
-                  {/* Main app routes */}
-                  <Route element={<AppLayout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/games" element={<GamesPage />} />
-                    <Route path="/support" element={<SupportPage />} />
+                    {/* Main app routes */}
+                    <Route element={<AppLayout />}>
+                      {/* Public */}
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/games" element={<GamesPage />} />
+                      <Route path="/support" element={<SupportPage />} />
 
-                    {/* Protected Game & Account Routes */}
-                    <Route path="/games/color-prediction" element={<ProtectedRoute><ColorPredictionPage /></ProtectedRoute>} />
-                    <Route path="/games/matka" element={<ProtectedRoute><MatkaPage /></ProtectedRoute>} />
-                    <Route path="/games/wingo" element={<ProtectedRoute><WinGoPage /></ProtectedRoute>} />
-                    <Route path="/games/lottery" element={<ProtectedRoute><LotteryPage /></ProtectedRoute>} />
-                    <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
-                    <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                    <Route path="/vip" element={<ProtectedRoute><VIPPage /></ProtectedRoute>} />
-                    <Route path="/referral" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-                    <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-                  </Route>
+                      {/* Game pages — guest browsable, bet actions gated inside each page */}
+                      <Route path="/games/color-prediction" element={<ColorPredictionPage />} />
+                      <Route path="/games/matka" element={<MatkaPage />} />
+                      <Route path="/games/wingo" element={<WinGoPage />} />
+                      <Route path="/games/lottery" element={<LotteryPage />} />
 
-                  {/* Catch-all redirect to Home */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </ToastProvider>
+                      {/* Protected Account & Wallet Routes */}
+                      <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+                      <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/kyc" element={<ProtectedRoute><KYCPage /></ProtectedRoute>} />
+                      <Route path="/vip" element={<ProtectedRoute><VIPPage /></ProtectedRoute>} />
+                      <Route path="/referral" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                    </Route>
+
+                    {/* Catch-all redirect to Home */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </ToastProvider>
+            </KYCProvider>
           </WalletProvider>
         </AuthProvider>
       </ErrorBoundary>

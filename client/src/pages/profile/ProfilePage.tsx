@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Mail, Phone, Gift, Check, Wallet, Crown } from 'lucide-react';
+import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Mail, Phone, Gift, Check, Wallet, Crown, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
+import { useKYC } from '../../store/KYCContext';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import { formatCurrency } from '../../lib/utils';
 
 export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
   const { balance, addBalance } = useWallet();
+  const { status: kycStatus } = useKYC();
   const [activeSection, setActiveSection] = useState<'personal' | 'bank' | 'security' | 'notifications' | null>('personal');
   const [claimedToday, setClaimedToday] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -68,7 +71,7 @@ export default function ProfilePage() {
               <h2 className="text-xl font-black text-[#F5F1E6] font-heading truncate">
                 {user?.name || 'Demo Player'}
               </h2>
-              {/* VIP badge — crown icon + gold pill */}
+              {/* VIP badge */}
               <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase btn-royal-gold shadow">
                 <Crown className="w-3 h-3" /> Gold VIP
               </span>
@@ -77,6 +80,17 @@ export default function ProfilePage() {
             <p className="text-[10px] font-bold text-[rgba(212,175,55,0.6)] tracking-wider mt-1">
               UID: {user?.id || 'usr_84920194'}
             </p>
+            {/* KYC Badge */}
+            <Link to="/kyc" className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full border text-[10px] font-black cursor-pointer transition-all hover:opacity-80 "
+              style={{
+                color: kycStatus === 'verified' ? '#2ECC71' : kycStatus === 'pending' ? '#F59E0B' : kycStatus === 'rejected' ? '#FF4D6D' : 'rgba(212,175,55,0.5)',
+                background: kycStatus === 'verified' ? 'rgba(46,204,113,0.08)' : kycStatus === 'pending' ? 'rgba(245,158,11,0.08)' : kycStatus === 'rejected' ? 'rgba(255,77,109,0.08)' : 'rgba(212,175,55,0.06)',
+                borderColor: kycStatus === 'verified' ? 'rgba(46,204,113,0.3)' : kycStatus === 'pending' ? 'rgba(245,158,11,0.3)' : kycStatus === 'rejected' ? 'rgba(255,77,109,0.3)' : 'rgba(212,175,55,0.2)',
+              }}
+            >
+              <ShieldCheck className="w-3 h-3" />
+              {kycStatus === 'verified' ? 'KYC Verified' : kycStatus === 'pending' ? 'KYC Pending Review' : kycStatus === 'rejected' ? 'KYC Rejected — Resubmit' : 'KYC Not Started → Verify'}
+            </Link>
           </div>
         </div>
 

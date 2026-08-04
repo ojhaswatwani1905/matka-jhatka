@@ -5,6 +5,8 @@ import confetti from 'canvas-confetti';
 import Timer from '../../components/shared/Timer';
 import Modal from '../../components/ui/Modal';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
+import { AuthGateModal } from '../../components/ui/AuthGateModal';
+import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
@@ -36,6 +38,7 @@ const mockNames = ['User***920', 'User***184', 'User***592', 'User***301', 'User
 export default function ColorPredictionPage() {
   const { balance, deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
+  const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [period, setPeriod] = useState<string>('202607310001');
   const [commitHash, setCommitHash] = useState<string>('');
   const [remainingSec, setRemainingSec] = useState<number>(60);
@@ -130,14 +133,16 @@ export default function ColorPredictionPage() {
   }, []);
 
   const handleSelect = (type: 'color' | 'size' | 'number', value: string) => {
-    if (isLocked) {
-      addToast({ type: 'warning', title: 'Round Locked', message: 'Round is in resolution. Please wait for next round.' });
-      return;
-    }
-    if (soundEnabled) sounds.playChip();
-    setSelectedBetType(type);
-    setSelectedValue(value);
-    setShowBetPanel(true);
+    requireAuth(() => {
+      if (isLocked) {
+        addToast({ type: 'warning', title: 'Round Locked', message: 'Round is in resolution. Please wait for next round.' });
+        return;
+      }
+      if (soundEnabled) sounds.playChip();
+      setSelectedBetType(type);
+      setSelectedValue(value);
+      setShowBetPanel(true);
+    });
   };
 
   const placeBet = useCallback(async () => {
@@ -538,6 +543,7 @@ export default function ColorPredictionPage() {
       </Modal>
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
+      <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );
 }
