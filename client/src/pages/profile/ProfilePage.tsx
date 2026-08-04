@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Mail, Phone, Gift, Check, Wallet, Crown, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Mail, Phone, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
   const { balance, addBalance } = useWallet();
   const { status: kycStatus } = useKYC();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'personal' | 'bank' | 'security' | 'notifications' | null>('personal');
   const [claimedToday, setClaimedToday] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -221,9 +222,20 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* 5. Logout — muted red text link, no button styling */}
+      {/* Admin Panel — only visible to admin users */}
+      {user?.isAdmin && (
+        <Link
+          to="/admin"
+          className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-black cursor-pointer transition-all border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60"
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          Open Admin Panel
+        </Link>
+      )}
+
+      {/* Logout */}
       <button
-        onClick={logout}
+        onClick={() => { logout(); navigate('/'); }}
         className="w-full flex items-center justify-center gap-2 py-3 text-[#FF4D6D] text-xs font-bold hover:text-[#FF6B87] transition-colors cursor-pointer"
       >
         <LogOut className="w-4 h-4" /> Log Out Account
