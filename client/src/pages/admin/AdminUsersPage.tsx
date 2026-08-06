@@ -73,6 +73,34 @@ export default function AdminUsersPage() {
       return { ...u, balance: newBal };
     });
     saveUsers(updated);
+
+    // Audit log transaction
+    try {
+      const allTxns = JSON.parse(localStorage.getItem('playarena_all_transactions') || '[]');
+      const newTx = {
+        id: `tx_admin_adj_${Date.now()}`,
+        userId: showBalance.id,
+        type: adjType === 'add' ? 'bonus' : 'withdrawal',
+        amount: amt,
+        status: 'completed',
+        description: `Admin Adjustment (${adjType === 'add' ? '+' : '-'}₹${amt}): ${adjReason}`,
+        createdAt: new Date().toISOString(),
+      };
+      localStorage.setItem('playarena_all_transactions', JSON.stringify([newTx, ...allTxns]));
+
+      // If adjusting demo user balance, also sync local wallet store
+      const demoWallet = JSON.parse(localStorage.getItem('wallet') || '{}');
+      if (demoWallet && (showBalance.id === 'usr_84920194' || showBalance.email.includes('demo'))) {
+        const currentBal = demoWallet.balance ?? 10000;
+        const nextBal = adjType === 'add' ? currentBal + amt : Math.max(0, currentBal - amt);
+        localStorage.setItem('wallet', JSON.stringify({
+          ...demoWallet,
+          balance: nextBal,
+          transactions: [newTx, ...(demoWallet.transactions || [])],
+        }));
+      }
+    } catch { /* ignore */ }
+
     addToast({ type: 'success', title: 'Balance Adjusted', message: `${adjType === 'add' ? '+' : '-'}₹${amt} — ${adjReason}` });
     setShowBalance(null);
     setBalanceAdj('');

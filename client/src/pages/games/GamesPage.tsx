@@ -97,7 +97,7 @@ const COLOR_GAMES: Game[] = [
     name: 'Win Go 3Min',
     sub: 'Number & Color',
     img: '/games/wingo.png',
-    path: '/games/color-prediction',
+    path: '/games/wingo',
     badge: 'HOT',
     badgeColor: 'bg-rose-600',
     players: 1943,
@@ -177,10 +177,9 @@ const FISHING_GAMES: Game[] = [
     name: 'Ocean Hunter',
     sub: 'Arcade Fishing',
     img: '/games/fishing.png',
-    path: '#',
-    badge: 'SOON',
-    badgeColor: 'bg-purple-700',
-    locked: true,
+    path: '/games/ocean-hunter',
+    badge: '🐟 LIVE',
+    badgeColor: 'bg-emerald-600',
   },
 ];
 

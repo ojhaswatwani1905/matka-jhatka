@@ -49,9 +49,9 @@ interface LeaderboardEntry {
   isMe?: boolean;
 }
 
-function LeaderRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
+function LeaderRow({ entry, rank, tab }: { entry: LeaderboardEntry; rank: number; tab: 'week' | 'month' }) {
   const style = RANK_STYLES[rank];
-  const winAmt = entry.weekWin; // shown by parent based on tab
+  const winAmt = tab === 'week' ? entry.weekWin : entry.monthWin;
 
   return (
     <motion.div
@@ -209,7 +209,7 @@ export default function LeaderboardPage() {
       <div className="space-y-2">
         <p className="text-xs font-black text-[rgba(212,175,55,0.5)] uppercase tracking-wider">Full Rankings</p>
         {topList.map((entry, i) => (
-          <LeaderRow key={entry.id} entry={{ ...entry, weekWin: tab === 'week' ? entry.weekWin : entry.monthWin }} rank={i + 1} />
+          <LeaderRow key={entry.id} entry={entry} rank={i + 1} tab={tab} />
         ))}
       </div>
 

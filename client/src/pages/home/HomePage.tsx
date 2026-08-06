@@ -43,8 +43,8 @@ const TOP_GAMES: Game[] = [
   { id: 'color', name: 'Color Prediction', sub: 'Win Go 1Min / 3Min', img: '/games/color.png', path: '/games/color-prediction', badge: '⚡ Live', badgeColor: 'bg-emerald-600', players: 5284 },
   { id: 'wingo', name: 'Win Go', sub: 'Number Draw', img: '/games/wingo.png', path: '/games/color-prediction', badge: 'NEW', badgeColor: 'bg-blue-600', players: 3127 },
   { id: 'lottery', name: 'Lottery 5D', sub: '5D & K3 Style', img: '/games/lottery.png', path: '/games/lottery', badge: '💰 Jackpot', badgeColor: 'bg-amber-600', players: 2341 },
-  { id: 'aviator', name: 'Aviator', sub: 'Crash Multiplier', img: '/games/aviator.png', path: '#', badge: 'SOON', badgeColor: 'bg-purple-700', locked: true },
-  { id: 'fishing', name: 'Ocean Hunter', sub: 'Arcade Fishing', img: '/games/fishing.png', path: '#', badge: 'SOON', badgeColor: 'bg-purple-700', locked: true },
+  { id: 'aviator', name: 'Aviator', sub: 'Crash Multiplier', img: '/games/aviator.png', path: '/games/aviator', badge: '🚀 HOT', badgeColor: 'bg-rose-600', players: 6120 },
+  { id: 'fishing', name: 'Ocean Hunter', sub: 'Arcade Fishing', img: '/games/fishing.png', path: '/games/ocean-hunter', badge: '🐟 LIVE', badgeColor: 'bg-emerald-600' },
 ];
 
 function GamePhotoCard({ game }: { game: Game }) {

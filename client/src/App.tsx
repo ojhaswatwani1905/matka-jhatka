@@ -25,6 +25,7 @@ import AviatorPage from './pages/games/AviatorPage';
 import MinesPage from './pages/games/MinesPage';
 import PlinkoPage from './pages/games/PlinkoPage';
 import TeenPattiPage from './pages/games/TeenPattiPage';
+import OceanHunterPage from './pages/games/OceanHunterPage';
 import WalletPage from './pages/wallet/WalletPage';
 import HistoryPage from './pages/history/HistoryPage';
 import ProfilePage from './pages/profile/ProfilePage';
@@ -139,6 +140,7 @@ export default function App() {
                             <Route path="/games/mines" element={<MinesPage />} />
                             <Route path="/games/plinko" element={<PlinkoPage />} />
                             <Route path="/games/teen-patti" element={<TeenPattiPage />} />
+                            <Route path="/games/ocean-hunter" element={<OceanHunterPage />} />
 
                             {/* Protected routes */}
                             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
