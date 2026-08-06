@@ -310,10 +310,9 @@ export default function MinesPage() {
             return won ? payout - amount : -amount;
           }}
         />
+        {/* Per-game chat */}
+        <GameChat gameId="mines" />
       </div>
     </div>
-
-    {/* Per-game chat */}
-    <GameChat gameId="mines" />
   );
 }

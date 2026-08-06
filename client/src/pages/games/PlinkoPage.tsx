@@ -294,8 +294,8 @@ export default function PlinkoPage() {
           return payout - amount;
         }}
       />
-    </div>
 
-    <GameChat gameId="plinko" />
+      <GameChat gameId="plinko" />
+    </div>
   );
 }
