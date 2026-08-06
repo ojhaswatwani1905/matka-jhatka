@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Crown, Star, Zap, Shield, Gift, LockKeyhole, TrendingUp,
   ChevronRight, Sparkles, Flame, Trophy,
 } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
+import { useNotifications } from '../../store/NotificationContext';
 
 /* ── Tier data ──────────────────────────────────────────────── */
 const VIP_TIERS = [
@@ -77,9 +78,20 @@ function fmt(n: number) {
 }
 
 export default function VIPPage() {
-  useWallet();
+  const { transactions, addBalance } = useWallet();
+  const { addNotification } = useNotifications();
 
-  const totalWagered = 45200;
+  // Real wagered = sum of all bet transactions
+  const totalWagered = useMemo(() =>
+    transactions.filter(t => t.type === 'bet').reduce((s, t) => s + t.amount, 0)
+  , [transactions]);
+
+  // Cashback calc: 4% of net losses this week (scaled by tier)
+  const weekCutoff = Date.now() - 7 * 24 * 3600 * 1000;
+  const weeklyBets   = transactions.filter(t => t.type === 'bet'   && new Date(t.createdAt).getTime() >= weekCutoff).reduce((s, t) => s + t.amount, 0);
+  const weeklyWins   = transactions.filter(t => t.type === 'win'   && new Date(t.createdAt).getTime() >= weekCutoff).reduce((s, t) => s + t.amount, 0);
+  const weeklyLosses = Math.max(0, weeklyBets - weeklyWins);
+
   const currentTierIdx = VIP_TIERS.findIndex(t => totalWagered >= t.min && totalWagered < t.max);
   const safeIdx = Math.max(0, currentTierIdx);
   const currentTier = VIP_TIERS[safeIdx];
@@ -87,8 +99,19 @@ export default function VIPPage() {
   const progress = nextTier
     ? ((totalWagered - currentTier.min) / (nextTier.min - currentTier.min)) * 100
     : 100;
+  const cashbackPct = [4, 6, 8, 10, 15][safeIdx];
+  const estimatedCashback = Math.floor(weeklyLosses * cashbackPct / 100);
+
+  const CASHBACK_KEY = 'playarena_cashback_last';
+  const processCashback = () => {
+    if (estimatedCashback <= 0) return;
+    addBalance(estimatedCashback, `Weekly Cashback (${cashbackPct}%) — VIP ${currentTier.name}`, 'bonus');
+    addNotification({ type: 'bonus', title: '💰 Cashback Credited!', message: `₹${estimatedCashback} (${cashbackPct}% VIP cashback) added to your wallet.` });
+    localStorage.setItem(CASHBACK_KEY, Date.now().toString());
+  };
 
   const [expandedTier, setExpandedTier] = useState<string | null>(null);
+
 
   return (
     <div className="space-y-5 pb-10">
@@ -169,6 +192,35 @@ export default function VIPPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* ── Cashback Tracker ──────────────────────────────────── */}
+      <div className="royal-panel rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">💰</span>
+            <div>
+              <h3 className="text-sm font-black text-[#E8C97A]">Weekly Cashback Tracker</h3>
+              <p className="text-[10px] text-[rgba(212,175,55,0.45)]">{cashbackPct}% of net losses returned every week</p>
+            </div>
+          </div>
+          <button onClick={processCashback} disabled={estimatedCashback <= 0}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer transition-all ${estimatedCashback > 0 ? 'btn-royal-gold' : 'bg-[rgba(212,175,55,0.05)] border border-[rgba(212,175,55,0.12)] text-[rgba(212,175,55,0.3)]'}`}>
+            {estimatedCashback > 0 ? `Claim ₹${fmt(estimatedCashback)}` : 'No losses yet'}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            { label: 'Weekly Bets', value: `₹${fmt(weeklyBets)}` },
+            { label: 'Weekly Losses', value: `₹${fmt(weeklyLosses)}` },
+            { label: 'Cashback', value: `₹${fmt(estimatedCashback)}` },
+          ].map(s => (
+            <div key={s.label} className="p-2 rounded-xl bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.1)]">
+              <p className="text-xs font-black text-gold">{s.value}</p>
+              <p className="text-[9px] text-[rgba(212,175,55,0.4)] mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ── Tier ladder ───────────────────────────────────────── */}
       <div>

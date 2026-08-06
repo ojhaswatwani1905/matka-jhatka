@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Mail, Phone, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard, LockKeyhole, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../../components/ui/Button';
@@ -8,6 +8,9 @@ import Input from '../../components/ui/Input';
 import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { useKYC } from '../../store/KYCContext';
+import { useAchievements } from '../../store/AchievementContext';
+import { useNotifications } from '../../store/NotificationContext';
+import { SpinWheelModal } from '../../components/ui/SpinWheelModal';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import { formatCurrency } from '../../lib/utils';
 
@@ -15,10 +18,22 @@ export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
   const { balance, addBalance } = useWallet();
   const { status: kycStatus } = useKYC();
+  const { achievements } = useAchievements();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'personal' | 'bank' | 'security' | 'notifications' | null>('personal');
   const [claimedToday, setClaimedToday] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [showSpin, setShowSpin] = useState(false);
+
+  // Spin cooldown
+  const SPIN_KEY = `spin_last_${user?.id ?? 'guest'}`;
+  const lastSpin = localStorage.getItem(SPIN_KEY);
+  const canSpin = !lastSpin || (Date.now() - parseInt(lastSpin)) > 24 * 3600 * 1000;
+  const cooldownMs = lastSpin ? Math.max(0, parseInt(lastSpin) + 24 * 3600 * 1000 - Date.now()) : 0;
+  const cooldownH = Math.floor(cooldownMs / 3600000);
+  const cooldownM = Math.floor((cooldownMs % 3600000) / 60000);
+  const cooldownLeft = canSpin ? '' : `${cooldownH}h ${cooldownM}m`;
 
   const [name, setName] = useState(user?.name || 'Demo Player');
   const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
@@ -28,9 +43,18 @@ export default function ProfilePage() {
 
   const handleClaimBonus = () => {
     if (claimedToday) return;
-    addBalance(500, 'Daily Login Reward - ₹500');
+    addBalance(500, 'Daily Login Reward - ₹500', 'bonus');
+    addNotification({ type: 'bonus', title: 'Daily Login Reward', message: 'You claimed ₹500 free demo coins.' });
     setClaimedToday(true);
     confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors: ['#D4AF37', '#2ECC71', '#F5D576'] });
+  };
+
+  const handleSpinWin = (reward: number) => {
+    addBalance(reward, `Daily Spin Reward — ₹${reward}`, 'bonus');
+    localStorage.setItem(SPIN_KEY, Date.now().toString());
+    addNotification({ type: 'spin', title: '🎰 Spin Reward!', message: `You won ₹${reward} from the Daily Spin!` });
+    confetti({ particleCount: 150, spread: 80, origin: { y: 0.4 }, colors: ['#D4AF37', '#2ECC71', '#FF4D6D'] });
+    setTimeout(() => setShowSpin(false), 1500);
   };
 
   const handleSaveProfile = () => {
@@ -135,6 +159,29 @@ export default function ProfilePage() {
         </button>
       </div>
 
+      {/* Daily Spin Wheel */}
+      <div className="royal-panel p-4 rounded-2xl flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-[rgba(212,175,55,0.12)] border border-[rgba(212,175,55,0.3)] flex items-center justify-center flex-shrink-0 text-xl">
+            🎰
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-[#E8C97A] font-heading">Daily Spin Wheel</h3>
+            <p className="text-xs text-[rgba(212,175,55,0.5)]">
+              {canSpin ? 'Spin for free — win up to ₹5,000!' : `Available in ${cooldownLeft}`}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowSpin(true)}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex-shrink-0 cursor-pointer ${
+            canSpin ? 'btn-royal-gold' : 'bg-[rgba(212,175,55,0.06)] text-[rgba(212,175,55,0.4)] border border-[rgba(212,175,55,0.15)]'
+          }`}
+        >
+          {canSpin ? '🎰 Spin!' : `⏱ ${cooldownLeft}`}
+        </button>
+      </div>
+
       {/* 3. Stats Grid — pa-panel cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
@@ -222,6 +269,39 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* ── Achievements Grid ──────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-black text-[#E8C97A] flex items-center gap-2">
+          <span>🏆</span> Achievements
+        </h3>
+        <div className="grid grid-cols-2 gap-2.5">
+          {achievements.map(a => (
+            <div key={a.id}
+              className={`royal-panel rounded-xl p-3 flex items-start gap-2.5 transition-all ${a.unlocked ? 'border-[rgba(212,175,55,0.4)] shadow-[0_0_10px_rgba(212,175,55,0.1)]' : 'opacity-60'}`}>
+              <div className={`text-2xl flex-shrink-0 ${!a.unlocked ? 'grayscale' : ''}`}>
+                {a.unlocked ? a.icon : <LockKeyhole className="w-5 h-5 text-[rgba(212,175,55,0.3)] mt-0.5" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-black ${a.unlocked ? 'text-gold' : 'text-[rgba(212,175,55,0.5)]'}`}>{a.title}</p>
+                <p className="text-[9px] text-[rgba(212,175,55,0.35)] leading-tight mt-0.5">{a.description}</p>
+                {!a.unlocked && a.target > 1 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    <div className="flex justify-between text-[9px] text-[rgba(212,175,55,0.4)]">
+                      <span>{a.progress}/{a.target}</span>
+                      <span>{Math.round((a.progress / a.target) * 100)}%</span>
+                    </div>
+                    <div className="h-1 bg-[rgba(212,175,55,0.1)] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#D4AF37] rounded-full transition-all" style={{ width: `${Math.min(100, (a.progress / a.target) * 100)}%` }} />
+                    </div>
+                  </div>
+                )}
+                {a.unlocked && <p className="text-[9px] text-[#2ECC71] font-bold mt-0.5">✓ Unlocked · +₹{a.reward} bonus</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Admin Panel — only visible to admin users */}
       {user?.isAdmin && (
         <Link
@@ -240,6 +320,15 @@ export default function ProfilePage() {
       >
         <LogOut className="w-4 h-4" /> Log Out Account
       </button>
+
+      {/* Spin Wheel */}
+      <SpinWheelModal
+        isOpen={showSpin}
+        onClose={() => setShowSpin(false)}
+        onSpin={handleSpinWin}
+        canSpin={canSpin}
+        cooldownLeft={cooldownLeft}
+      />
     </div>
   );
 }

@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { Home, Gift, Trophy, Wallet, User } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
-const PUBLIC_TABS = ['/', '/games'];
+const PUBLIC_TABS = ['/', '/games', '/leaderboard'];
 
 const tabs = [
   { path: '/', icon: Home, label: 'Home' },
   { path: '/games', icon: Gift, label: 'Games' },
-  { path: '/history', icon: Trophy, label: 'History' },
+  { path: '/leaderboard', icon: Trophy, label: 'Ranks' },
   { path: '/wallet', icon: Wallet, label: 'Wallet' },
   { path: '/profile', icon: User, label: 'Account' },
 ];
