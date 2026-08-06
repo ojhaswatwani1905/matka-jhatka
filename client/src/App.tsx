@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useRef } from 'react';
+import { Suspense, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { WalletProvider } from './store/WalletContext';
@@ -6,6 +6,7 @@ import { KYCProvider } from './store/KYCContext';
 import { NotificationProvider } from './store/NotificationContext';
 import { AchievementProvider } from './store/AchievementContext';
 import { RGProvider } from './store/RGContext';
+import { LiveFeedProvider } from './store/LiveFeedContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -29,6 +30,7 @@ import SettingsPage from './pages/settings/SettingsPage';
 import SupportPage from './pages/support/SupportPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import LeaderboardPage from './pages/leaderboard/LeaderboardPage';
+import { LiveFeedPage } from './components/ui/GlobalLiveFeed';
 import ResponsibleGamingPage from './pages/responsible-gaming/ResponsibleGamingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -81,7 +83,8 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <WalletProvider>
-            <NotificationProvider>
+            <LiveFeedProvider>
+              <NotificationProvider>
               <AchievementProvider>
                 <KYCProvider>
                   <ToastProvider>
@@ -111,6 +114,7 @@ export default function App() {
                             <Route path="/" element={<HomePage />} />
                             <Route path="/games" element={<GamesPage />} />
                             <Route path="/support" element={<SupportPage />} />
+                            <Route path="/live" element={<LiveFeedPage />} />
                             <Route path="/leaderboard" element={<LeaderboardPage />} />
                             <Route path="/responsible-gaming" element={<ResponsibleGamingPage />} />
 
@@ -144,6 +148,7 @@ export default function App() {
                 </KYCProvider>
               </AchievementProvider>
             </NotificationProvider>
+            </LiveFeedProvider>
           </WalletProvider>
         </AuthProvider>
       </ErrorBoundary>

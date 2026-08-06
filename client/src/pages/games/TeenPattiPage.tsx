@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
+import { GameChat } from '../../components/ui/GameChat';
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generateTeenPattiSeed(): Promise<{ seed: string; hash: string }> {
@@ -361,6 +362,8 @@ export default function TeenPattiPage() {
           ))}
         </div>
       )}
+
+      <GameChat gameId="teen-patti" />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId, generatePeriod } from '../../lib/utils';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 const ROUND_DURATION = 45;
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -225,6 +227,25 @@ export default function WinGoPage() {
           </div>
         )}
       </Modal>
+
+      {/* Auto-Bet Panel */}
+      <AutoBetPanel
+        balance={balance}
+        disabled={isLocked}
+        intervalMs={5000}
+        onPlaceBet={async (amount) => {
+          if (!requireAuth()) return 0;
+          if (balance < amount) return 0;
+          deductBalance(amount, `Auto-Bet — WinGo`, 'bet');
+          const won = Math.random() > 0.5;
+          const mult = won ? 2.0 : 0;
+          const payout = won ? Math.round(amount * mult) : 0;
+          if (won) addBalance(payout, `Auto-Bet Win — WinGo ${mult}×`, 'win');
+          return won ? payout - amount : -amount;
+        }}
+      />
+
+      <GameChat gameId="wingo" />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );

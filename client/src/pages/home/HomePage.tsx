@@ -6,6 +6,7 @@ import BannerSlider from '../../components/shared/BannerSlider';
 import RecentWinners from '../../components/shared/RecentWinners';
 import WalletCard from '../../components/shared/WalletCard';
 import WelcomeBonusPopup from '../../components/ui/WelcomeBonusPopup';
+import { LiveFeedPanel } from '../../components/ui/GlobalLiveFeed';
 import { useAuth } from '../../store/AuthContext';
 
 const container = {
@@ -169,7 +170,12 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* 5. Trust Badges */}
+        {/* Live Bet Feed */}
+        <motion.div variants={item}>
+          <LiveFeedPanel />
+        </motion.div>
+
+        {/* Trust Badges */}
         {!isAuthenticated && (
           <motion.div variants={item} className="flex items-center justify-center gap-3 flex-wrap py-2">
             <span className="gold-badge"><span>🔒</span> SSL Encrypted</span>

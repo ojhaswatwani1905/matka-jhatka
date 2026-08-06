@@ -9,6 +9,8 @@ import { useAuthGate } from '../../hooks/useAuthGate';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId } from '../../lib/utils';
 import confetti from 'canvas-confetti';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 const TICKET_PRICE = 50;
 const JACKPOT = 500000;
@@ -260,6 +262,24 @@ export default function LotteryPage() {
           ))}
         </div>
       )}
+
+      {/* Auto-Bet Panel */}
+      <AutoBetPanel
+        balance={balance}
+        intervalMs={4000}
+        onPlaceBet={async (amount) => {
+          if (!requireAuth()) return 0;
+          if (balance < amount) return 0;
+          deductBalance(amount, `Auto-Bet — Lottery 5D`, 'bet');
+          const won = Math.random() > 0.7;
+          const mult = won ? 5.0 : 0;
+          const payout = won ? Math.round(amount * mult) : 0;
+          if (won) addBalance(payout, `Auto-Bet Win — Lottery 5D ${mult}×`, 'win');
+          return won ? payout - amount : -amount;
+        }}
+      />
+
+      <GameChat gameId="lottery" />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>
   );

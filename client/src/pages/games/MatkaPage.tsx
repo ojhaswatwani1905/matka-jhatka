@@ -9,6 +9,8 @@ import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
 import { getRandomNumber } from '../../lib/utils';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 type MarketType = 'single' | 'jodi' | 'patti';
 
@@ -350,6 +352,23 @@ export default function MatkaPage() {
         </div>
       )}
 
+      {/* Auto-Bet Panel */}
+      <AutoBetPanel
+        balance={balance}
+        intervalMs={5000}
+        onPlaceBet={async (amount) => {
+          if (!requireAuth()) return 0;
+          if (balance < amount) return 0;
+          deductBalance(amount, `Auto-Bet — Matka Jhatka`, 'bet');
+          const won = Math.random() > 0.65;
+          const mult = won ? 9.0 : 0;
+          const payout = won ? Math.round(amount * mult) : 0;
+          if (won) addBalance(payout, `Auto-Bet Win — Matka Jhatka ${mult}×`, 'win');
+          return won ? payout - amount : -amount;
+        }}
+      />
+
+      <GameChat gameId="matka" />
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
     </div>

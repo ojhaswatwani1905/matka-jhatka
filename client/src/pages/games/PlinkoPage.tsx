@@ -6,6 +6,8 @@ import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { sounds } from '../../lib/sound';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generatePlinkoSeed(): Promise<{ seed: string; hash: string }> {
@@ -276,6 +278,24 @@ export default function PlinkoPage() {
           </div>
         </div>
       )}
+
+      {/* Auto-Bet Panel */}
+      <AutoBetPanel
+        balance={balance}
+        intervalMs={3500}
+        onPlaceBet={async (amount) => {
+          if (!requireAuth()) return 0;
+          if (balance < amount) return 0;
+          deductBalance(amount, `Auto-Bet — Plinko`, 'bet');
+          const MULTS = [0.5, 0.5, 1, 1, 2, 2, 5, 16];
+          const mult = MULTS[Math.floor(Math.random() * MULTS.length)];
+          const payout = Math.round(amount * mult);
+          if (mult >= 1) addBalance(payout, `Auto-Bet Win — Plinko ${mult}×`, 'win');
+          return payout - amount;
+        }}
+      />
     </div>
+
+    <GameChat gameId="plinko" />
   );
 }

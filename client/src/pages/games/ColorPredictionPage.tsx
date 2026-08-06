@@ -11,6 +11,7 @@ import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
 import { generateId } from '../../lib/utils';
+import { GameChat } from '../../components/ui/GameChat';
 import type { ColorPredictionResult, ColorChoice } from '../../types';
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -544,6 +545,7 @@ export default function ColorPredictionPage() {
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
+      <GameChat gameId="color-prediction" />
     </div>
   );
 }

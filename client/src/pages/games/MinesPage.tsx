@@ -7,6 +7,8 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generateMineSeed(): Promise<{ seed: string; hash: string }> {
@@ -291,7 +293,27 @@ export default function MinesPage() {
             <span>Multiplier: <span className="font-black text-gold">{currentMultiplier.toFixed(2)}×</span></span>
           </div>
         )}
+
+        {/* Auto-Bet Panel */}
+        <AutoBetPanel
+          balance={balance}
+          disabled={gameState === 'playing'}
+          intervalMs={4000}
+          onPlaceBet={async (amount) => {
+            if (!requireAuth()) return 0;
+            if (balance < amount) return 0;
+            deductBalance(amount, `Auto-Bet — Mines`, 'bet');
+            const won = Math.random() > 0.45;
+            const mult = won ? parseFloat((1.3 + Math.random() * 4).toFixed(2)) : 0;
+            const payout = won ? Math.round(amount * mult) : 0;
+            if (won) addBalance(payout, `Auto-Bet Win — Mines ${mult}×`, 'win');
+            return won ? payout - amount : -amount;
+          }}
+        />
       </div>
     </div>
+
+    {/* Per-game chat */}
+    <GameChat gameId="mines" />
   );
 }

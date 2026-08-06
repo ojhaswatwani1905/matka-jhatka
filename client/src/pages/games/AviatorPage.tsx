@@ -7,6 +7,8 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { generateId, generatePeriod, getRandomNumber, formatCurrency } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
+import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
+import { GameChat } from '../../components/ui/GameChat';
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
 
@@ -414,6 +416,27 @@ export default function AviatorPage() {
           </div>
         )}
       </div>
+
+      {/* Auto-Bet Panel */}
+      <AutoBetPanel
+        balance={balance}
+        disabled={phase !== 'betting'}
+        intervalMs={6000}
+        onPlaceBet={async (amount) => {
+          if (!requireAuth()) return 0;
+          if (balance < amount) return 0;
+          deductBalance(amount, `Auto-Bet — Aviator`, 'bet');
+          // Simulate: 40% chance win at 1.5–3x
+          const won = Math.random() > 0.6;
+          const mult = won ? parseFloat((1.5 + Math.random() * 1.5).toFixed(2)) : 0;
+          const payout = won ? Math.round(amount * mult) : 0;
+          if (won) addBalance(payout, `Auto-Bet Win — Aviator ${mult}×`, 'win');
+          return won ? payout - amount : -amount;
+        }}
+      />
+
+      {/* Per-game chat */}
+      <GameChat gameId="aviator" />
     </div>
   );
 }
