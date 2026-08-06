@@ -96,7 +96,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
       ctx.strokeStyle = 'rgba(212,175,55,0.35)';
       ctx.lineWidth = 2.5;
       ctx.moveTo(0, H - 15);
-      ctx.lineTo(60, H - 15);
+      ctx.lineTo(80, H - 15);
       ctx.stroke();
       return;
     }
@@ -105,15 +105,16 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     if (startTimeRef.current === 0) startTimeRef.current = Date.now();
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
 
-    // Dynamic scale: stretch across full container width & height as multiplier climbs
-    const progressX = Math.min(1.0, elapsed / 4.5); // scales across width smoothly
-    const progressY = Math.min(1.0, (multiplier - 1.0) / 4.0); // scales height
+    // Aggressive scaling: curve rapidly expands across 85%-95% width and 40%-85% height even in early/mid rounds
+    const progressX = Math.min(0.92, 0.25 + (elapsed / 2.8) * 0.67);
+    const rawRatio = Math.max(0, (multiplier - 1.0) / 2.2);
+    const progressY = Math.min(0.85, Math.pow(rawRatio, 0.5) * 0.72 + 0.08);
 
-    const targetX = Math.max(80, progressX * (W - 20));
-    const targetY = Math.max(25, H - 15 - progressY * (H - 55));
+    const targetX = progressX * W;
+    const targetY = H - progressY * H;
 
     // Control point for smooth accelerating upward sweep curve
-    const controlX = targetX * 0.65;
+    const controlX = targetX * 0.62;
     const controlY = originY;
 
     // 1. Solid gradient wedge fill from curve down to bottom edge of chart
@@ -125,21 +126,21 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
 
     const fillGrad = ctx.createLinearGradient(0, targetY, 0, originY);
     if (crashed) {
-      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.75)');
-      fillGrad.addColorStop(0.6, 'rgba(255, 77, 109, 0.35)');
-      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.12)');
+      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.85)');
+      fillGrad.addColorStop(0.5, 'rgba(255, 77, 109, 0.45)');
+      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.15)');
     } else {
-      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.75)');
-      fillGrad.addColorStop(0.6, 'rgba(212, 175, 55, 0.35)');
-      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.12)');
+      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.85)');
+      fillGrad.addColorStop(0.5, 'rgba(212, 175, 55, 0.45)');
+      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.15)');
     }
     ctx.fillStyle = fillGrad;
     ctx.fill();
 
     // 2. Vertical drop line from plane tip straight to bottom edge
     ctx.beginPath();
-    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.7)' : 'rgba(212, 175, 55, 0.7)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.75)' : 'rgba(212, 175, 55, 0.75)';
+    ctx.lineWidth = 2.5;
     ctx.setLineDash([4, 3]);
     ctx.moveTo(targetX, targetY);
     ctx.lineTo(targetX, originY);
@@ -149,7 +150,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     // 3. Accelerating stroke curve line
     ctx.beginPath();
     ctx.strokeStyle = crashed ? '#FF4D6D' : '#FFE57F';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 4.5;
     ctx.lineCap = 'round';
     ctx.moveTo(originX, originY);
     ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
@@ -165,7 +166,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
       ctx.translate(targetX, targetY);
       ctx.rotate(angle);
       ctx.fillStyle = '#FFE57F';
-      ctx.font = 'bold 26px sans-serif';
+      ctx.font = 'bold 28px sans-serif';
       ctx.fillText('✈', -8, 8);
       ctx.restore();
     }
