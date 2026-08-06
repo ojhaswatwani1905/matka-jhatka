@@ -8,8 +8,11 @@ import Input from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useWallet } from '../../store/WalletContext';
 import { useKYC } from '../../store/KYCContext';
+import { useAuth } from '../../store/AuthContext';
+import { usePromo } from '../../store/PromoContext';
 import { useToast } from '../../components/ui/Toast';
 import { getTimeAgo } from '../../lib/utils';
+import { Tag, Sparkles } from 'lucide-react';
 
 const STATUS_BADGE: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-500/10 border border-amber-500/30',
@@ -18,7 +21,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function WalletPage() {
-  const { balance, transactions, deposit, withdraw } = useWallet();
+  const { balance, transactions, deposit, withdraw, addBalance } = useWallet();
+  const { user } = useAuth();
+  const { redeemCode } = usePromo();
   const { status: kycStatus } = useKYC();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'deposit' | 'withdrawal'>('all');
@@ -27,6 +32,7 @@ export default function WalletPage() {
   const [showKYCGate, setShowKYCGate] = useState(false);
   const [depositAmount, setDepositAmount] = useState('100');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [promoInput, setPromoInput] = useState('');
 
   const filtered = transactions.filter(t => {
     if (activeTab === 'deposit') return t.type === 'deposit' || t.type === 'bonus';
@@ -44,6 +50,18 @@ export default function WalletPage() {
     addToast({ type: 'success', title: 'Deposit Successful', message: `Added ₹${amt} to your balance.` });
     setShowDeposit(false);
     setDepositAmount('100');
+  };
+
+  const handleRedeemPromo = () => {
+    if (!promoInput.trim()) return;
+    const res = redeemCode(promoInput, user?.id || 'usr_demo', user?.name || 'Player');
+    if (res.success && res.amount) {
+      addBalance(res.amount, `Promo Code — ${promoInput.toUpperCase().trim()}`, 'bonus');
+      addToast({ type: 'success', title: 'Bonus Credited!', message: res.message });
+      setPromoInput('');
+    } else {
+      addToast({ type: 'error', title: 'Redemption Failed', message: res.message });
+    }
   };
 
   const handleWithdrawClick = () => {
@@ -212,6 +230,28 @@ export default function WalletPage() {
           >
             Confirm Deposit (₹{depositAmount})
           </button>
+
+          {/* Promo Code section in Deposit Modal */}
+          <div className="pt-2 border-t border-[rgba(212,175,55,0.15)] space-y-2">
+            <label className="block text-[rgba(212,175,55,0.7)] font-bold text-[10px] uppercase flex items-center gap-1">
+              <Tag className="w-3 h-3 text-gold" /> Have a Promo Code?
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoInput}
+                onChange={e => setPromoInput(e.target.value)}
+                placeholder="Enter code (e.g. WELCOME500)"
+                className="flex-1 bg-[#061510] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-2 text-xs font-mono uppercase text-gold focus:outline-none focus:border-gold"
+              />
+              <button
+                onClick={handleRedeemPromo}
+                className="px-3 py-2 rounded-xl bg-[rgba(212,175,55,0.15)] text-gold border border-[rgba(212,175,55,0.3)] font-black text-xs hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
         </div>
       </Modal>
 

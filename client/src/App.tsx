@@ -7,6 +7,7 @@ import { NotificationProvider } from './store/NotificationContext';
 import { AchievementProvider } from './store/AchievementContext';
 import { RGProvider } from './store/RGContext';
 import { LiveFeedProvider } from './store/LiveFeedContext';
+import { PromoProvider } from './store/PromoContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -41,6 +42,10 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminKYCPage from './pages/admin/AdminKYCPage';
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
 import AdminGamesPage from './pages/admin/AdminGamesPage';
+import AdminPromosPage from './pages/admin/AdminPromosPage';
+import AdminBroadcastsPage from './pages/admin/AdminBroadcastsPage';
+import AdminFraudPage from './pages/admin/AdminFraudPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
 import VIPPage from './pages/vip/VIPPage';
 import ReferralPage from './pages/referral/ReferralPage';
 import KYCPage from './pages/kyc/KYCPage';
@@ -85,10 +90,11 @@ export default function App() {
           <WalletProvider>
             <LiveFeedProvider>
               <NotificationProvider>
-              <AchievementProvider>
-                <KYCProvider>
-                  <ToastProvider>
-                    <AppWithRG>
+                <AchievementProvider>
+                  <PromoProvider>
+                    <KYCProvider>
+                      <ToastProvider>
+                        <AppWithRG>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           {/* Auth routes (no layout) */}
@@ -105,6 +111,10 @@ export default function App() {
                             <Route path="users" element={<AdminUsersPage />} />
                             <Route path="kyc" element={<AdminKYCPage />} />
                             <Route path="transactions" element={<AdminTransactionsPage />} />
+                            <Route path="promos" element={<AdminPromosPage />} />
+                            <Route path="broadcasts" element={<AdminBroadcastsPage />} />
+                            <Route path="fraud" element={<AdminFraudPage />} />
+                            <Route path="analytics" element={<AdminAnalyticsPage />} />
                             <Route path="games" element={<AdminGamesPage />} />
                           </Route>
 
@@ -146,8 +156,9 @@ export default function App() {
                     </AppWithRG>
                   </ToastProvider>
                 </KYCProvider>
-              </AchievementProvider>
-            </NotificationProvider>
+              </PromoProvider>
+            </AchievementProvider>
+          </NotificationProvider>
             </LiveFeedProvider>
           </WalletProvider>
         </AuthProvider>
