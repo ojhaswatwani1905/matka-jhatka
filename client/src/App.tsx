@@ -16,6 +16,10 @@ import ColorPredictionPage from './pages/games/ColorPredictionPage';
 import MatkaPage from './pages/games/MatkaPage';
 import WinGoPage from './pages/games/WinGoPage';
 import LotteryPage from './pages/games/LotteryPage';
+import AviatorPage from './pages/games/AviatorPage';
+import MinesPage from './pages/games/MinesPage';
+import PlinkoPage from './pages/games/PlinkoPage';
+import TeenPattiPage from './pages/games/TeenPattiPage';
 import WalletPage from './pages/wallet/WalletPage';
 import HistoryPage from './pages/history/HistoryPage';
 import ProfilePage from './pages/profile/ProfilePage';
@@ -87,6 +91,10 @@ export default function App() {
                       <Route path="/games/matka" element={<MatkaPage />} />
                       <Route path="/games/wingo" element={<WinGoPage />} />
                       <Route path="/games/lottery" element={<LotteryPage />} />
+                      <Route path="/games/aviator" element={<AviatorPage />} />
+                      <Route path="/games/mines" element={<MinesPage />} />
+                      <Route path="/games/plinko" element={<PlinkoPage />} />
+                      <Route path="/games/teen-patti" element={<TeenPattiPage />} />
 
                       {/* Protected Account & Wallet Routes */}
                       <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />

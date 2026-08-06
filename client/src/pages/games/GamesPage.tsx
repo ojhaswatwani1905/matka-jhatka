@@ -40,44 +40,44 @@ const TOP_GAMES: Game[] = [
     players: 5284,
   },
   {
-    id: 'wingo',
-    name: 'Win Go',
-    sub: 'Number Draw',
-    img: '/games/wingo.png',
-    path: '/games/color-prediction',
-    badge: 'NEW',
-    badgeColor: 'bg-blue-600',
-    players: 3127,
+    id: 'aviator',
+    name: 'Aviator',
+    sub: 'Crash Multiplier',
+    img: '/games/aviator.png',
+    path: '/games/aviator',
+    badge: '🚀 HOT',
+    badgeColor: 'bg-rose-600',
+    players: 6120,
   },
   {
-    id: 'lottery',
-    name: 'Lottery 5D',
-    sub: '5D & K3 Style',
-    img: '/games/lottery.png',
-    path: '/games/lottery',
-    badge: '💰 Jackpot',
+    id: 'mines',
+    name: 'Mines',
+    sub: 'Strategy · Dodge Bombs',
+    img: '/games/mines.png',
+    path: '/games/mines',
+    badge: '💣 NEW',
     badgeColor: 'bg-amber-600',
-    players: 2341,
+    players: 2890,
+  },
+  {
+    id: 'plinko',
+    name: 'Plinko Gold',
+    sub: 'Physics Drop',
+    img: '/games/plinko.png',
+    path: '/games/plinko',
+    badge: '🪙 NEW',
+    badgeColor: 'bg-blue-600',
+    players: 1740,
   },
   {
     id: 'teen_patti',
     name: 'Teen Patti',
     sub: 'Indian Card Game',
     img: '/games/teen_patti.png',
-    path: '#',
-    badge: 'SOON',
-    badgeColor: 'bg-purple-700',
-    locked: true,
-  },
-  {
-    id: 'aviator',
-    name: 'Aviator',
-    sub: 'Crash Multiplier',
-    img: '/games/aviator.png',
-    path: '#',
-    badge: 'SOON',
-    badgeColor: 'bg-purple-700',
-    locked: true,
+    path: '/games/teen-patti',
+    badge: '🃏 NEW',
+    badgeColor: 'bg-purple-600',
+    players: 3210,
   },
 ];
 
@@ -128,6 +128,49 @@ const MATKA_GAMES: Game[] = [
   },
 ];
 
+const CRASH_CARD_GAMES: Game[] = [
+  {
+    id: 'aviator2',
+    name: 'Aviator',
+    sub: 'Crash Multiplier',
+    img: '/games/aviator.png',
+    path: '/games/aviator',
+    badge: '🚀 HOT',
+    badgeColor: 'bg-rose-600',
+    players: 6120,
+  },
+  {
+    id: 'mines2',
+    name: 'Mines',
+    sub: 'Strategy · Dodge Bombs',
+    img: '/games/mines.png',
+    path: '/games/mines',
+    badge: '💣 NEW',
+    badgeColor: 'bg-amber-600',
+    players: 2890,
+  },
+  {
+    id: 'plinko2',
+    name: 'Plinko Gold',
+    sub: 'Physics Drop',
+    img: '/games/plinko.png',
+    path: '/games/plinko',
+    badge: '🪙 NEW',
+    badgeColor: 'bg-blue-600',
+    players: 1740,
+  },
+  {
+    id: 'teen2',
+    name: 'Teen Patti',
+    sub: 'Indian Card Game',
+    img: '/games/teen_patti.png',
+    path: '/games/teen-patti',
+    badge: '🃏 LIVE',
+    badgeColor: 'bg-purple-600',
+    players: 3210,
+  },
+];
+
 const FISHING_GAMES: Game[] = [
   {
     id: 'fishing',
@@ -141,12 +184,7 @@ const FISHING_GAMES: Game[] = [
   },
 ];
 
-const COMING_SOON: Game[] = [
-  { id: 'aviator2', name: 'Aviator', sub: 'Crash Game', img: '/games/aviator.png', path: '#', locked: true, badge: 'SOON', badgeColor: 'bg-purple-700' },
-  { id: 'mines', name: 'Mines', sub: 'Strategy', img: '/games/mines.png', path: '#', locked: true, badge: 'SOON', badgeColor: 'bg-purple-700' },
-  { id: 'plinko', name: 'Plinko Gold', sub: 'Physics', img: '/games/plinko.png', path: '#', locked: true, badge: 'SOON', badgeColor: 'bg-purple-700' },
-  { id: 'teen2', name: 'Teen Patti', sub: 'Card Game', img: '/games/teen_patti.png', path: '#', locked: true, badge: 'SOON', badgeColor: 'bg-purple-700' },
-];
+const COMING_SOON: Game[] = [];
 
 /* ─── Category tabs ─────────────────────────────────────────────── */
 const CATS = [
@@ -154,8 +192,8 @@ const CATS = [
   { id: 'top', label: '⚡ TOP' },
   { id: 'color', label: '🎨 Color' },
   { id: 'matka', label: '🎲 Matka' },
+  { id: 'crash', label: '🚀 Crash & Cards' },
   { id: 'fishing', label: '🌊 Fishing' },
-  { id: 'coming', label: '🔒 Coming Soon' },
 ];
 
 /* ─── Single Photo-Card ─────────────────────────────────────────── */
@@ -294,24 +332,24 @@ export default function GamesPage() {
         </motion.section>
       )}
 
-      {/* Fishing Section */}
-      {(showAll || active === 'fishing') && (
+      {/* Crash & Cards Section */}
+      {(showAll || active === 'crash') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
-          <SectionHeader emoji="🌊" title="Fishing Games" />
+          <SectionHeader emoji="🚀" title="Crash & Cards" />
           <div className="gold-divider mb-4" />
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {FISHING_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
+            {CRASH_CARD_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}
 
-      {/* Coming Soon Section */}
-      {(showAll || active === 'coming') && (
+      {/* Fishing Section */}
+      {(showAll || active === 'fishing') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}>
-          <SectionHeader emoji="🔒" title="Coming Soon" />
+          <SectionHeader emoji="🌊" title="Fishing Games" />
           <div className="gold-divider mb-4" />
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {COMING_SOON.map((g) => <GamePhotoCard key={g.id} game={g} />)}
+            {FISHING_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}
