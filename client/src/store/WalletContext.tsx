@@ -1,10 +1,21 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import { generateId } from '../lib/utils';
-import type { Transaction, WalletState } from '../types';
+import type { Transaction } from '../types';
+
+export interface ExtendedWalletState {
+  balance: number;
+  bonusBalance: number;
+  bonusWagerRequired: number;
+  bonusWagerProgress: number;
+  transactions: Transaction[];
+  isLoading: boolean;
+}
 
 type WalletAction =
   | { type: 'SET_BALANCE'; payload: number }
+  | { type: 'SET_BONUS_BALANCE'; payload: number }
+  | { type: 'SET_WAGER_REQUIREMENT'; payload: { required: number; progress: number } }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'SET_TRANSACTIONS'; payload: Transaction[] }
   | { type: 'UPDATE_TRANSACTION'; payload: { id: string; updates: Partial<Transaction> } }
@@ -18,16 +29,23 @@ const defaultDemoTxns: Transaction[] = [
   { id: 'tx-5', userId: 'demo', type: 'win', amount: 450, status: 'completed', description: 'Won Matka Jhatka Single #7 (9.0x)', createdAt: new Date(Date.now() - 1750000).toISOString() },
 ];
 
-const initialState: WalletState = {
+const initialState: ExtendedWalletState = {
   balance: 10000,
+  bonusBalance: 1500,
+  bonusWagerRequired: 5000,
+  bonusWagerProgress: 2340,
   transactions: defaultDemoTxns,
   isLoading: false,
 };
 
-function walletReducer(state: WalletState, action: WalletAction): WalletState {
+function walletReducer(state: ExtendedWalletState, action: WalletAction): ExtendedWalletState {
   switch (action.type) {
     case 'SET_BALANCE':
       return { ...state, balance: action.payload };
+    case 'SET_BONUS_BALANCE':
+      return { ...state, bonusBalance: action.payload };
+    case 'SET_WAGER_REQUIREMENT':
+      return { ...state, bonusWagerRequired: action.payload.required, bonusWagerProgress: action.payload.progress };
     case 'ADD_TRANSACTION':
       return {
         ...state,
@@ -49,12 +67,13 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
   }
 }
 
-interface WalletContextType extends WalletState {
+interface WalletContextType extends ExtendedWalletState {
   addBalance: (amount: number, description?: string, type?: 'deposit' | 'win' | 'bonus') => void;
+  addBonusBalance: (amount: number, description?: string) => void;
   deductBalance: (amount: number, description?: string) => boolean;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => string;
   deposit: (amount: number) => void;
-  withdraw: (amount: number) => string | null;
+  withdraw: (amount: number, selectedAccountId?: string) => string | null;
   approveWithdrawal: (txId: string) => void;
   rejectWithdrawal: (txId: string) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
@@ -70,9 +89,12 @@ export function useWallet() {
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(walletReducer, initialState);
-  // Use ref to avoid stale closure issues
   const balanceRef = useRef(state.balance);
   balanceRef.current = state.balance;
+  const bonusBalanceRef = useRef(state.bonusBalance);
+  bonusBalanceRef.current = state.bonusBalance;
+  const wagerReqRef = useRef({ req: state.bonusWagerRequired, prog: state.bonusWagerProgress });
+  wagerReqRef.current = { req: state.bonusWagerRequired, prog: state.bonusWagerProgress };
 
   // Load from localStorage
   useEffect(() => {
@@ -81,6 +103,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved);
         dispatch({ type: 'SET_BALANCE', payload: parsed.balance ?? 10000 });
+        dispatch({ type: 'SET_BONUS_BALANCE', payload: parsed.bonusBalance ?? 1500 });
+        dispatch({
+          type: 'SET_WAGER_REQUIREMENT',
+          payload: { required: parsed.bonusWagerRequired ?? 5000, progress: parsed.bonusWagerProgress ?? 2340 },
+        });
         if (parsed.transactions && parsed.transactions.length > 0) {
           dispatch({ type: 'SET_TRANSACTIONS', payload: parsed.transactions });
         } else {
@@ -94,15 +121,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Persist to localStorage (also store in global transactions for admin)
+  // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem('wallet', JSON.stringify({
-      balance: state.balance,
-      transactions: state.transactions.slice(0, 200),
-    }));
-    // Write transactions to global admin-readable store
+    localStorage.setItem(
+      'wallet',
+      JSON.stringify({
+        balance: state.balance,
+        bonusBalance: state.bonusBalance,
+        bonusWagerRequired: state.bonusWagerRequired,
+        bonusWagerProgress: state.bonusWagerProgress,
+        transactions: state.transactions.slice(0, 200),
+      })
+    );
     localStorage.setItem('playarena_all_transactions', JSON.stringify(state.transactions.slice(0, 200)));
-  }, [state.balance, state.transactions]);
+  }, [state.balance, state.bonusBalance, state.bonusWagerRequired, state.bonusWagerProgress, state.transactions]);
 
   const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'createdAt'>): string => {
     const transaction: Transaction = {
@@ -118,7 +150,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_TRANSACTION', payload: { id, updates } });
   }, []);
 
+  const addBonusBalance = useCallback((amount: number, description?: string) => {
+    const newBonus = bonusBalanceRef.current + amount;
+    const addedReq = amount * 5; // 5x wagering requirement
+    const newReq = wagerReqRef.current.req + addedReq;
+
+    dispatch({ type: 'SET_BONUS_BALANCE', payload: newBonus });
+    dispatch({ type: 'SET_WAGER_REQUIREMENT', payload: { required: newReq, progress: wagerReqRef.current.prog } });
+
+    addTransaction({
+      userId: 'demo',
+      type: 'bonus',
+      amount,
+      status: 'completed',
+      description: description || `Bonus Funds Added — ₹${amount} (5x Wagering Required)`,
+    });
+  }, [addTransaction]);
+
   const addBalance = useCallback((amount: number, description?: string, type: 'deposit' | 'win' | 'bonus' = 'deposit') => {
+    if (type === 'bonus') {
+      addBonusBalance(amount, description);
+      return;
+    }
     dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
     const isWin = description?.toLowerCase().includes('won') || description?.toLowerCase().includes('win');
     addTransaction({
@@ -128,11 +181,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       status: 'completed',
       description: description || `Added ₹${amount}`,
     });
-  }, [addTransaction]);
+  }, [addBonusBalance, addTransaction]);
 
   const deductBalance = useCallback((amount: number, description?: string): boolean => {
-    if (balanceRef.current < amount) return false;
-    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current - amount });
+    const mainBal = balanceRef.current;
+    const bonusBal = bonusBalanceRef.current;
+
+    if (mainBal + bonusBal < amount) return false;
+
+    // Deduct main balance first, remainder from bonus balance if needed
+    if (mainBal >= amount) {
+      dispatch({ type: 'SET_BALANCE', payload: mainBal - amount });
+    } else {
+      const mainUsed = mainBal;
+      const bonusUsed = amount - mainUsed;
+      dispatch({ type: 'SET_BALANCE', payload: 0 });
+      dispatch({ type: 'SET_BONUS_BALANCE', payload: bonusBal - bonusUsed });
+    }
+
+    // Track wagering progress
+    const newProg = wagerReqRef.current.prog + amount;
+    const req = wagerReqRef.current.req;
+
+    // Check if bonus wagering requirement is unlocked!
+    if (req > 0 && newProg >= req && bonusBalanceRef.current > 0) {
+      const unlockedBonus = bonusBalanceRef.current;
+      dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + unlockedBonus });
+      dispatch({ type: 'SET_BONUS_BALANCE', payload: 0 });
+      dispatch({ type: 'SET_WAGER_REQUIREMENT', payload: { required: 0, progress: 0 } });
+
+      addTransaction({
+        userId: 'demo',
+        type: 'bonus',
+        amount: unlockedBonus,
+        status: 'completed',
+        description: `🎁 Bonus Unlocked! ₹${unlockedBonus} converted to main withdrawable balance.`,
+      });
+    } else {
+      dispatch({ type: 'SET_WAGER_REQUIREMENT', payload: { required: req, progress: newProg } });
+    }
+
     addTransaction({
       userId: 'demo',
       type: 'bet',
@@ -140,6 +228,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       status: 'completed',
       description: description || `Bet ₹${amount}`,
     });
+
     return true;
   }, [addTransaction]);
 
@@ -154,16 +243,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [addTransaction]);
 
-  const withdraw = useCallback((amount: number): string | null => {
+  const withdraw = useCallback((amount: number, selectedAccountLabel?: string): string | null => {
     if (balanceRef.current < amount) return null;
-    // Deduct immediately and hold as pending
     dispatch({ type: 'SET_BALANCE', payload: balanceRef.current - amount });
+    const accText = selectedAccountLabel ? ` to ${selectedAccountLabel}` : '';
     const txId = addTransaction({
       userId: 'demo',
       type: 'withdrawal',
       amount,
       status: 'pending',
-      description: `Withdrawal Request — ₹${amount}`,
+      description: `Withdrawal Request — ₹${amount}${accText}`,
     });
     return txId;
   }, [addTransaction]);
@@ -173,7 +262,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const rejectWithdrawal = useCallback((txId: string) => {
-    // Find tx and refund
     const tx = state.transactions.find(t => t.id === txId);
     if (tx && tx.status === 'pending') {
       dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + tx.amount });
@@ -182,7 +270,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [state.transactions]);
 
   return (
-    <WalletContext.Provider value={{ ...state, addBalance, deductBalance, addTransaction, deposit, withdraw, approveWithdrawal, rejectWithdrawal, updateTransaction }}>
+    <WalletContext.Provider
+      value={{
+        ...state,
+        addBalance,
+        addBonusBalance,
+        deductBalance,
+        addTransaction,
+        deposit,
+        withdraw,
+        approveWithdrawal,
+        rejectWithdrawal,
+        updateTransaction,
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );

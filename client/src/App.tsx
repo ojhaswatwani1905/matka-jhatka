@@ -8,6 +8,7 @@ import { AchievementProvider } from './store/AchievementContext';
 import { RGProvider } from './store/RGContext';
 import { LiveFeedProvider } from './store/LiveFeedContext';
 import { PromoProvider } from './store/PromoContext';
+import { WithdrawalAccountsProvider } from './store/WithdrawalAccountsContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -92,9 +93,10 @@ export default function App() {
               <NotificationProvider>
                 <AchievementProvider>
                   <PromoProvider>
-                    <KYCProvider>
-                      <ToastProvider>
-                        <AppWithRG>
+                    <WithdrawalAccountsProvider>
+                      <KYCProvider>
+                        <ToastProvider>
+                          <AppWithRG>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           {/* Auth routes (no layout) */}
@@ -156,8 +158,9 @@ export default function App() {
                     </AppWithRG>
                   </ToastProvider>
                 </KYCProvider>
-              </PromoProvider>
-            </AchievementProvider>
+              </WithdrawalAccountsProvider>
+            </PromoProvider>
+          </AchievementProvider>
           </NotificationProvider>
             </LiveFeedProvider>
           </WalletProvider>

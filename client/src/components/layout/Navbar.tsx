@@ -17,8 +17,8 @@ const desktopNavItems = [
 ];
 
 export default function Navbar() {
-  const { balance } = useWallet();
   const { isAuthenticated } = useAuth();
+  const { balance, bonusBalance } = useWallet();
   const { unreadCount } = useNotifications();
   const location = useLocation();
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
@@ -83,26 +83,39 @@ export default function Navbar() {
 
           {/* Wallet Balance Chip — only when authenticated */}
           {isAuthenticated && (
-            <Link
-              to="/wallet"
-              className="flex items-center bg-[#0d2419] border border-[rgba(212,175,55,0.35)] rounded-xl px-3 py-1.5 hover:border-[rgba(212,175,55,0.65)] transition-all shadow-inner group"
-            >
-              <div className="w-6 h-6 rounded-lg bg-[rgba(212,175,55,0.15)] flex items-center justify-center mr-2">
-                <Wallet className="w-3.5 h-3.5 text-gold" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-[rgba(212,175,55,0.6)] uppercase leading-none">Balance</span>
-                <AnimatedCounter
-                  value={balance}
-                  prefix="₹"
-                  decimals={2}
-                  className="text-sm font-black text-gold font-heading leading-tight tabular-nums"
-                />
-              </div>
-              <div className="ml-2.5 w-5 h-5 rounded-md bg-[rgba(46,204,113,0.2)] text-[#2ECC71] flex items-center justify-center group-hover:bg-[#2ECC71] group-hover:text-[#062312] transition-colors">
-                <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              </div>
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to="/wallet"
+                className="flex items-center bg-[#0d2419] border border-[rgba(212,175,55,0.35)] rounded-xl px-3 py-1.5 hover:border-[rgba(212,175,55,0.65)] transition-all shadow-inner group"
+              >
+                <div className="w-6 h-6 rounded-lg bg-[rgba(212,175,55,0.15)] flex items-center justify-center mr-2">
+                  <Wallet className="w-3.5 h-3.5 text-gold" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-[rgba(212,175,55,0.6)] uppercase leading-none">Balance</span>
+                  <AnimatedCounter
+                    value={balance}
+                    prefix="₹"
+                    decimals={2}
+                    className="text-sm font-black text-gold font-heading leading-tight tabular-nums"
+                  />
+                </div>
+                <div className="ml-2.5 w-5 h-5 rounded-md bg-[rgba(46,204,113,0.2)] text-[#2ECC71] flex items-center justify-center group-hover:bg-[#2ECC71] group-hover:text-[#062312] transition-colors">
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+              </Link>
+
+              {bonusBalance > 0 && (
+                <Link
+                  to="/wallet"
+                  title="Bonus Balance (5x Wagering Unlocks Cash)"
+                  className="hidden sm:flex flex-col px-2.5 py-1 rounded-xl bg-[rgba(245,158,11,0.08)] border border-amber-500/35 hover:border-amber-400 transition-all text-right"
+                >
+                  <span className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Bonus</span>
+                  <span className="text-xs font-black text-amber-300 font-mono">₹{bonusBalance.toFixed(0)}</span>
+                </Link>
+              )}
+            </div>
           )}
 
           {/* Notifications */}

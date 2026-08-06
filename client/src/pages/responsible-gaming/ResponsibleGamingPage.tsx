@@ -45,27 +45,30 @@ function SectionCard({ icon, title, subtitle, children }: { icon: React.ReactNod
 }
 
 export default function ResponsibleGamingPage() {
-  const { settings, updateSettings, setExclusion, isExcluded } = useRG();
+  const { settings, updateSettings, updateDepositCaps, cancelPendingIncrease, setExclusion, isExcluded } = useRG();
   const { logout } = useAuth();
   const navigate = useNavigate();
 
   const [depositDay, setDepositDay] = useState(settings.depositCap.daily?.toString() ?? '');
   const [depositWeek, setDepositWeek] = useState(settings.depositCap.weekly?.toString() ?? '');
   const [depositMonth, setDepositMonth] = useState(settings.depositCap.month?.toString() ?? '');
-  const [saved, setSaved] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [confirmExclusion, setConfirmExclusion] = useState<ExclusionPeriod | null>(null);
   const [showExclusionWarning, setShowExclusionWarning] = useState(false);
 
   const saveDepositCaps = () => {
-    updateSettings({
-      depositCap: {
-        daily: depositDay ? parseInt(depositDay) : undefined,
-        weekly: depositWeek ? parseInt(depositWeek) : undefined,
-        monthly: depositMonth ? parseInt(depositMonth) : undefined,
-      },
+    const res = updateDepositCaps({
+      daily: depositDay ? parseInt(depositDay) : undefined,
+      weekly: depositWeek ? parseInt(depositWeek) : undefined,
+      monthly: depositMonth ? parseInt(depositMonth) : undefined,
     });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+
+    if (res.immediate) {
+      setSavedMessage('Deposit limits updated immediately!');
+    } else {
+      setSavedMessage(`Limit decrease saved immediately. Upward increase for (${res.pendingFields.join(', ')}) scheduled with 24h cooldown.`);
+    }
+    setTimeout(() => setSavedMessage(null), 4000);
   };
 
   const handleExclusion = (period: ExclusionPeriod) => {
@@ -149,24 +152,34 @@ export default function ResponsibleGamingPage() {
       {/* 3. Deposit Caps */}
       <SectionCard
         icon={<span className="text-xl">💰</span>}
-        title="Deposit Limits"
-        subtitle="Block deposits once your self-set cap is reached"
+        title="Self-Set Deposit Limits"
+        subtitle="Lowering limits applies immediately; raising limits requires a 24-hour cooling-off period"
       >
         <div className="space-y-2.5">
           {[
-            { label: 'Daily Limit (₹)', value: depositDay, set: setDepositDay, placeholder: 'e.g. 2000' },
-            { label: 'Weekly Limit (₹)', value: depositWeek, set: setDepositWeek, placeholder: 'e.g. 10000' },
-            { label: 'Monthly Limit (₹)', value: depositMonth, set: setDepositMonth, placeholder: 'e.g. 30000' },
-          ].map(f => (
-            <div key={f.label}>
-              <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">{f.label}</label>
-              <input type="number" min="0" value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} className={inputCls} />
-            </div>
-          ))}
+            { field: 'daily' as const, label: 'Daily Limit (₹)', value: depositDay, set: setDepositDay, placeholder: 'e.g. 2000' },
+            { field: 'weekly' as const, label: 'Weekly Limit (₹)', value: depositWeek, set: setDepositWeek, placeholder: 'e.g. 10000' },
+            { field: 'monthly' as const, label: 'Monthly Limit (₹)', value: depositMonth, set: setDepositMonth, placeholder: 'e.g. 30000' },
+          ].map(f => {
+            const pending = (settings.pendingIncreases || []).find(p => p.field === f.field);
+            return (
+              <div key={f.label} className="space-y-1">
+                <div className="flex justify-between">
+                  <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold">{f.label}</label>
+                  {pending && (
+                    <span className="text-[9px] text-amber-400 font-bold flex items-center gap-1">
+                      ⏱ 24h Cooldown Pending: ₹{pending.newVal.toLocaleString()} (Effective {new Date(pending.effectiveAt).toLocaleTimeString()})
+                    </span>
+                  )}
+                </div>
+                <input type="number" min="0" value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} className={inputCls} />
+              </div>
+            );
+          })}
         </div>
         <button onClick={saveDepositCaps}
-          className={`w-full py-2.5 rounded-xl font-black text-xs cursor-pointer transition-all ${saved ? 'bg-[rgba(46,204,113,0.15)] border border-[rgba(46,204,113,0.4)] text-[#2ECC71]' : 'btn-royal-gold'}`}>
-          {saved ? <><Check className="w-3.5 h-3.5 inline mr-1" />Limits Saved!</> : 'Save Deposit Limits'}
+          className={`w-full py-2.5 rounded-xl font-black text-xs cursor-pointer transition-all ${savedMessage ? 'bg-[rgba(46,204,113,0.15)] border border-[rgba(46,204,113,0.4)] text-[#2ECC71]' : 'btn-royal-gold'}`}>
+          {savedMessage ? <><Check className="w-3.5 h-3.5 inline mr-1" />{savedMessage}</> : 'Save Deposit Limits'}
         </button>
         {(settings.depositCap.daily || settings.depositCap.weekly || settings.depositCap.monthly) && (
           <div className="grid grid-cols-3 gap-2 text-center">

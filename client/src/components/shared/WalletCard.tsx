@@ -10,7 +10,7 @@ interface WalletCardProps {
 }
 
 export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
-  const { balance } = useWallet();
+  const { balance, bonusBalance, bonusWagerRequired, bonusWagerProgress } = useWallet();
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [glare, setGlare] = useState({ x: 50, y: 50 });
 
@@ -119,9 +119,38 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
               animate={{ opacity: [1, 0.25, 1] }}
               transition={{ duration: 1.3, repeat: Infinity }}
             />
-            <span className="text-[10px] text-[rgba(212,175,55,0.42)] font-bold">Available for live betting &amp; withdrawal</span>
+            <p className="text-[10px] font-bold text-[rgba(212,175,55,0.45)] uppercase tracking-wider">
+              Withdrawable Funds
+            </p>
           </div>
         </div>
+
+        {/* Bonus Wallet Pill & Wagering Requirement Progress */}
+        {bonusBalance > 0 && (
+          <div className="mt-4 p-3 rounded-2xl bg-[rgba(212,175,55,0.06)] border border-[rgba(212,175,55,0.2)] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" /> Bonus Balance
+              </span>
+              <span className="text-xs font-black text-amber-300 font-mono">₹{bonusBalance.toFixed(2)}</span>
+            </div>
+
+            {bonusWagerRequired > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[9px] text-[rgba(212,175,55,0.5)] font-bold">
+                  <span>5x Wagering Unlock Progress</span>
+                  <span>₹{bonusWagerProgress.toFixed(0)} / ₹{bonusWagerRequired.toFixed(0)}</span>
+                </div>
+                <div className="h-2 bg-[#061510] rounded-full overflow-hidden border border-[rgba(212,175,55,0.15)]">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#D4AF37] to-[#2ECC71] rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (bonusWagerProgress / bonusWagerRequired) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Divider */}
         <div className="h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.22)] to-transparent my-4" />

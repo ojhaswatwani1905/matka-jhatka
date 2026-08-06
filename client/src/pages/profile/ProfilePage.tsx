@@ -12,6 +12,7 @@ import { useAchievements } from '../../store/AchievementContext';
 import { useNotifications } from '../../store/NotificationContext';
 import { useRG } from '../../store/RGContext';
 import { SpinWheelModal } from '../../components/ui/SpinWheelModal';
+import { SavedAccountsManager } from '../../components/shared/SavedAccountsManager';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import { formatCurrency } from '../../lib/utils';
 
@@ -238,14 +239,7 @@ export default function ProfilePage() {
                     </>
                   )}
                   {item.key === 'bank' && (
-                    <>
-                      <Input label="Bank Name" value={bankName} onChange={e => setBankName(e.target.value)} />
-                      <Input label="Account Number" value={accNumber} onChange={e => setAccNumber(e.target.value)} />
-                      <Input label="IFSC Code" value={ifsc} onChange={e => setIfsc(e.target.value)} />
-                      <Button variant="primary" size="md" fullWidth onClick={() => { setSavedSuccess(true); setTimeout(() => setSavedSuccess(false), 2500); }}>
-                        {savedSuccess ? 'Bank Details Saved ✓' : 'Save Withdrawal Details'}
-                      </Button>
-                    </>
+                    <SavedAccountsManager />
                   )}
                   {item.key === 'security' && (
                     <>

@@ -10,9 +10,11 @@ import { useWallet } from '../../store/WalletContext';
 import { useKYC } from '../../store/KYCContext';
 import { useAuth } from '../../store/AuthContext';
 import { usePromo } from '../../store/PromoContext';
+import { useWithdrawalAccounts } from '../../store/WithdrawalAccountsContext';
+import { useRG } from '../../store/RGContext';
 import { useToast } from '../../components/ui/Toast';
 import { getTimeAgo } from '../../lib/utils';
-import { Tag, Sparkles } from 'lucide-react';
+import { Tag, Sparkles, Building, QrCode } from 'lucide-react';
 
 const STATUS_BADGE: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-500/10 border border-amber-500/30',
@@ -24,6 +26,8 @@ export default function WalletPage() {
   const { balance, transactions, deposit, withdraw, addBalance } = useWallet();
   const { user } = useAuth();
   const { redeemCode } = usePromo();
+  const { accounts, defaultAccount } = useWithdrawalAccounts();
+  const { checkDepositAllowed, settings: rgSettings } = useRG();
   const { status: kycStatus } = useKYC();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'deposit' | 'withdrawal'>('all');
@@ -32,6 +36,7 @@ export default function WalletPage() {
   const [showKYCGate, setShowKYCGate] = useState(false);
   const [depositAmount, setDepositAmount] = useState('100');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(defaultAccount?.id || '');
   const [promoInput, setPromoInput] = useState('');
 
   const filtered = transactions.filter(t => {
@@ -46,6 +51,22 @@ export default function WalletPage() {
       addToast({ type: 'warning', title: 'Minimum Deposit', message: 'Minimum deposit amount is ₹10.' });
       return;
     }
+
+    // Check Responsible Gaming Deposit Limits
+    const todayCutoff = new Date().setHours(0, 0, 0, 0);
+    const weekCutoff = Date.now() - 7 * 86400000;
+    const monthCutoff = Date.now() - 30 * 86400000;
+
+    const dayTotal = transactions.filter(t => t.type === 'deposit' && new Date(t.createdAt).getTime() >= todayCutoff).reduce((s, t) => s + t.amount, 0);
+    const weekTotal = transactions.filter(t => t.type === 'deposit' && new Date(t.createdAt).getTime() >= weekCutoff).reduce((s, t) => s + t.amount, 0);
+    const monthTotal = transactions.filter(t => t.type === 'deposit' && new Date(t.createdAt).getTime() >= monthCutoff).reduce((s, t) => s + t.amount, 0);
+
+    const check = checkDepositAllowed(amt, [dayTotal, weekTotal, monthTotal]);
+    if (!check.allowed) {
+      addToast({ type: 'error', title: 'Deposit Limit Blocked', message: check.reason || 'Self-set deposit limit reached.' });
+      return;
+    }
+
     deposit(amt);
     addToast({ type: 'success', title: 'Deposit Successful', message: `Added ₹${amt} to your balance.` });
     setShowDeposit(false);
@@ -73,6 +94,10 @@ export default function WalletPage() {
   };
 
   const handleWithdraw = () => {
+    if (accounts.length === 0) {
+      addToast({ type: 'warning', title: 'No Saved Account', message: 'Please add a saved withdrawal account on your Profile page.' });
+      return;
+    }
     const amt = parseFloat(withdrawAmount);
     if (isNaN(amt) || amt < 100) {
       addToast({ type: 'warning', title: 'Minimum Withdrawal', message: 'Minimum withdrawal is ₹100.' });
@@ -82,9 +107,11 @@ export default function WalletPage() {
       addToast({ type: 'error', title: 'Insufficient Balance', message: `Your balance is ₹${balance.toFixed(2)}.` });
       return;
     }
-    const txId = withdraw(amt);
+
+    const selectedAcc = accounts.find(a => a.id === selectedAccountId) || defaultAccount || accounts[0];
+    const txId = withdraw(amt, selectedAcc?.label);
     if (txId) {
-      addToast({ type: 'success', title: 'Withdrawal Requested', message: `₹${amt} withdrawal submitted. Pending admin approval.` });
+      addToast({ type: 'success', title: 'Withdrawal Requested', message: `₹${amt} withdrawal requested to ${selectedAcc?.label}. Pending approval.` });
       setShowWithdraw(false);
       setWithdrawAmount('');
     }
@@ -262,6 +289,31 @@ export default function WalletPage() {
             <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <p className="text-emerald-400 font-bold">KYC Verified — Withdrawals enabled</p>
           </div>
+
+          {/* Destination Saved Account Selector */}
+          <div>
+            <label className="block text-[rgba(212,175,55,0.7)] mb-1.5 font-bold uppercase text-[10px]">
+              Select Payout Account
+            </label>
+            {accounts.length === 0 ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                ⚠️ No saved withdrawal accounts found. <Link to="/profile" className="underline font-bold text-gold">Add an account on Profile page</Link> first.
+              </div>
+            ) : (
+              <select
+                value={selectedAccountId || defaultAccount?.id}
+                onChange={e => setSelectedAccountId(e.target.value)}
+                className="w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F1E6] focus:outline-none focus:border-[rgba(212,175,55,0.5)] cursor-pointer"
+              >
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.isDefault ? '⭐ [DEFAULT] ' : ''}{acc.label} ({acc.type === 'bank' ? `${acc.bankName} ${acc.accountNumber}` : acc.upiId})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div>
             <label className="block text-[rgba(212,175,55,0.7)] mb-1.5 font-bold">Amount to Withdraw (₹)</label>
             <input
@@ -273,9 +325,11 @@ export default function WalletPage() {
             />
             <p className="text-[10px] text-[rgba(212,175,55,0.4)] mt-1">Available: ₹{balance.toFixed(2)}</p>
           </div>
+
           <button
             onClick={handleWithdraw}
-            className="w-full py-3 rounded-xl font-black text-[#E8C97A] text-xs bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.25)] hover:bg-[rgba(212,175,55,0.15)] transition-all cursor-pointer"
+            disabled={accounts.length === 0}
+            className="w-full py-3 rounded-xl font-black text-[#E8C97A] text-xs bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.25)] hover:bg-[rgba(212,175,55,0.15)] transition-all cursor-pointer disabled:opacity-40"
           >
             Submit Withdrawal Request
           </button>
