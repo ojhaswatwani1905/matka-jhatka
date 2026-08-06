@@ -211,7 +211,7 @@ export default function TeenPattiPage() {
   };
 
   return (
-    <div className="px-3 py-4 space-y-4 max-w-lg mx-auto">
+    <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -227,14 +227,17 @@ export default function TeenPattiPage() {
         </div>
       </div>
 
-      {/* Commit hash */}
-      {commitHash && (
-        <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
-          Seed hash: {commitHash}
-        </div>
-      )}
+      {/* 2-Column Desktop Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Card Table & Controls */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {commitHash && (
+            <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
+              Seed hash: {commitHash}
+            </div>
+          )}
 
-      {/* Hand rankings reference */}
+          {/* Hand rankings reference */}
       <div className="royal-panel rounded-xl p-2.5">
         <p className="text-[9px] font-black text-[rgba(212,175,55,0.4)] uppercase tracking-wider mb-1.5">Hand Rankings (High → Low)</p>
         <div className="flex gap-1 flex-wrap">
@@ -361,9 +364,14 @@ export default function TeenPattiPage() {
             </span>
           ))}
         </div>
-      )}
+        </div>
 
-      <GameChat gameId="teen-patti" />
+        {/* Right Column: Game Chat */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <GameChat gameId="teen-patti" />
+        </div>
+      </div>
     </div>
   );
 }
+

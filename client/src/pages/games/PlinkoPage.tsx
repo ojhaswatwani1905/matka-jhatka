@@ -5,9 +5,20 @@ import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { generateId } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+
+/* ─── Risk Tables ───────────────────────────────────────────────── */
+const ROWS = 8;
+const MULTIPLIERS = {
+  low:    [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6],
+  medium: [13,  3.0, 1.3, 0.7, 0.4, 0.7, 1.3, 3.0, 13],
+  high:   [29,  4.0, 1.5, 0.3, 0.2, 0.3, 1.5, 4.0, 29],
+};
+
+const BET_AMOUNTS = [10, 50, 100, 500, 1000];
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generatePlinkoSeed(): Promise<{ seed: string; hash: string }> {
@@ -18,95 +29,92 @@ async function generatePlinkoSeed(): Promise<{ seed: string; hash: string }> {
   return { seed, hash };
 }
 
-// Seed determines path: 16 rows, each row = left or right
 function seedToPath(seed: string, rows: number): ('L' | 'R')[] {
   const path: ('L' | 'R')[] = [];
   for (let i = 0; i < rows; i++) {
-    const byteIdx = (i * 2) % seed.length;
-    const byte = parseInt(seed.slice(byteIdx, byteIdx + 2), 16);
+    const byte = parseInt(seed.slice((i * 2) % seed.length, (i * 2) % seed.length + 2), 16);
     path.push(byte % 2 === 0 ? 'L' : 'R');
   }
   return path;
 }
 
-// Path → slot index (0 = leftmost)
 function pathToSlot(path: ('L' | 'R')[]): number {
-  return path.filter(d => d === 'R').length;
+  return path.filter(dir => dir === 'R').length;
 }
 
-/* ─── Multiplier configs by risk ────────────────────────────────── */
-const ROWS = 16;
-
-const MULTIPLIERS: Record<string, number[]> = {
-  low:    [16, 9, 2, 1.4, 1.4, 1.2, 1.1, 1, 0.5, 1, 1.1, 1.2, 1.4, 1.4, 2, 9, 16],
-  medium: [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110],
-  high:   [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0.2, 0.2, 2, 4, 9, 26, 130, 1000],
-};
-
-const SLOT_COLORS: Record<string, string[]> = {
-  low:    ['#2ECC71','#3498db','#9b59b6','#e67e22','#e74c3c','#e67e22','#9b59b6','#3498db','#95a5a6','#3498db','#9b59b6','#e67e22','#e74c3c','#e67e22','#3498db','#2ECC71'],
-  medium: ['#2ECC71','#2ECC71','#e67e22','#e67e22','#9b59b6','#3498db','#95a5a6','#e74c3c','#e74c3c','#e74c3c','#3498db','#95a5a6','#9b59b6','#e67e22','#e67e22','#2ECC71','#2ECC71'],
-  high:   ['#2ECC71','#2ECC71','#e67e22','#e67e22','#9b59b6','#e74c3c','#e74c3c','#e74c3c','#e74c3c','#e74c3c','#9b59b6','#e67e22','#e67e22','#2ECC71','#2ECC71','#2ECC71'],
-};
-
-const BET_AMOUNTS = [10, 50, 100, 500, 1000];
-
-/* ─── Peg Board Visual ──────────────────────────────────────────── */
+/* ─── SVG Peg Board ─────────────────────────────────────────────── */
 function PegBoard({ path, isDropping, landedSlot }: { path: ('L' | 'R')[]; isDropping: boolean; landedSlot: number | null }) {
-  const rows = ROWS;
-  const W = 320, H = 280;
-  const pegR = 4;
-  const slotW = W / (rows + 1);
-  const rowH = (H - 40) / (rows + 1);
+  const W = 360, H = 220;
+  const topY = 20, rowH = (H - 40) / (ROWS + 1);
+
+  // Compute ball coordinates at each step
+  const ballPositions: { x: number; y: number }[] = [];
+  let col = 0;
+  ballPositions.push({ x: W / 2, y: topY });
+  path.forEach((dir, i) => {
+    if (dir === 'R') col++;
+    const r = i + 1;
+    const count = r + 1;
+    const startX = W / 2 - (count - 1) * 16;
+    ballPositions.push({ x: startX + col * 32, y: topY + r * rowH });
+  });
+
+  const lastPos = ballPositions[ballPositions.length - 1] ?? { x: W / 2, y: topY };
 
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mx-auto">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[220px]">
       {/* Pegs */}
-      {Array.from({ length: rows }, (_, row) =>
-        Array.from({ length: row + 1 }, (_, col) => {
-          const x = W / 2 - (row * slotW) / 2 + col * slotW;
-          const y = 20 + (row + 1) * rowH;
-          return (
-            <motion.circle key={`${row}-${col}`} cx={x} cy={y} r={pegR}
-              fill="rgba(212,175,55,0.5)" stroke="rgba(212,175,55,0.8)" strokeWidth={1} />
-          );
-        })
+      {Array.from({ length: ROWS + 1 }, (_, r) => {
+        const count = r + 1;
+        const startX = W / 2 - (count - 1) * 16;
+        const y = topY + r * rowH;
+        return Array.from({ length: count }, (_, c) => (
+          <circle
+            key={`${r}-${c}`}
+            cx={startX + c * 32}
+            cy={y}
+            r={r === 0 ? 4 : 3}
+            fill={r === 0 ? '#D4AF37' : 'rgba(212,175,55,0.4)'}
+          />
+        ));
+      })}
+
+      {/* Ball path trail */}
+      {isDropping && ballPositions.length > 1 && (
+        <polyline
+          points={ballPositions.map(p => `${p.x},${p.y}`).join(' ')}
+          fill="none"
+          stroke="rgba(212,175,55,0.3)"
+          strokeWidth="2"
+          strokeDasharray="4 2"
+        />
       )}
 
-      {/* Ball */}
-      {isDropping && path.length > 0 && (() => {
-        // Calculate ball position based on path steps
-        const step = Math.min(path.length, rows);
-        const leftCount = path.slice(0, step).filter(d => d === 'L').length;
-        const rightCount = step - leftCount;
-        const col = rightCount;
-        const x = W / 2 - ((step) * slotW) / 2 + col * slotW;
-        const y = 20 + (step + 1) * rowH;
-        return (
-          <motion.circle
-            cx={x} cy={y} r={7}
-            fill="#D4AF37"
-            style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.9))' }}
-            animate={{ cx: x, cy: y }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-          />
-        );
-      })()}
+      {/* Falling Ball */}
+      {isDropping && (
+        <motion.circle
+          cx={lastPos.x}
+          cy={lastPos.y}
+          r={7}
+          fill="#FFE57F"
+          stroke="#D4AF37"
+          strokeWidth="2"
+          style={{ filter: 'drop-shadow(0 0 8px rgba(212,175,55,0.9))' }}
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ repeat: Infinity, duration: 0.2 }}
+        />
+      )}
 
-      {/* Slots */}
-      {Array.from({ length: rows + 1 }, (_, i) => {
-        const x = W / 2 - (rows * slotW) / 2 + i * slotW;
-        const isLanded = landedSlot === i;
-        return (
-          <motion.rect
-            key={i} x={x - slotW * 0.38} y={H - 32} width={slotW * 0.76} height={24}
-            rx={4} fill={isLanded ? '#D4AF37' : 'rgba(212,175,55,0.15)'}
-            stroke={isLanded ? '#D4AF37' : 'rgba(212,175,55,0.3)'} strokeWidth={1}
-            animate={isLanded ? { scale: [1, 1.15, 1] } : {}}
-            transition={{ duration: 0.3 }}
-          />
-        );
-      })}
+      {/* Landed flash */}
+      {landedSlot !== null && !isDropping && (
+        <circle
+          cx={lastPos.x}
+          cy={lastPos.y}
+          r={8}
+          fill="#2ECC71"
+          style={{ filter: 'drop-shadow(0 0 10px rgba(46,204,113,0.9))' }}
+        />
+      )}
     </svg>
   );
 }
@@ -158,26 +166,26 @@ export default function PlinkoPage() {
           setLandedSlot(slot);
           const mult = multipliers[slot] ?? 0;
           const win = Math.floor(betAmount * mult * 100) / 100;
-
           if (win > 0) {
-            addBalance(win, `Plinko win — ${mult}× (${risk} risk, slot ${slot})`);
-            addToast({ type: 'success', title: `₹${win.toFixed(2)} — ${mult}×!` });
-            if (mult >= 10) confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
-            else sounds.playWin();
-          } else {
-            addToast({ type: 'error', title: `0× — No win this drop` });
+            addBalance(win, `Plinko win — ${mult}× (${risk} risk)`);
           }
-
+          if (mult >= 1) {
+            sounds.playWin();
+            addToast({ type: 'success', title: `Landed ${mult}×!`, message: `Won ₹${win.toFixed(2)}` });
+            if (mult >= 5) confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+          } else {
+            addToast({ type: 'info', title: `Landed ${mult}×`, message: `Return ₹${win.toFixed(2)}` });
+          }
           setLastResult({ multiplier: mult, win, slot });
-          setHistory(prev => [{ slot, multiplier: mult, win }, ...prev].slice(0, 20));
+          setHistory(prev => [{ slot, multiplier: mult, win }, ...prev].slice(0, 15));
           setGameState('result');
         }
-      }, 80);
+      }, 150);
     });
   };
 
   return (
-    <div className="px-3 py-4 space-y-4 max-w-lg mx-auto">
+    <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -193,109 +201,104 @@ export default function PlinkoPage() {
         </div>
       </div>
 
-      {/* Commit hash */}
-      {commitHash && (
-        <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
-          Seed hash: {commitHash}
+      {/* 2-Column Desktop Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Board & Bet Controls */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {commitHash && (
+            <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
+              Seed hash: {commitHash}
+            </div>
+          )}
+
+          {/* Peg Board Frame */}
+          <div className="royal-panel rounded-2xl p-4 overflow-hidden">
+            <PegBoard path={animPath} isDropping={gameState === 'dropping'} landedSlot={landedSlot} />
+
+            {/* Slot multiplier labels */}
+            <div className="flex gap-0.5 mt-2 overflow-hidden">
+              {multipliers.map((m, i) => (
+                <motion.div key={i}
+                  animate={landedSlot === i ? { scale: [1, 1.3, 1], opacity: 1 } : { scale: 1, opacity: 0.7 }}
+                  className="flex-1 text-center text-[8px] font-black py-0.5 rounded"
+                  style={{ color: m >= 10 ? '#2ECC71' : m >= 2 ? '#D4AF37' : m >= 1 ? 'rgba(212,175,55,0.6)' : '#FF4D6D', background: landedSlot === i ? 'rgba(212,175,55,0.2)' : 'transparent' }}>
+                  {m}×
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Last result readout */}
+          <AnimatePresence>
+            {lastResult && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="royal-panel rounded-xl p-3 text-center">
+                <p className="text-xs text-[rgba(212,175,55,0.6)]">Landed Multiplier</p>
+                <p className={`text-2xl font-black font-heading ${lastResult.multiplier >= 2 ? 'text-gold' : lastResult.multiplier >= 1 ? 'text-emerald-400' : 'text-[#FF4D6D]'}`}>
+                  {lastResult.multiplier}× <span className="text-xs font-normal text-[rgba(212,175,55,0.6)]">(Payout: ₹{lastResult.win})</span>
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Controls */}
+          <div className="royal-panel rounded-2xl p-4 space-y-3">
+            {/* Risk Selection */}
+            <div>
+              <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Risk Level</label>
+              <div className="flex gap-2">
+                {(['low', 'medium', 'high'] as const).map(r => (
+                  <button key={r} onClick={() => setRisk(r)} disabled={gameState === 'dropping'}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold capitalize cursor-pointer transition-all ${risk === r ? 'bg-[rgba(212,175,55,0.2)] text-gold border border-[rgba(212,175,55,0.4)]' : 'bg-[#0d2419] text-[rgba(212,175,55,0.4)] hover:text-gold'}`}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Bet Amounts */}
+            <div className="flex gap-2 flex-wrap">
+              {BET_AMOUNTS.map(amt => (
+                <button key={amt} onClick={() => setBetAmount(amt)} disabled={gameState === 'dropping'}
+                  className={`flex-1 min-w-[50px] py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${betAmount === amt ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.6)] hover:text-gold'}`}>
+                  ₹{amt}
+                </button>
+              ))}
+            </div>
+
+            {/* Drop Button */}
+            <button
+              onClick={drop}
+              disabled={gameState === 'dropping'}
+              className="btn-royal-gold w-full py-3.5 rounded-xl font-black text-sm cursor-pointer disabled:opacity-50"
+            >
+              {gameState === 'dropping' ? 'Ball Dropping...' : `Drop Ball (₹${betAmount})`}
+            </button>
+          </div>
+
+          {/* Auto-Bet */}
+          <AutoBetPanel
+            balance={balance}
+            disabled={gameState === 'dropping'}
+            intervalMs={3500}
+            onPlaceBet={async (amount) => {
+              if (!requireAuth()) return 0;
+              if (balance < amount) return 0;
+              deductBalance(amount, `Auto-Bet — Plinko`, 'bet');
+              const MULTS = [0.5, 0.5, 1, 1, 2, 2, 5, 16];
+              const mult = MULTS[Math.floor(Math.random() * MULTS.length)];
+              const payout = Math.round(amount * mult);
+              if (mult >= 1) addBalance(payout, `Auto-Bet Win — Plinko ${mult}×`, 'win');
+              return payout - amount;
+            }}
+          />
         </div>
-      )}
 
-      {/* Peg Board */}
-      <div className="royal-panel rounded-2xl p-4 overflow-hidden">
-        <PegBoard path={animPath} isDropping={gameState === 'dropping'} landedSlot={landedSlot} />
-
-        {/* Slot multiplier labels */}
-        <div className="flex gap-0.5 mt-2 overflow-hidden">
-          {multipliers.map((m, i) => (
-            <motion.div key={i}
-              animate={landedSlot === i ? { scale: [1, 1.3, 1], opacity: 1 } : { scale: 1, opacity: 0.7 }}
-              className="flex-1 text-center text-[8px] font-black py-0.5 rounded"
-              style={{ color: m >= 10 ? '#2ECC71' : m >= 2 ? '#D4AF37' : m >= 1 ? 'rgba(212,175,55,0.6)' : '#FF4D6D', background: landedSlot === i ? 'rgba(212,175,55,0.2)' : 'transparent' }}>
-              {m}×
-            </motion.div>
-          ))}
+        {/* Right Column: Game Chat */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <GameChat gameId="plinko" />
         </div>
       </div>
-
-      {/* Last result */}
-      <AnimatePresence>
-        {lastResult && gameState === 'result' && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className={`rounded-xl p-3 text-center border ${lastResult.win > 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-[#FF4D6D]/10 border-[#FF4D6D]/30 text-[#FF4D6D]'}`}>
-            <p className="font-black text-sm">{lastResult.win > 0 ? `Won ₹${lastResult.win.toFixed(2)} at ${lastResult.multiplier}×!` : `0× — No win`}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Controls */}
-      <div className="royal-panel rounded-2xl p-4 space-y-3">
-        {/* Risk */}
-        <div>
-          <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Risk Level</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['low', 'medium', 'high'] as const).map(r => (
-              <button key={r} onClick={() => setRisk(r)}
-                className={`py-2 rounded-xl text-xs font-bold capitalize cursor-pointer transition-all ${risk === r
-                  ? r === 'high' ? 'bg-[#FF4D6D]/15 border border-[#FF4D6D]/50 text-[#FF4D6D]'
-                  : r === 'medium' ? 'bg-amber-500/15 border border-amber-500/50 text-amber-400'
-                  : 'btn-royal-gold'
-                  : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)]'}`}>
-                {r === 'low' ? '🟢 Low' : r === 'medium' ? '🟡 Medium' : '🔴 High'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Bet */}
-        <div>
-          <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Bet Amount</label>
-          <div className="flex gap-1.5 flex-wrap">
-            {BET_AMOUNTS.map(a => (
-              <button key={a} onClick={() => setBetAmount(a)}
-                className={`flex-1 min-w-[48px] py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${betAmount === a ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)]'}`}>
-                ₹{a}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={drop} disabled={gameState === 'dropping'}
-          className="btn-royal-gold w-full py-3 rounded-xl font-black text-xs cursor-pointer disabled:opacity-50">
-          {gameState === 'dropping' ? '⚡ Dropping...' : '🪙 Drop Ball (₹' + betAmount + ')'}
-        </button>
-      </div>
-
-      {/* History */}
-      {history.length > 0 && (
-        <div>
-          <p className="text-xs font-black text-[rgba(212,175,55,0.5)] mb-2">Recent Drops</p>
-          <div className="flex flex-wrap gap-1.5">
-            {history.map((h, i) => (
-              <span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-black ${h.multiplier >= 10 ? 'bg-emerald-500/15 text-emerald-400' : h.multiplier >= 1 ? 'bg-amber-500/15 text-amber-400' : 'bg-[#FF4D6D]/15 text-[#FF4D6D]'}`}>
-                {h.multiplier}×
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Auto-Bet Panel */}
-      <AutoBetPanel
-        balance={balance}
-        intervalMs={3500}
-        onPlaceBet={async (amount) => {
-          if (!requireAuth()) return 0;
-          if (balance < amount) return 0;
-          deductBalance(amount, `Auto-Bet — Plinko`, 'bet');
-          const MULTS = [0.5, 0.5, 1, 1, 2, 2, 5, 16];
-          const mult = MULTS[Math.floor(Math.random() * MULTS.length)];
-          const payout = Math.round(amount * mult);
-          if (mult >= 1) addBalance(payout, `Auto-Bet Win — Plinko ${mult}×`, 'win');
-          return payout - amount;
-        }}
-      />
-
-      <GameChat gameId="plinko" />
     </div>
   );
 }

@@ -20,7 +20,6 @@ async function generateMineSeed(): Promise<{ seed: string; hash: string }> {
 }
 
 function seedToMinePositions(seed: string, total: number, mineCount: number): Set<number> {
-  // Fisher-Yates using seed bytes
   const arr = Array.from({ length: total }, (_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
     const byteIdx = (i * 2) % seed.length;
@@ -32,7 +31,6 @@ function seedToMinePositions(seed: string, total: number, mineCount: number): Se
 
 /* ─── Multiplier table ───────────────────────────────────────────── */
 function calcMultiplier(revealed: number, total: number, mines: number): number {
-  // house edge = 1% per reveal
   let m = 1;
   for (let i = 0; i < revealed; i++) {
     m *= (total - mines - i) / (total - i);
@@ -59,20 +57,20 @@ function Tile({ state, onClick, disabled }: { state: TileState; onClick: () => v
       whileTap={state === 'hidden' && !disabled ? { scale: 0.95 } : {}}
       className={`aspect-square rounded-xl border text-xl cursor-pointer transition-all flex items-center justify-center disabled:cursor-not-allowed font-black ${
         state === 'hidden'
-          ? 'bg-[#0d2419] border-[rgba(212,175,55,0.25)] hover:bg-[rgba(212,175,55,0.1)] hover:border-[rgba(212,175,55,0.6)] hover:shadow-[0_0_12px_rgba(212,175,55,0.25)]'
+          ? 'bg-[#0d2419] border-[rgba(212,175,55,0.2)] hover:border-gold hover:bg-[rgba(212,175,55,0.1)]'
           : state === 'gem'
-          ? 'bg-emerald-500/15 border-emerald-500/50 shadow-[0_0_15px_rgba(46,204,113,0.3)]'
-          : 'bg-[#FF4D6D]/15 border-[#FF4D6D]/50 shadow-[0_0_15px_rgba(255,77,109,0.3)]'
+          ? 'bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_15px_rgba(46,204,113,0.3)]'
+          : 'bg-[#FF4D6D]/20 border-[#FF4D6D]/50 shadow-[0_0_15px_rgba(255,77,109,0.3)]'
       }`}
     >
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {state === 'gem' && (
-          <motion.span initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <motion.span key="gem" initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }}>
             💎
           </motion.span>
         )}
         {state === 'mine' && (
-          <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <motion.span key="mine" initial={{ scale: 0 }} animate={{ scale: 1, rotate: [0, 10, -10, 0] }}>
             💣
           </motion.span>
         )}
@@ -88,59 +86,58 @@ export default function MinesPage() {
   const { requireAuth } = useAuthGate();
 
   const [gridSize, setGridSize] = useState(25);
-  const [mineCount, setMineCount] = useState(5);
+  const [mineCount, setMineCount] = useState(3);
   const [betAmount, setBetAmount] = useState(100);
-  const [tiles, setTiles] = useState<TileState[]>(Array(25).fill('hidden'));
+  const [currentBet, setCurrentBet] = useState(100);
+  const [gameState, setGameState] = useState<'idle' | 'playing' | 'won' | 'busted'>('idle');
+  const [tiles, setTiles] = useState<TileState[]>(() => Array(25).fill('hidden'));
   const [minePositions, setMinePositions] = useState<Set<number>>(new Set());
   const [revealed, setRevealed] = useState(0);
-  const [gameState, setGameState] = useState<'idle' | 'playing' | 'won' | 'lost'>('idle');
   const [commitHash, setCommitHash] = useState('');
   const [seed, setSeed] = useState('');
-  const [currentBet, setCurrentBet] = useState(0);
 
-  const currentMultiplier = calcMultiplier(revealed, gridSize, mineCount);
-  const potentialWin = Math.floor(currentBet * currentMultiplier * 100) / 100;
+  const currentMultiplier = revealed > 0 ? calcMultiplier(revealed, gridSize, mineCount) : 1;
 
-  const startGame = async () => {
+  const startGame = useCallback(() => {
     requireAuth(async () => {
-      if (!deductBalance(betAmount, `Mines bet — ${mineCount} mines`)) {
+      if (!deductBalance(betAmount, `Mines bet (${gridSize} tiles, ${mineCount} mines)`)) {
         addToast({ type: 'error', title: 'Insufficient balance' });
         return;
       }
       const { seed: s, hash: h } = await generateMineSeed();
+      const pos = seedToMinePositions(s, gridSize, mineCount);
       setSeed(s);
       setCommitHash(h);
-      const positions = seedToMinePositions(s, gridSize, mineCount);
-      setMinePositions(positions);
+      setMinePositions(pos);
       setTiles(Array(gridSize).fill('hidden'));
       setRevealed(0);
-      setGameState('playing');
       setCurrentBet(betAmount);
+      setGameState('playing');
       sounds.playChip();
+      addToast({ type: 'info', title: 'Game Started', message: 'Dodge mines & cash out anytime!' });
     });
-  };
+  }, [betAmount, gridSize, mineCount, deductBalance, addToast, requireAuth]);
 
-  const revealTile = useCallback((idx: number) => {
+  const handleTileClick = useCallback((idx: number) => {
     if (gameState !== 'playing' || tiles[idx] !== 'hidden') return;
 
     if (minePositions.has(idx)) {
-      // Hit mine — reveal all
+      // BUSTED
+      sounds.playLoss();
+      setGameState('busted');
       setTiles(prev => {
         const next = [...prev];
-        next[idx] = 'mine';
-        minePositions.forEach(m => { if (next[m] === 'hidden') next[m] = 'mine'; });
+        minePositions.forEach(m => { next[m] = 'mine'; });
         return next;
       });
-      setGameState('lost');
-      addToast({ type: 'error', title: '💣 Boom! Hit a mine!', message: `Lost ₹${currentBet}` });
-      sounds.playSpin();
+      addToast({ type: 'error', title: '💥 BOOM! Hit a mine', message: `Lost ₹${currentBet}` });
     } else {
+      // SAFE GEM
       const newRevealed = revealed + 1;
       setRevealed(newRevealed);
       setTiles(prev => { const next = [...prev]; next[idx] = 'gem'; return next; });
       sounds.playChip();
 
-      // Check win condition (all safe tiles revealed)
       const safeTiles = gridSize - mineCount;
       if (newRevealed === safeTiles) {
         cashOut(newRevealed);
@@ -157,7 +154,6 @@ export default function MinesPage() {
     addToast({ type: 'success', title: `Won ₹${win.toFixed(2)}!`, message: `${r} gems × ${m.toFixed(2)}×` });
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#2ECC71', '#D4AF37'] });
     setGameState('won');
-    // Reveal remaining mines
     setTiles(prev => {
       const next = [...prev];
       minePositions.forEach(m => { if (next[m] === 'hidden') next[m] = 'mine'; });
@@ -168,7 +164,7 @@ export default function MinesPage() {
   const cols = gridSize === 25 ? 5 : 4;
 
   return (
-    <div className="px-3 py-4 space-y-4 max-w-lg mx-auto">
+    <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -184,134 +180,107 @@ export default function MinesPage() {
         </div>
       </div>
 
-      {/* Commit hash */}
-      {commitHash && (
-        <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2.5 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
-          Seed hash: {commitHash}
-        </div>
-      )}
+      {/* 2-Column Desktop Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Board & Bet Controls */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {commitHash && (
+            <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2.5 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
+              Seed Hash: {commitHash}
+            </div>
+          )}
 
-      {/* Grid */}
-      <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-        {tiles.map((t, i) => (
-          <Tile key={i} state={t} onClick={() => revealTile(i)} disabled={gameState !== 'playing'} />
-        ))}
-      </div>
+          {/* Mines Grid Frame */}
+          <div className="royal-panel rounded-2xl p-4 flex flex-col items-center">
+            <div
+              className="grid gap-2 w-full max-w-sm"
+              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            >
+              {tiles.map((st, i) => (
+                <Tile key={i} state={st} onClick={() => handleTileClick(i)} disabled={gameState !== 'playing'} />
+              ))}
+            </div>
 
-      {/* Multiplier display */}
-      {gameState === 'playing' && revealed > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex items-center justify-between royal-panel rounded-xl px-4 py-3">
-          <div>
-            <p className="text-xs text-[rgba(212,175,55,0.5)]">Current Multiplier</p>
-            <p className="text-2xl font-black text-gold font-heading">{currentMultiplier.toFixed(2)}×</p>
+            {gameState === 'playing' && (
+              <div className="mt-4 flex justify-between w-full max-w-sm text-xs text-[rgba(212,175,55,0.6)]">
+                <span>💎 Gems found: <span className="font-black text-gold">{revealed}</span></span>
+                <span>💣 Mines: <span className="font-black text-[#FF4D6D]">{mineCount}</span></span>
+                <span>Mult: <span className="font-black text-gold">{currentMultiplier.toFixed(2)}×</span></span>
+              </div>
+            )}
           </div>
-          <div className="text-right">
-            <p className="text-xs text-[rgba(212,175,55,0.5)]">Potential Win</p>
-            <p className="text-2xl font-black text-[#2ECC71] font-heading">₹{potentialWin.toFixed(2)}</p>
-          </div>
-        </motion.div>
-      )}
 
-      {/* Game Over message */}
-      {(gameState === 'won' || gameState === 'lost') && (
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          className={`rounded-xl p-3 text-center border ${gameState === 'won' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-[#FF4D6D]/10 border-[#FF4D6D]/30 text-[#FF4D6D]'}`}>
-          <p className="font-black text-sm">
-            {gameState === 'won' ? `🎉 Won ₹${(currentBet * currentMultiplier).toFixed(2)}!` : `💣 Lost ₹${currentBet}`}
-          </p>
-          {seed && <p className="text-[9px] mt-1 opacity-60 font-mono">Seed: {seed.slice(0, 16)}...</p>}
-        </motion.div>
-      )}
-
-      {/* Controls */}
-      <div className="royal-panel rounded-2xl p-4 space-y-3">
-        {/* Grid + Mine config (only when idle) */}
-        {gameState !== 'playing' && (
-          <>
+          {/* Bet Panel */}
+          <div className="royal-panel rounded-2xl p-4 space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Grid Size</label>
+                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Grid Size</label>
                 <div className="flex gap-1.5">
-                  {GRID_OPTIONS.map(o => (
-                    <button key={o.total} onClick={() => { setGridSize(o.total); setTiles(Array(o.total).fill('hidden')); }}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${gridSize === o.total ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)]'}`}>
-                      {o.label}
+                  {GRID_OPTIONS.map(g => (
+                    <button key={g.total} onClick={() => { setGridSize(g.total); setTiles(Array(g.total).fill('hidden')); setGameState('idle'); }}
+                      disabled={gameState === 'playing'}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold ${gridSize === g.total ? 'bg-[rgba(212,175,55,0.2)] text-gold border border-[rgba(212,175,55,0.4)]' : 'bg-[#0d2419] text-[rgba(212,175,55,0.4)]'}`}>
+                      {g.label}
                     </button>
                   ))}
                 </div>
               </div>
+
               <div>
-                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Mines Count</label>
-                <div className="flex gap-1">
-                  {MINE_OPTIONS.filter(m => m < gridSize).map(m => (
-                    <button key={m} onClick={() => setMineCount(m)}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${mineCount === m ? 'bg-[#FF4D6D]/20 border border-[#FF4D6D]/50 text-[#FF4D6D]' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)]'}`}>
-                      {m}
-                    </button>
+                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Mines Count</label>
+                <select value={mineCount} onChange={e => setMineCount(+e.target.value)} disabled={gameState === 'playing'}
+                  className="w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-2.5 py-1.5 text-xs text-[#F5F1E6] focus:outline-none">
+                  {MINE_OPTIONS.map(m => (
+                    <option key={m} value={m}>{m} Mines</option>
                   ))}
-                </div>
+                </select>
               </div>
             </div>
 
-            <div>
-              <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1.5 block">Bet Amount</label>
-              <div className="flex gap-1.5 flex-wrap">
-                {BET_AMOUNTS.map(a => (
-                  <button key={a} onClick={() => setBetAmount(a)}
-                    className={`flex-1 min-w-[48px] py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${betAmount === a ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)]'}`}>
-                    ₹{a}
-                  </button>
-                ))}
-              </div>
+            {/* Quick Amounts */}
+            <div className="flex gap-1.5 flex-wrap">
+              {BET_AMOUNTS.map(amt => (
+                <button key={amt} onClick={() => setBetAmount(amt)} disabled={gameState === 'playing'}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold ${betAmount === amt ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.6)]'}`}>
+                  ₹{amt}
+                </button>
+              ))}
             </div>
-          </>
-        )}
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          {gameState !== 'playing' ? (
-            <button onClick={startGame}
-              className="btn-royal-gold flex-1 py-3 rounded-xl font-black text-xs cursor-pointer">
-              {gameState === 'idle' ? '🎮 Start Game' : '🔄 Play Again'}
-            </button>
-          ) : (
-            <>
-              <button onClick={() => cashOut()}
-                disabled={revealed === 0}
-                className="flex-1 py-3 rounded-xl font-black text-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer transition-all">
-                Cash Out ₹{potentialWin.toFixed(2)}
+            {/* Start / Cashout Button */}
+            {gameState !== 'playing' ? (
+              <button onClick={startGame} className="btn-royal-gold w-full py-3 rounded-xl font-black text-sm cursor-pointer">
+                Start Game (₹{betAmount})
               </button>
-            </>
-          )}
+            ) : (
+              <button onClick={() => cashOut()} disabled={revealed === 0}
+                className="w-full py-3 rounded-xl font-black text-sm bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-40 cursor-pointer">
+                Cash Out ₹{(currentBet * currentMultiplier).toFixed(2)} ({currentMultiplier.toFixed(2)}×)
+              </button>
+            )}
+          </div>
+
+          <AutoBetPanel
+            balance={balance}
+            disabled={gameState === 'playing'}
+            intervalMs={4000}
+            onPlaceBet={async (amount) => {
+              if (!requireAuth()) return 0;
+              if (balance < amount) return 0;
+              deductBalance(amount, `Auto-Bet — Mines`, 'bet');
+              const won = Math.random() > 0.45;
+              const mult = won ? parseFloat((1.3 + Math.random() * 4).toFixed(2)) : 0;
+              const payout = won ? Math.round(amount * mult) : 0;
+              if (won) addBalance(payout, `Auto-Bet Win — Mines ${mult}×`, 'win');
+              return won ? payout - amount : -amount;
+            }}
+          />
         </div>
 
-        {gameState === 'playing' && (
-          <div className="flex justify-between text-xs text-[rgba(212,175,55,0.5)]">
-            <span>💎 Gems found: <span className="font-black text-gold">{revealed}</span></span>
-            <span>💣 Mines hidden: <span className="font-black text-[#FF4D6D]">{mineCount}</span></span>
-            <span>Multiplier: <span className="font-black text-gold">{currentMultiplier.toFixed(2)}×</span></span>
-          </div>
-        )}
-
-        {/* Auto-Bet Panel */}
-        <AutoBetPanel
-          balance={balance}
-          disabled={gameState === 'playing'}
-          intervalMs={4000}
-          onPlaceBet={async (amount) => {
-            if (!requireAuth()) return 0;
-            if (balance < amount) return 0;
-            deductBalance(amount, `Auto-Bet — Mines`, 'bet');
-            const won = Math.random() > 0.45;
-            const mult = won ? parseFloat((1.3 + Math.random() * 4).toFixed(2)) : 0;
-            const payout = won ? Math.round(amount * mult) : 0;
-            if (won) addBalance(payout, `Auto-Bet Win — Mines ${mult}×`, 'win');
-            return won ? payout - amount : -amount;
-          }}
-        />
-        {/* Per-game chat */}
-        <GameChat gameId="mines" />
+        {/* Right Column: Live Chat & Game Info */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <GameChat gameId="mines" />
+        </div>
       </div>
     </div>
   );

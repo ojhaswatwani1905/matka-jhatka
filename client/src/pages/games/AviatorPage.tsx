@@ -76,7 +76,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
 
     // Dynamically match canvas resolution to parent container
     const W = parent.clientWidth || 600;
-    const H = parent.clientHeight || 240;
+    const H = parent.clientHeight || 280;
     if (canvas.width !== W || canvas.height !== H) {
       canvas.width = W;
       canvas.height = H;
@@ -105,7 +105,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     if (startTimeRef.current === 0) startTimeRef.current = Date.now();
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
 
-    // Aggressive scaling: curve rapidly expands across 85%-95% width and 40%-85% height even in early/mid rounds
+    // Aggressive scaling: curve rapidly expands across 85%-92% width and 40%-85% height even in early/mid rounds
     const progressX = Math.min(0.92, 0.25 + (elapsed / 2.8) * 0.67);
     const rawRatio = Math.max(0, (multiplier - 1.0) / 2.2);
     const progressY = Math.min(0.85, Math.pow(rawRatio, 0.5) * 0.72 + 0.08);
@@ -173,7 +173,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
   }, [multiplier, crashed, phase]);
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.25)] bg-[#04140D] shadow-2xl" style={{ height: 240 }}>
+    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.25)] bg-[#04140D] shadow-2xl" style={{ height: 280 }}>
       {/* Radial light-ray background fanning out from bottom-left origin */}
       <div
         className="absolute inset-0 pointer-events-none opacity-25"
@@ -393,7 +393,7 @@ export default function AviatorPage() {
   const inputCls = 'w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-2.5 text-sm text-[#F5F1E6] focus:outline-none focus:border-[rgba(212,175,55,0.5)] transition-colors placeholder-[rgba(212,175,55,0.25)]';
 
   return (
-    <div className="px-3 py-4 space-y-4 max-w-2xl mx-auto">
+    <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -416,146 +416,155 @@ export default function AviatorPage() {
         </div>
       </div>
 
-      {/* Top compact recent multiplier ticker strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1.5 px-2 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.15)]">
-        <span className="text-[9px] font-black text-[rgba(212,175,55,0.4)] uppercase tracking-wider shrink-0 mr-1">History:</span>
-        {history.map((h, i) => (
-          <span key={i} className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
-            {h.multiplier.toFixed(2)}×
-          </span>
-        ))}
-        {history.length === 0 && <span className="text-[10px] text-[rgba(212,175,55,0.3)]">No history rounds recorded yet</span>}
-      </div>
-
-      {/* Commit hash */}
-      <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2.5 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
-        Next round hash: {commitHash}
-      </div>
-
-      {/* Crash chart */}
-      <CrashChart multiplier={multiplier} crashed={phase === 'crashed'} phase={phase} liveBets={liveBets} />
-
-      {/* Countdown */}
-      {phase === 'betting' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
-          <p className="text-gold font-black text-sm">Starting in <span className="text-2xl">{countdown}</span>s</p>
-        </motion.div>
-      )}
-
-      {/* Round History strip */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-        {history.map((h, i) => (
-          <span key={i} className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
-            {h.multiplier.toFixed(2)}×
-          </span>
-        ))}
-      </div>
-
-      {/* Bet Panel */}
-      <div className="royal-panel rounded-2xl p-4 space-y-3">
-        {/* Bet amounts */}
-        <div className="flex gap-2 flex-wrap">
-          {BET_AMOUNTS.map(amt => (
-            <button key={amt} onClick={() => setBetAmount(amt)}
-              className={`flex-1 min-w-[50px] py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${betAmount === amt ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.6)] hover:text-gold'}`}>
-              ₹{amt}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Bet Amount</label>
-            <input type="number" value={betAmount} onChange={e => setBetAmount(+e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Auto Cashout at ×</label>
-            <input type="number" step="0.1" value={autoCashout} onChange={e => setAutoCashout(e.target.value)} placeholder="e.g. 2.00" className={inputCls} />
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={placeBet}
-            disabled={phase !== 'betting' || !!myBet}
-            className="btn-royal-gold py-3 rounded-xl font-black text-xs cursor-pointer disabled:opacity-50"
-          >
-            {myBet ? `Bet: ₹${myBet.amount}` : 'Place Bet'}
-          </button>
-          <button
-            onClick={() => handleCashOut()}
-            disabled={phase !== 'flying' || !myBet || !!myBet.cashedAt}
-            className="py-3 rounded-xl font-black text-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer transition-all"
-          >
-            {myBet?.cashedAt ? `Cashed ${myBet.cashedAt.toFixed(2)}×` : `Cash Out ${multiplier.toFixed(2)}×`}
-          </button>
-        </div>
-
-        {myBet && !myBet.cashedAt && phase === 'flying' && (
-          <div className="text-center text-xs font-bold text-gold animate-pulse">
-            Win: ₹{(myBet.amount * multiplier).toFixed(2)} if you cash out now
-          </div>
-        )}
-      </div>
-
-      {/* Live Bets / History tabs */}
-      <div>
-        <div className="flex gap-1 bg-[#0d2419] rounded-xl p-1 mb-3 border border-[rgba(212,175,55,0.12)]">
-          {(['live', 'history'] as const).map(t => (
-            <button key={t} onClick={() => setActiveTab(t)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize cursor-pointer transition-all ${activeTab === t ? 'bg-[rgba(212,175,55,0.18)] text-[#E8C97A] border border-[rgba(212,175,55,0.35)]' : 'text-[rgba(212,175,55,0.4)]'}`}>
-              {t === 'live' ? <span className="flex items-center justify-center gap-1.5"><Users className="w-3.5 h-3.5" /> Live Bets</span> : <span className="flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" /> Round History</span>}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === 'live' && (
-          <div className="space-y-1.5">
-            {liveBets.map(b => (
-              <div key={b.id} className="flex items-center gap-2 royal-panel rounded-xl px-3 py-2 text-xs">
-                <div className="w-7 h-7 rounded-lg bg-[rgba(212,175,55,0.08)] flex items-center justify-center font-black text-gold text-[10px]">{b.user[0]}</div>
-                <span className="flex-1 font-bold text-[#F5F1E6]">{b.user}</span>
-                <span className="text-[rgba(212,175,55,0.6)]">₹{b.bet}</span>
-                {b.status === 'won' && <span className="text-emerald-400 font-black">{b.cashedAt?.toFixed(2)}×</span>}
-                {b.status === 'lost' && <span className="text-[#FF4D6D] font-black">Lost</span>}
-                {b.status === 'active' && <span className="text-amber-400 font-black animate-pulse">{multiplier.toFixed(2)}×</span>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'history' && (
-          <div className="grid grid-cols-5 gap-1.5">
+      {/* Responsive 2-Column Grid on Desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Primary Left Column: Chart & Bet Controls */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {/* Top compact recent multiplier ticker strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1.5 px-2 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.15)]">
+            <span className="text-[9px] font-black text-[rgba(212,175,55,0.4)] uppercase tracking-wider shrink-0 mr-1">History:</span>
             {history.map((h, i) => (
-              <div key={i} className={`text-center py-2 rounded-xl text-xs font-black ${getMultiplierChipClass(h.multiplier)}`}>
+              <span key={i} className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
                 {h.multiplier.toFixed(2)}×
-              </div>
+              </span>
+            ))}
+            {history.length === 0 && <span className="text-[10px] text-[rgba(212,175,55,0.3)]">No history rounds recorded yet</span>}
+          </div>
+
+          {/* Commit hash */}
+          <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2.5 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
+            Next round hash: {commitHash}
+          </div>
+
+          {/* Crash chart */}
+          <CrashChart multiplier={multiplier} crashed={phase === 'crashed'} phase={phase} liveBets={liveBets} />
+
+          {/* Countdown */}
+          {phase === 'betting' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+              <p className="text-gold font-black text-sm">Starting in <span className="text-2xl">{countdown}</span>s</p>
+            </motion.div>
+          )}
+
+          {/* Round History strip */}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+            {history.map((h, i) => (
+              <span key={i} className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
+                {h.multiplier.toFixed(2)}×
+              </span>
             ))}
           </div>
-        )}
+
+          {/* Bet Panel */}
+          <div className="royal-panel rounded-2xl p-4 space-y-3">
+            {/* Bet amounts */}
+            <div className="flex gap-2 flex-wrap">
+              {BET_AMOUNTS.map(amt => (
+                <button key={amt} onClick={() => setBetAmount(amt)}
+                  className={`flex-1 min-w-[50px] py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${betAmount === amt ? 'btn-royal-gold' : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.6)] hover:text-gold'}`}>
+                  ₹{amt}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Bet Amount</label>
+                <input type="number" value={betAmount} onChange={e => setBetAmount(+e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className="text-[10px] text-[rgba(212,175,55,0.5)] font-bold mb-1 block">Auto Cashout at ×</label>
+                <input type="number" step="0.1" value={autoCashout} onChange={e => setAutoCashout(e.target.value)} placeholder="e.g. 2.00" className={inputCls} />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={placeBet}
+                disabled={phase !== 'betting' || !!myBet}
+                className="btn-royal-gold py-3 rounded-xl font-black text-xs cursor-pointer disabled:opacity-50"
+              >
+                {myBet ? `Bet: ₹${myBet.amount}` : 'Place Bet'}
+              </button>
+              <button
+                onClick={() => handleCashOut()}
+                disabled={phase !== 'flying' || !myBet || !!myBet.cashedAt}
+                className="py-3 rounded-xl font-black text-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 cursor-pointer transition-all"
+              >
+                {myBet?.cashedAt ? `Cashed ${myBet.cashedAt.toFixed(2)}×` : `Cash Out ${multiplier.toFixed(2)}×`}
+              </button>
+            </div>
+
+            {myBet && !myBet.cashedAt && phase === 'flying' && (
+              <div className="text-center text-xs font-bold text-gold animate-pulse">
+                Win: ₹{(myBet.amount * multiplier).toFixed(2)} if you cash out now
+              </div>
+            )}
+          </div>
+
+          {/* Auto-Bet Panel */}
+          <AutoBetPanel
+            balance={balance}
+            disabled={phase !== 'betting'}
+            intervalMs={6000}
+            onPlaceBet={async (amount) => {
+              if (!requireAuth()) return 0;
+              if (balance < amount) return 0;
+              deductBalance(amount, `Auto-Bet — Aviator`, 'bet');
+              // Simulate: 40% chance win at 1.5–3x
+              const won = Math.random() > 0.6;
+              const mult = won ? parseFloat((1.5 + Math.random() * 1.5).toFixed(2)) : 0;
+              const payout = won ? Math.round(amount * mult) : 0;
+              if (won) addBalance(payout, `Auto-Bet Win — Aviator ${mult}×`, 'win');
+              return won ? payout - amount : -amount;
+            }}
+          />
+        </div>
+
+        {/* Secondary Right Column: Live Bets, Round History, Game Chat */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          {/* Live Bets / History tabs */}
+          <div className="royal-panel rounded-2xl p-4 space-y-3">
+            <div className="flex gap-1 bg-[#0d2419] rounded-xl p-1 border border-[rgba(212,175,55,0.12)]">
+              {(['live', 'history'] as const).map(t => (
+                <button key={t} onClick={() => setActiveTab(t)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize cursor-pointer transition-all ${activeTab === t ? 'bg-[rgba(212,175,55,0.18)] text-[#E8C97A] border border-[rgba(212,175,55,0.35)]' : 'text-[rgba(212,175,55,0.4)]'}`}>
+                  {t === 'live' ? <span className="flex items-center justify-center gap-1.5"><Users className="w-3.5 h-3.5" /> Live Bets</span> : <span className="flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" /> History</span>}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'live' && (
+              <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin">
+                {liveBets.map(b => (
+                  <div key={b.id} className="flex items-center gap-2 bg-[#0d2419]/80 rounded-xl px-3 py-2 text-xs border border-[rgba(212,175,55,0.08)]">
+                    <div className="w-7 h-7 rounded-lg bg-[rgba(212,175,55,0.08)] flex items-center justify-center font-black text-gold text-[10px]">{b.user[0]}</div>
+                    <span className="flex-1 font-bold text-[#F5F1E6] truncate">{b.user}</span>
+                    <span className="text-[rgba(212,175,55,0.6)]">₹{b.bet}</span>
+                    {b.status === 'won' && <span className="text-emerald-400 font-black">{b.cashedAt?.toFixed(2)}×</span>}
+                    {b.status === 'lost' && <span className="text-[#FF4D6D] font-black">Lost</span>}
+                    {b.status === 'active' && <span className="text-amber-400 font-black animate-pulse">{multiplier.toFixed(2)}×</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+              <div className="grid grid-cols-4 gap-1.5 max-h-[260px] overflow-y-auto pr-1">
+                {history.map((h, i) => (
+                  <div key={i} className={`text-center py-2 rounded-xl text-xs font-black ${getMultiplierChipClass(h.multiplier)}`}>
+                    {h.multiplier.toFixed(2)}×
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Per-game chat */}
+          <GameChat gameId="aviator" />
+        </div>
       </div>
-
-      {/* Auto-Bet Panel */}
-      <AutoBetPanel
-        balance={balance}
-        disabled={phase !== 'betting'}
-        intervalMs={6000}
-        onPlaceBet={async (amount) => {
-          if (!requireAuth()) return 0;
-          if (balance < amount) return 0;
-          deductBalance(amount, `Auto-Bet — Aviator`, 'bet');
-          // Simulate: 40% chance win at 1.5–3x
-          const won = Math.random() > 0.6;
-          const mult = won ? parseFloat((1.5 + Math.random() * 1.5).toFixed(2)) : 0;
-          const payout = won ? Math.round(amount * mult) : 0;
-          if (won) addBalance(payout, `Auto-Bet Win — Aviator ${mult}×`, 'win');
-          return won ? payout - amount : -amount;
-        }}
-      />
-
-      {/* Per-game chat */}
-      <GameChat gameId="aviator" />
     </div>
   );
 }

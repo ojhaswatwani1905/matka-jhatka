@@ -79,6 +79,13 @@ export default function AppLayout() {
 
   return (
     <div className="w-full min-h-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-x-hidden">
+      {/* Ambient background glows for wide viewports */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.07)_0%,transparent_70%)] blur-3xl" />
+        <div className="absolute top-1/3 -right-32 w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(46,204,113,0.06)_0%,transparent_70%)] blur-3xl" />
+        <div className="absolute bottom-10 left-1/3 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.05)_0%,transparent_70%)] blur-3xl" />
+      </div>
+
       {/* Age & Compliance Modal */}
       <AgeGateModal />
 

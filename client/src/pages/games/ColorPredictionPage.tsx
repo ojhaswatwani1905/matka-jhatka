@@ -278,7 +278,7 @@ export default function ColorPredictionPage() {
   }, [period, bets, addBalance, soundEnabled, addToast, fetchActiveRound, fetchResults]);
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
       {/* Top Header Mode Tabs & Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 flex gap-1.5 bg-slate-900/80 rounded-xl p-1 border border-white/10">
@@ -310,7 +310,11 @@ export default function ColorPredictionPage() {
         </button>
       </div>
 
-      {/* Timer & Period Display Box */}
+      {/* 2-Column Desktop Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Game Timer, Betting Grid, and Recent History */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {/* Timer & Period Display Box */}
       <div className="app-card border border-gold/30 rounded-2xl p-5 shadow-2xl flex items-center justify-between relative overflow-hidden">
         <div>
           <div className="flex items-center gap-1.5">
@@ -437,29 +441,162 @@ export default function ColorPredictionPage() {
                 res.number === 0 ? 'bg-gradient-to-tr from-violet-600 to-rose-600' :
                 res.number === 5 ? 'bg-gradient-to-tr from-violet-600 to-emerald-600' :
                 [1,3,7,9].includes(res.number) ? 'bg-emerald-600' : 'bg-red-600'
-              }`}
-            >
-              {res.number}
+          <div className="app-card border border-gold/30 rounded-2xl p-5 shadow-2xl flex items-center justify-between relative overflow-hidden">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                  Current Period
+                </span>
+                <button
+                  onClick={() => setIsFairnessOpen(true)}
+                  className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 hover:bg-emerald-500/20 cursor-pointer"
+                >
+                  <ShieldCheck className="w-3 h-3" /> Provably Fair SHA-256
+                </button>
+              </div>
+              <p className="text-xl font-black text-gold font-heading tabular-nums mt-1">
+                {period}
+              </p>
+              {commitHash && (
+                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                  <span className="text-slate-500">Commit:</span>
+                  <span className="truncate max-w-[180px] sm:max-w-[260px] text-slate-300">{commitHash}</span>
+                </div>
+              )}
+              {isLocked && (
+                <span className="text-[10px] font-bold text-rose-500 animate-pulse block mt-1">
+                  ⏳ Round locked for draw resolution...
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+            <Timer
+              key={roundKey}
+              duration={remainingSec}
+              onComplete={handleRoundComplete}
+              size="md"
+            />
+          </div>
 
-      {/* Simulated Live Player Bets Stream */}
-      <div className="app-card p-4 rounded-2xl border border-white/5">
-        <span className="text-xs font-bold text-white font-heading mb-2 block flex items-center gap-1.5">
-          <TrendingUp className="w-4 h-4 text-emerald-400" /> Live Room Bets Stream
-        </span>
-        <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-none text-xs">
-          {liveBets.map((b) => (
-            <div key={b.id} className="flex items-center justify-between py-1 px-2.5 rounded-lg bg-slate-900/60 border border-white/5">
-              <span className="text-slate-400 font-mono text-[11px]">{b.user}</span>
-              <span className="font-bold text-gold px-2 py-0.5 rounded bg-gold/10 text-[10px]">
-                {b.selection}
-              </span>
-              <span className="font-mono text-emerald-400 font-bold">${b.amount}</span>
+          {/* Color Selection Buttons */}
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => handleSelect('color', 'green')}
+              className="btn-3d-green py-3.5 rounded-2xl text-white font-black text-sm shadow-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:scale-[1.02] transition-transform"
+            >
+              <span>GREEN</span>
+              <span className="text-[10px] font-normal opacity-90">2.0x</span>
+            </button>
+            <button
+              onClick={() => handleSelect('color', 'violet')}
+              className="btn-3d-violet py-3.5 rounded-2xl text-white font-black text-sm shadow-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:scale-[1.02] transition-transform"
+            >
+              <span>VIOLET</span>
+              <span className="text-[10px] font-normal opacity-90">4.5x</span>
+            </button>
+            <button
+              onClick={() => handleSelect('color', 'red')}
+              className="btn-3d-red py-3.5 rounded-2xl text-white font-black text-sm shadow-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:scale-[1.02] transition-transform"
+            >
+              <span>RED</span>
+              <span className="text-[10px] font-normal opacity-90">2.0x</span>
+            </button>
+          </div>
+
+          {/* Big / Small Choice */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => handleSelect('size', 'big')}
+              className="py-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-sm hover:bg-amber-500/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>BIG (5–9)</span>
+              <span className="text-xs text-amber-400 font-mono">2.0x</span>
+            </button>
+            <button
+              onClick={() => handleSelect('size', 'small')}
+              className="py-3 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 font-bold text-sm hover:bg-blue-500/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>SMALL (0–4)</span>
+              <span className="text-xs text-blue-400 font-mono">2.0x</span>
+            </button>
+          </div>
+
+          {/* 0–9 Digit Grid */}
+          <div className="app-card p-4 border border-white/10 rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-white font-heading">Select Single Number (9.0x Payout)</span>
+              <span className="text-[10px] text-slate-400 font-mono">Pick 0–9</span>
             </div>
-          ))}
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+                const colorClass =
+                  num === 0 ? 'bg-gradient-to-br from-violet-600 to-rose-600' :
+                  num === 5 ? 'bg-gradient-to-br from-violet-600 to-emerald-600' :
+                  [1, 3, 7, 9].includes(num) ? 'bg-emerald-600' : 'bg-red-600';
+
+                return (
+                  <button
+                    key={num}
+                    onClick={() => handleSelect('number', num.toString())}
+                    className={`${colorClass} h-12 rounded-xl text-white font-black text-base shadow flex items-center justify-center hover:scale-110 transition-transform cursor-pointer border border-white/20`}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* History Log Dots Bar */}
+          <div className="app-card p-4 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-white font-heading flex items-center gap-1.5">
+                <History className="w-4 h-4 text-gold" /> Recent Round History
+              </span>
+              <Link
+                to="/history"
+                className="text-[11px] text-gold hover:underline cursor-pointer"
+              >
+                View All →
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+              {results.slice(0, 15).map((res, i) => (
+                <div
+                  key={i}
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shadow border border-white/20 ${
+                    res.number === 0 ? 'bg-gradient-to-tr from-violet-600 to-rose-600' :
+                    res.number === 5 ? 'bg-gradient-to-tr from-violet-600 to-emerald-600' :
+                    [1,3,7,9].includes(res.number) ? 'bg-emerald-600' : 'bg-red-600'
+                  }`}
+                >
+                  {res.number}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Live Room Bets Stream & Game Chat */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          {/* Simulated Live Player Bets Stream */}
+          <div className="app-card p-4 rounded-2xl border border-white/5">
+            <span className="text-xs font-bold text-white font-heading mb-2 flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-emerald-400" /> Live Room Bets Stream
+            </span>
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 text-xs scrollbar-thin">
+              {liveBets.map((b) => (
+                <div key={b.id} className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-slate-900/60 border border-white/5">
+                  <span className="text-slate-400 font-mono text-[11px] truncate max-w-[90px]">{b.user}</span>
+                  <span className="font-bold text-gold px-2 py-0.5 rounded bg-gold/10 text-[10px]">
+                    {b.selection}
+                  </span>
+                  <span className="font-mono text-emerald-400 font-bold">₹{b.amount}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <GameChat gameId="color-prediction" />
         </div>
       </div>
 
@@ -471,19 +608,17 @@ export default function ColorPredictionPage() {
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block text-slate-400 mb-1">Select Bet Amount ($)</label>
+            <label className="block text-slate-400 mb-1">Select Bet Amount (₹)</label>
             <div className="grid grid-cols-5 gap-2">
               {BET_AMOUNTS.map((amt) => (
                 <button
                   key={amt}
                   onClick={() => setBaseAmount(amt)}
-                  className={`py-2 rounded-xl font-bold transition-all cursor-pointer ${
-                    baseAmount === amt
-                      ? 'btn-gold-shimmer text-black'
-                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                    baseAmount === amt ? 'btn-royal-gold' : 'bg-slate-800 text-slate-300 hover:text-white'
                   }`}
                 >
-                  ${amt}
+                  ₹{amt}
                 </button>
               ))}
             </div>
@@ -491,37 +626,37 @@ export default function ColorPredictionPage() {
 
           <div>
             <label className="block text-slate-400 mb-1">Multiplier</label>
-            <div className="grid grid-cols-6 gap-1.5">
+            <div className="flex gap-2">
               {MULTIPLIERS.map((m) => (
                 <button
                   key={m}
                   onClick={() => setMultiplier(m)}
-                  className={`py-1.5 rounded-lg font-bold text-center cursor-pointer ${
-                    multiplier === m ? 'bg-amber-400 text-black' : 'bg-slate-800 text-slate-400'
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                    multiplier === m ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-300'
                   }`}
                 >
-                  x{m}
+                  {m}X
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-sm">
-            <span className="text-slate-400 font-medium">Total Stake:</span>
-            <span className="text-gold font-black font-heading text-base font-mono">${totalBetAmount}</span>
+          <div className="p-3 bg-slate-900 rounded-xl border border-white/10 flex justify-between text-xs font-bold">
+            <span className="text-slate-400">Total Bet Amount:</span>
+            <span className="text-gold font-mono">₹{totalBetAmount}</span>
           </div>
 
           <button
             onClick={placeBet}
-            className="w-full py-3 rounded-xl font-bold text-black btn-gold-shimmer cursor-pointer shadow-lg text-sm"
+            className="btn-royal-gold w-full py-3 rounded-xl text-xs font-black"
           >
-            Confirm & Place Bet (${totalBetAmount})
+            Confirm & Place Bet (₹{totalBetAmount})
           </button>
         </div>
       </Modal>
 
       {/* Result Outcome Overlay Modal */}
-      <Modal isOpen={showResult} onClose={() => setShowResult(false)} title="Round Draw Result">
+      <Modal isOpen={showResult} onClose={() => setShowResult(false)} title="Round Result">
         {lastResult && (
           <div className="flex flex-col items-center text-center py-4 space-y-3">
             <div
@@ -545,7 +680,6 @@ export default function ColorPredictionPage() {
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
-      <GameChat gameId="color-prediction" />
     </div>
   );
 }
