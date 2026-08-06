@@ -67,25 +67,36 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     }
   }, [phase]);
 
-  // Draw canvas with exponential curve + plane rotation + filled area
+  // Render loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
+    // Dynamically match canvas resolution to parent container
+    const W = parent.clientWidth || 600;
+    const H = parent.clientHeight || 240;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width = W;
+      canvas.height = H;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    const originX = 35;
-    const originY = H - 25;
+    // Origin is at bottom-left corner
+    const originX = 0;
+    const originY = H;
 
     if (phase === 'betting') {
-      // Draw idle flat line at origin
+      // Idle line at bottom-left
       ctx.beginPath();
-      ctx.strokeStyle = 'rgba(212,175,55,0.3)';
-      ctx.lineWidth = 2;
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX + 40, originY);
+      ctx.strokeStyle = 'rgba(212,175,55,0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.moveTo(0, H - 15);
+      ctx.lineTo(60, H - 15);
       ctx.stroke();
       return;
     }
@@ -94,40 +105,42 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     if (startTimeRef.current === 0) startTimeRef.current = Date.now();
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
 
-    // Exponential arc progress math
-    const progressX = Math.min(1.0, elapsed / 7.5);
-    const progressY = Math.min(1.0, Math.log(multiplier) / Math.log(12.0));
+    // Dynamic scale: stretch across full container width & height as multiplier climbs
+    const progressX = Math.min(1.0, elapsed / 4.5); // scales across width smoothly
+    const progressY = Math.min(1.0, (multiplier - 1.0) / 4.0); // scales height
 
-    const targetX = originX + progressX * (W - 85);
-    const targetY = originY - progressY * (H - 55);
+    const targetX = Math.max(80, progressX * (W - 20));
+    const targetY = Math.max(25, H - 15 - progressY * (H - 55));
 
-    // Control point for exponential sweep curve: flat near start, steep at end
-    const controlX = originX + (targetX - originX) * 0.72;
+    // Control point for smooth accelerating upward sweep curve
+    const controlX = targetX * 0.65;
     const controlY = originY;
 
-    // 1. Solid gradient wedge fill under the curve down to origin Y
+    // 1. Solid gradient wedge fill from curve down to bottom edge of chart
     ctx.beginPath();
     ctx.moveTo(originX, originY);
     ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
     ctx.lineTo(targetX, originY);
     ctx.closePath();
 
-    const fillGrad = ctx.createLinearGradient(originX, 0, targetX, 0);
+    const fillGrad = ctx.createLinearGradient(0, targetY, 0, originY);
     if (crashed) {
-      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.05)');
-      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.55)');
+      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.75)');
+      fillGrad.addColorStop(0.6, 'rgba(255, 77, 109, 0.35)');
+      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.12)');
     } else {
-      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.05)');
-      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.55)');
+      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.75)');
+      fillGrad.addColorStop(0.6, 'rgba(212, 175, 55, 0.35)');
+      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.12)');
     }
     ctx.fillStyle = fillGrad;
     ctx.fill();
 
-    // 2. Vertical drop line from plane tip to bottom baseline (like real Aviator)
+    // 2. Vertical drop line from plane tip straight to bottom edge
     ctx.beginPath();
-    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.45)' : 'rgba(212, 175, 55, 0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.7)' : 'rgba(212, 175, 55, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
     ctx.moveTo(targetX, targetY);
     ctx.lineTo(targetX, originY);
     ctx.stroke();
@@ -135,8 +148,8 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
 
     // 3. Accelerating stroke curve line
     ctx.beginPath();
-    ctx.strokeStyle = crashed ? '#FF4D6D' : '#D4AF37';
-    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = crashed ? '#FF4D6D' : '#FFE57F';
+    ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.moveTo(originX, originY);
     ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
@@ -151,24 +164,24 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
       ctx.save();
       ctx.translate(targetX, targetY);
       ctx.rotate(angle);
-      ctx.fillStyle = crashed ? '#FF4D6D' : '#FFE57F';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('✈', -6, 6);
+      ctx.fillStyle = '#FFE57F';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText('✈', -8, 8);
       ctx.restore();
     }
   }, [multiplier, crashed, phase]);
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.25)] bg-[#04140D] shadow-2xl" style={{ height: 230 }}>
+    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.25)] bg-[#04140D] shadow-2xl" style={{ height: 240 }}>
       {/* Radial light-ray background fanning out from bottom-left origin */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-20"
+        className="absolute inset-0 pointer-events-none opacity-25"
         style={{
-          background: 'repeating-conic-gradient(from -20deg at 5% 95%, rgba(46,204,113,0.3) 0deg 8deg, transparent 8deg 16deg)',
+          background: 'repeating-conic-gradient(from -30deg at 0% 100%, rgba(46,204,113,0.3) 0deg 8deg, transparent 8deg 16deg)',
         }}
       />
 
-      <canvas ref={canvasRef} width={600} height={230} className="w-full h-full relative z-10" />
+      <canvas ref={canvasRef} className="w-full h-full relative z-10 block" />
 
       {/* Multiplier overlay */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
@@ -199,7 +212,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
         {liveBets.slice(0, 4).map((b, i) => (
           <div
             key={b.id || i}
-            className="w-6 h-6 rounded-full bg-[#0d2419] border-2 border-gold/40 flex items-center justify-center text-[9px] font-black text-gold shadow-md"
+            className="w-6.5 h-6.5 rounded-full bg-[#0d2419] border-2 border-gold/50 flex items-center justify-center text-[9px] font-black text-gold shadow-md"
             title={b.user}
           >
             {b.user[0]}
