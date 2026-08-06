@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Phone, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
+import { Mail, Phone, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck, Sparkles, UserCheck, Shield } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { CountryCodeSelect, COUNTRIES, type CountryCode } from '../../components/auth/CountryCodeSelect';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
+import { useRG } from '../../store/RGContext';
 
 interface LoginForm {
   identifier: string;
@@ -17,29 +18,57 @@ interface LoginForm {
 export default function LoginPage() {
   const { login } = useAuth();
   const { addToast } = useToast();
+  const { settings: rgSettings, isExcluded } = useRG();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') || '/';
+  const reason = searchParams.get('reason');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRIES[0]);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // 2FA state
+  const [show2FA, setShow2FA] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [pendingLogin, setPendingLogin] = useState<(() => Promise<void>) | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+
+  const performLogin = async (identifier: string) => {
+    await login(identifier, '');
+    addToast({ type: 'success', title: 'Welcome Back!', message: 'Successfully signed in to PlayArena.' });
+    navigate(decodeURIComponent(returnTo));
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     setServerError(null);
     try {
       const fullIdentifier = loginMethod === 'phone' ? `${selectedCountry.dialCode}${data.identifier}` : data.identifier;
-      await login(fullIdentifier, data.password);
-      addToast({ type: 'success', title: 'Welcome Back!', message: 'Successfully signed in to PlayArena.' });
-      navigate(decodeURIComponent(returnTo));
+      if (rgSettings.twoFAEnabled) {
+        // Show 2FA step instead of logging in immediately
+        setPendingLogin(() => () => performLogin(fullIdentifier));
+        setShow2FA(true);
+        setIsLoading(false);
+        return;
+      }
+      await performLogin(fullIdentifier);
     } catch {
       setServerError('Invalid email/phone or password. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handle2FASubmit = async () => {
+    if (otpValue !== '123456') {
+      setServerError('Incorrect OTP. Demo code is 123456.');
+      return;
+    }
+    if (pendingLogin) {
+      setIsLoading(true);
+      try { await pendingLogin(); } catch { setServerError('Login failed.'); } finally { setIsLoading(false); }
     }
   };
 
@@ -63,8 +92,63 @@ export default function LoginPage() {
       subtitle="Access your casino wallet, round history, & provably fair games"
       activeMode="login"
     >
+      {/* Self-Exclusion block */}
+      {isExcluded() && (
+        <div className="rounded-2xl bg-[#FF4D6D]/10 border border-[#FF4D6D]/40 p-5 text-center space-y-3 mb-4">
+          <div className="text-4xl">🔒</div>
+          <h3 className="text-base font-black text-[#FF4D6D]">Account Locked</h3>
+          <p className="text-xs text-[rgba(212,175,55,0.6)]">
+            You have self-excluded from PlayArena. Login is blocked until your exclusion period ends.
+          </p>
+          <p className="text-[10px] text-[#FF4D6D]/70 font-bold">
+            For help: <a href="mailto:support@playarena.com" className="underline">support@playarena.com</a>
+          </p>
+        </div>
+      )}
+
+      {/* Session expired banner */}
+      {reason === 'session_expired' && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-300 font-bold">You were logged out because your session time limit was reached.</p>
+        </div>
+      )}
+
+      {/* 2FA OTP modal overlay */}
+      {show2FA && (
+        <div className="rounded-2xl royal-panel p-5 space-y-4 mb-4">
+          <div className="text-center">
+            <div className="text-3xl mb-2">🔐</div>
+            <h3 className="text-sm font-black text-[#E8C97A]">Two-Factor Authentication</h3>
+            <p className="text-[10px] text-[rgba(212,175,55,0.5)] mt-1">Enter the 6-digit OTP sent to your device</p>
+            <div className="mt-2 p-2 rounded-lg bg-[rgba(46,204,113,0.08)] border border-[rgba(46,204,113,0.2)]">
+              <p className="text-xs font-black text-[#2ECC71]">🔔 Demo OTP: <span className="tracking-[0.3em] font-heading">123456</span></p>
+            </div>
+          </div>
+          <input
+            type="text" maxLength={6} value={otpValue}
+            onChange={e => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="_ _ _ _ _ _"
+            className="w-full text-center text-2xl font-black tracking-[0.5em] bg-[#061510] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-3 text-gold focus:outline-none focus:border-[rgba(212,175,55,0.5)]"
+          />
+          {serverError && <p className="text-xs text-[#FF4D6D] text-center">{serverError}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => { setShow2FA(false); setOtpValue(''); setServerError(null); }}
+              className="py-2.5 rounded-xl text-xs font-black border border-[rgba(212,175,55,0.2)] text-[rgba(212,175,55,0.6)] cursor-pointer">
+              Back
+            </button>
+            <button onClick={handle2FASubmit} disabled={otpValue.length !== 6 || isLoading}
+              className="py-2.5 rounded-xl text-xs font-black btn-royal-gold cursor-pointer disabled:opacity-50">
+              {isLoading ? 'Verifying…' : 'Verify OTP'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Instant Demo Access Box */}
-      <div className="p-3 rounded-xl bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.3)] text-center space-y-1.5 mb-3">
+      {!isExcluded() && !show2FA && (
+        <>
+        <div className="p-3 rounded-xl bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.3)] text-center space-y-1.5 mb-3">
         <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-gold">
           <Sparkles className="w-3.5 h-3.5 text-gold" /> Instant Demo Access
         </div>
@@ -282,6 +366,7 @@ export default function LoginPage() {
           </div>
         </div>
       </form>
+      </> )} {/* end !isExcluded && !show2FA fragment */}
     </AuthLayout>
   );
 }

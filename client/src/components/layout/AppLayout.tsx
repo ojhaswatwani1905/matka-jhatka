@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
+import { SessionWarningBanner, RealityCheckPopup } from '../ui/SessionWidgets';
+import { useRG } from '../../store/RGContext';
 import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
 
 const iconRailItems = [
@@ -69,10 +72,19 @@ function IconRail() {
 }
 
 export default function AppLayout() {
+  const { startSession } = useRG();
+
+  // Start session timer when layout mounts (user navigated into app)
+  useEffect(() => { startSession(); }, [startSession]);
+
   return (
     <div className="w-full min-h-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-x-hidden">
       {/* Age & Compliance Modal */}
       <AgeGateModal />
+
+      {/* Session widgets (warning banner + reality check) */}
+      <SessionWarningBanner />
+      <RealityCheckPopup />
 
       {/* Top Website Header */}
       <Navbar />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard, LockKeyhole, Zap } from 'lucide-react';
+import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard, LockKeyhole, Zap, Mail, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../../components/ui/Button';
@@ -10,6 +10,7 @@ import { useWallet } from '../../store/WalletContext';
 import { useKYC } from '../../store/KYCContext';
 import { useAchievements } from '../../store/AchievementContext';
 import { useNotifications } from '../../store/NotificationContext';
+import { useRG } from '../../store/RGContext';
 import { SpinWheelModal } from '../../components/ui/SpinWheelModal';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import { formatCurrency } from '../../lib/utils';
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const { status: kycStatus } = useKYC();
   const { achievements } = useAchievements();
   const { addNotification } = useNotifications();
+  const { settings: rgSettings, updateSettings: updateRG } = useRG();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'personal' | 'bank' | 'security' | 'notifications' | null>('personal');
   const [claimedToday, setClaimedToday] = useState(false);
@@ -250,6 +252,30 @@ export default function ProfilePage() {
                       <Input label="Current Password" type="password" placeholder="••••••••" />
                       <Input label="New Password" type="password" placeholder="••••••••" />
                       <Button variant="primary" size="md" fullWidth>Update Security Password</Button>
+                      {/* 2FA Toggle */}
+                      <div className="flex items-center justify-between p-3 bg-[rgba(212,175,55,0.05)] border border-[rgba(212,175,55,0.15)] rounded-xl">
+                        <div>
+                          <p className="text-xs font-black text-[#F5F1E6]">Two-Factor Authentication (2FA)</p>
+                          <p className="text-[10px] text-[rgba(212,175,55,0.45)] mt-0.5">
+                            {rgSettings.twoFAEnabled ? '✅ Enabled — OTP required at login' : 'Disabled — login with password only'}
+                          </p>
+                        </div>
+                        <button onClick={() => updateRG({ twoFAEnabled: !rgSettings.twoFAEnabled })}
+                          className={`w-12 h-6 rounded-full transition-all cursor-pointer relative ${rgSettings.twoFAEnabled ? 'bg-[#2ECC71]' : 'bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.2)]'}`}>
+                          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${rgSettings.twoFAEnabled ? 'left-6' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                      {rgSettings.twoFAEnabled && (
+                        <div className="p-3 rounded-xl bg-[rgba(46,204,113,0.08)] border border-[rgba(46,204,113,0.25)] text-xs text-[rgba(212,175,55,0.6)]">
+                          🔐 <strong className="text-[#2ECC71]">Demo OTP: 123456</strong> — In production, this would be sent via SMS/email. Use this code when prompted at login.
+                        </div>
+                      )}
+                      {/* Responsible Gaming link */}
+                      <Link to="/responsible-gaming"
+                        className="flex items-center justify-between p-3 rounded-xl bg-[rgba(46,204,113,0.06)] border border-[rgba(46,204,113,0.2)] text-xs text-[#2ECC71] font-bold hover:bg-[rgba(46,204,113,0.12)] transition-all cursor-pointer">
+                        <span className="flex items-center gap-2"><Shield className="w-4 h-4" /> Responsible Gaming Settings</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
                     </>
                   )}
                   {item.key === 'notifications' && (
