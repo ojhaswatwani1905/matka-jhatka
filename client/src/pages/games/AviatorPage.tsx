@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, TrendingUp, Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plane, Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
-import { generateId, generatePeriod, getRandomNumber, formatCurrency } from '../../lib/utils';
+import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
@@ -25,7 +25,6 @@ async function hashSeed(seed: string): Promise<string> {
 }
 
 function seedToCrashPoint(seed: string): number {
-  // Use first 8 hex chars → number → map to crash range 1.00–100x
   const n = parseInt(seed.slice(0, 8), 16);
   const r = n / 0xffffffff; // 0–1
   if (r < 0.03) return 1.00; // 3% instant crash
@@ -44,15 +43,31 @@ interface RoundHistory {
 
 const MOCK_USERS = ['Raj***91', 'Priya***42', 'Amit***77', 'Sona***15', 'Vikram***33', 'Neha***08', 'Rohit***66'];
 
+/* ─── Color Tier Helper for Multiplier Chips ──────────────────── */
+function getMultiplierChipClass(mult: number): string {
+  if (mult < 2.00) {
+    return 'bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 shadow-[0_0_8px_rgba(45,212,191,0.15)]';
+  } else if (mult < 10.00) {
+    return 'bg-[rgba(212,175,55,0.15)] text-[#E8C97A] border border-[rgba(212,175,55,0.4)] shadow-[0_0_10px_rgba(212,175,55,0.2)]';
+  } else {
+    return 'bg-fuchsia-950/90 text-fuchsia-300 border border-fuchsia-500/60 font-black shadow-[0_0_14px_rgba(236,72,153,0.35)] animate-pulse';
+  }
+}
+
 /* ─── Crash Chart ──────────────────────────────────────────────── */
-function CrashChart({ multiplier, crashed, phase }: { multiplier: number; crashed: boolean; phase: 'betting' | 'flying' | 'crashed' }) {
+function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier: number; crashed: boolean; phase: 'betting' | 'flying' | 'crashed'; liveBets?: LiveBet[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pointsRef = useRef<{ x: number; y: number }[]>([]);
+  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (phase === 'betting') { pointsRef.current = []; }
+    if (phase === 'betting') {
+      startTimeRef.current = 0;
+    } else if (phase === 'flying' && startTimeRef.current === 0) {
+      startTimeRef.current = Date.now();
+    }
   }, [phase]);
 
+  // Draw canvas with exponential curve + plane rotation + filled area
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -61,82 +76,135 @@ function CrashChart({ multiplier, crashed, phase }: { multiplier: number; crashe
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    if (phase === 'flying' || phase === 'crashed') {
-      const t = Math.min(multiplier, 20);
-      const xFrac = Math.min((Date.now() % 10000) / 10000, 1);
-      pointsRef.current.push({ x: xFrac, y: Math.log(t) / Math.log(20) });
-      if (pointsRef.current.length > 120) pointsRef.current.shift();
+    const originX = 35;
+    const originY = H - 25;
+
+    if (phase === 'betting') {
+      // Draw idle flat line at origin
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(212,175,55,0.3)';
+      ctx.lineWidth = 2;
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX + 40, originY);
+      ctx.stroke();
+      return;
     }
 
-    if (pointsRef.current.length < 2) return;
-    const pts = pointsRef.current;
-    const minX = pts[0].x, maxX = pts[pts.length - 1].x;
-    const rng = Math.max(maxX - minX, 0.01);
+    // Flying or Crashed phase
+    if (startTimeRef.current === 0) startTimeRef.current = Date.now();
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
 
-    const toCanvas = (p: { x: number; y: number }) => ({
-      cx: 40 + ((p.x - minX) / rng) * (W - 60),
-      cy: H - 30 - p.y * (H - 50),
-    });
+    // Exponential arc progress math
+    const progressX = Math.min(1.0, elapsed / 7.5);
+    const progressY = Math.min(1.0, Math.log(multiplier) / Math.log(12.0));
 
-    // Gradient fill
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, crashed ? 'rgba(255,77,109,0.25)' : 'rgba(212,175,55,0.25)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    const targetX = originX + progressX * (W - 85);
+    const targetY = originY - progressY * (H - 55);
+
+    // Control point for exponential sweep curve: flat near start, steep at end
+    const controlX = originX + (targetX - originX) * 0.72;
+    const controlY = originY;
+
+    // 1. Solid gradient wedge fill under the curve down to origin Y
     ctx.beginPath();
-    const first = toCanvas(pts[0]);
-    ctx.moveTo(first.cx, H - 30);
-    ctx.lineTo(first.cx, first.cy);
-    pts.forEach(p => { const c = toCanvas(p); ctx.lineTo(c.cx, c.cy); });
-    const last = toCanvas(pts[pts.length - 1]);
-    ctx.lineTo(last.cx, H - 30);
+    ctx.moveTo(originX, originY);
+    ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
+    ctx.lineTo(targetX, originY);
     ctx.closePath();
-    ctx.fillStyle = grad;
+
+    const fillGrad = ctx.createLinearGradient(originX, 0, targetX, 0);
+    if (crashed) {
+      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.05)');
+      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.55)');
+    } else {
+      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.05)');
+      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.55)');
+    }
+    ctx.fillStyle = fillGrad;
     ctx.fill();
 
-    // Line
+    // 2. Vertical drop line from plane tip to bottom baseline (like real Aviator)
+    ctx.beginPath();
+    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.45)' : 'rgba(212, 175, 55, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.moveTo(targetX, targetY);
+    ctx.lineTo(targetX, originY);
+    ctx.stroke();
+    ctx.setLineDash([]); // reset
+
+    // 3. Accelerating stroke curve line
     ctx.beginPath();
     ctx.strokeStyle = crashed ? '#FF4D6D' : '#D4AF37';
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
-    pts.forEach((p, i) => { const c = toCanvas(p); i === 0 ? ctx.moveTo(c.cx, c.cy) : ctx.lineTo(c.cx, c.cy); });
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.moveTo(originX, originY);
+    ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
     ctx.stroke();
 
-    // Plane icon at end
-    if (phase !== 'crashed') {
-      const end = toCanvas(pts[pts.length - 1]);
-      ctx.fillStyle = '#D4AF37';
-      ctx.font = '20px serif';
-      ctx.fillText('✈', end.cx - 10, end.cy - 5);
+    // 4. Plane icon rotated to match exact tangent slope angle at current point
+    if (phase === 'flying') {
+      const tangentDx = targetX - controlX;
+      const tangentDy = targetY - controlY;
+      const angle = Math.atan2(tangentDy, tangentDx);
+
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      ctx.rotate(angle);
+      ctx.fillStyle = crashed ? '#FF4D6D' : '#FFE57F';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('✈', -6, 6);
+      ctx.restore();
     }
-  });
+  }, [multiplier, crashed, phase]);
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.2)]"
-      style={{ background: 'linear-gradient(180deg, #0a1e12 0%, #061A10 100%)', height: 220 }}>
-      <canvas ref={canvasRef} width={600} height={220} className="w-full h-full" />
+    <div className="relative w-full rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.25)] bg-[#04140D] shadow-2xl" style={{ height: 230 }}>
+      {/* Radial light-ray background fanning out from bottom-left origin */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          background: 'repeating-conic-gradient(from -20deg at 5% 95%, rgba(46,204,113,0.3) 0deg 8deg, transparent 8deg 16deg)',
+        }}
+      />
+
+      <canvas ref={canvasRef} width={600} height={230} className="w-full h-full relative z-10" />
 
       {/* Multiplier overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
         {phase === 'betting' && (
           <div className="text-center space-y-1">
-            <p className="text-xs text-[rgba(212,175,55,0.5)] font-bold uppercase tracking-wider">Waiting for players...</p>
-            <div className="w-2 h-2 rounded-full bg-[#D4AF37] mx-auto animate-pulse" />
+            <p className="text-xs text-[rgba(212,175,55,0.6)] font-bold uppercase tracking-widest">NEXT ROUND STARTING</p>
+            <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] mx-auto animate-ping" />
           </div>
         )}
         {(phase === 'flying' || phase === 'crashed') && (
           <motion.div
             key={phase}
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="text-center"
           >
-            <div className={`text-5xl font-black font-heading ${crashed ? 'text-[#FF4D6D]' : 'text-[#D4AF37]'}`}
-              style={{ textShadow: crashed ? '0 0 30px rgba(255,77,109,0.8)' : '0 0 30px rgba(212,175,55,0.8)' }}>
+            <div className={`text-6xl font-black font-heading ${crashed ? 'text-[#FF4D6D]' : 'text-[#FFE57F]'}`}
+              style={{ textShadow: crashed ? '0 0 35px rgba(255,77,109,0.85)' : '0 0 35px rgba(212,175,55,0.85)' }}>
               {multiplier.toFixed(2)}×
             </div>
-            {crashed && <p className="text-[#FF4D6D] font-black text-sm mt-1">CRASHED!</p>}
+            {crashed && <p className="text-[#FF4D6D] font-black text-sm tracking-widest uppercase mt-1">FLEW AWAY!</p>}
           </motion.div>
         )}
+      </div>
+
+      {/* Overlapping live bet player avatars in bottom-right corner */}
+      <div className="absolute bottom-2.5 right-3 flex items-center -space-x-2 z-20 pointer-events-none">
+        {liveBets.slice(0, 4).map((b, i) => (
+          <div
+            key={b.id || i}
+            className="w-6 h-6 rounded-full bg-[#0d2419] border-2 border-gold/40 flex items-center justify-center text-[9px] font-black text-gold shadow-md"
+            title={b.user}
+          >
+            {b.user[0]}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -161,37 +229,16 @@ export default function AviatorPage() {
   const [seed, setSeed] = useState('');
   const [crashPoint, setCrashPoint] = useState(2.0);
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+
+  // Single-execution guard & refs to eliminate double-firing side effects
+  const isStoppingRef = useRef(false);
+  const myBetRef = useRef<{ amount: number; cashedAt?: number } | null>(null);
+  myBetRef.current = myBet;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
-
-  const stopFlight = useCallback((cp: number, didCrash: boolean) => {
-    clearInterval(intervalRef.current);
-    setPhase('crashed');
-    setMultiplier(cp);
-    setHistory(prev => [{ multiplier: cp, crashed: didCrash }, ...prev].slice(0, 20));
-
-    setMyBet(prev => {
-      if (prev && !prev.cashedAt) {
-        addToast({ type: 'error', title: `Crashed at ${cp.toFixed(2)}×`, message: `Lost ₹${prev.amount}` });
-      }
-      return null;
-    });
-
-    setLiveBets(prev => prev.map(b => !b.cashedAt ? { ...b, status: 'lost' as const } : b));
-
-    // New round after 4s
-    setTimeout(async () => {
-      const newSeed = generateSeed();
-      const hash = await hashSeed(newSeed);
-      const cp2 = seedToCrashPoint(newSeed);
-      setSeed(newSeed);
-      setCommitHash(hash);
-      setCrashPoint(cp2);
-      setMultiplier(1.00);
-      setPhase('betting');
-      setCountdown(5);
-      setLiveBets(generateMockBets());
-    }, 4000);
-  }, [addToast]);
 
   function generateMockBets(): LiveBet[] {
     return Array.from({ length: getRandomNumber(4, 8) }, () => ({
@@ -201,6 +248,44 @@ export default function AviatorPage() {
       status: 'active' as const,
     }));
   }
+
+  const stopFlight = useCallback((cp: number, didCrash: boolean) => {
+    // Single-execution guard
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    setPhase('crashed');
+    setMultiplier(cp);
+    setHistory(prev => [{ multiplier: cp, crashed: didCrash }, ...prev].slice(0, 20));
+
+    // Handle loss toast DIRECTLY on ref, NOT inside state updater callback
+    const activeBet = myBetRef.current;
+    if (activeBet && !activeBet.cashedAt) {
+      addToast({ type: 'error', title: `Crashed at ${cp.toFixed(2)}×`, message: `Lost ₹${activeBet.amount}` });
+    }
+    setMyBet(null);
+
+    setLiveBets(prev => prev.map(b => !b.cashedAt ? { ...b, status: 'lost' as const } : b));
+
+    // Prepare next round after 4s
+    setTimeout(async () => {
+      const newSeed = generateSeed();
+      const hash = await hashSeed(newSeed);
+      const cp2 = seedToCrashPoint(newSeed);
+      setSeed(newSeed);
+      setCommitHash(hash);
+      setCrashPoint(cp2);
+      setMultiplier(1.00);
+      isStoppingRef.current = false;
+      setPhase('betting');
+      setCountdown(5);
+      setLiveBets(generateMockBets());
+    }, 4000);
+  }, [addToast]);
 
   // Init
   useEffect(() => {
@@ -219,6 +304,7 @@ export default function AviatorPage() {
   useEffect(() => {
     if (phase !== 'betting') return;
     if (countdown <= 0) {
+      isStoppingRef.current = false;
       setPhase('flying');
       return;
     }
@@ -226,60 +312,69 @@ export default function AviatorPage() {
     return () => clearTimeout(t);
   }, [phase, countdown]);
 
-  // Flight multiplier
+  // Flight multiplier loop
   useEffect(() => {
     if (phase !== 'flying') return;
     const start = Date.now();
+
     intervalRef.current = setInterval(() => {
+      if (isStoppingRef.current) return;
+
       const elapsed = (Date.now() - start) / 1000;
       const m = Math.round(Math.pow(1.0023, elapsed * 60) * 100) / 100;
       setMultiplier(m);
+
+      // Check crash condition
+      if (m >= crashPoint) {
+        stopFlight(crashPoint, true);
+        return;
+      }
 
       // Auto cashout
       const acp = parseFloat(autoCashout);
       if (!isNaN(acp) && m >= acp) {
         handleCashOut(m);
-        return;
       }
 
-      // Mock cashouts
+      // Mock live bets cashouts
       setLiveBets(prev => prev.map(b => {
         if (b.status === 'active' && m >= getRandomNumber(110, 300) / 100 && Math.random() < 0.02) {
           return { ...b, cashedAt: m, status: 'won' as const };
         }
         return b;
       }));
-
-      if (m >= crashPoint) {
-        stopFlight(crashPoint, true);
-      }
     }, 100);
-    return () => clearInterval(intervalRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, crashPoint]);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [phase, crashPoint, autoCashout, stopFlight]);
 
   const placeBet = () => {
     requireAuth(() => {
       if (phase !== 'betting') { addToast({ type: 'warning', title: 'Round in progress' }); return; }
       if (!deductBalance(betAmount, `Aviator bet`)) { addToast({ type: 'error', title: 'Insufficient balance' }); return; }
       setMyBet({ amount: betAmount });
-      if (soundOn) sounds.playChip();
+      if (soundOnRef.current) sounds.playChip();
       addToast({ type: 'info', title: `Bet placed: ₹${betAmount}`, message: 'Cash out before it crashes!' });
     });
   };
 
   const handleCashOut = useCallback((atMultiplier?: number) => {
+    const activeBet = myBetRef.current;
+    if (!activeBet || activeBet.cashedAt || phaseRef.current !== 'flying') return;
+
     const m = atMultiplier ?? multiplier;
-    setMyBet(prev => {
-      if (!prev || prev.cashedAt) return prev;
-      const win = Math.floor(prev.amount * m * 100) / 100;
-      addBalance(win, `Aviator cashout at ${m.toFixed(2)}×`);
-      addToast({ type: 'success', title: `Cashed out! ₹${win.toFixed(2)}`, message: `${m.toFixed(2)}× multiplier` });
-      if (soundOn) sounds.playWin();
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
-      return { ...prev, cashedAt: m };
-    });
-  }, [multiplier, addBalance, addToast, soundOn]);
+    const win = Math.floor(activeBet.amount * m * 100) / 100;
+
+    myBetRef.current = { ...activeBet, cashedAt: m };
+    setMyBet({ ...activeBet, cashedAt: m });
+
+    addBalance(win, `Aviator cashout at ${m.toFixed(2)}×`);
+    addToast({ type: 'success', title: `Cashed out! ₹${win.toFixed(2)}`, message: `${m.toFixed(2)}× multiplier` });
+    if (soundOnRef.current) sounds.playWin();
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
+  }, [multiplier, addBalance, addToast]);
 
   const inputCls = 'w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-2.5 text-sm text-[#F5F1E6] focus:outline-none focus:border-[rgba(212,175,55,0.5)] transition-colors placeholder-[rgba(212,175,55,0.25)]';
 
@@ -307,13 +402,24 @@ export default function AviatorPage() {
         </div>
       </div>
 
+      {/* Top compact recent multiplier ticker strip */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1.5 px-2 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.15)]">
+        <span className="text-[9px] font-black text-[rgba(212,175,55,0.4)] uppercase tracking-wider shrink-0 mr-1">History:</span>
+        {history.map((h, i) => (
+          <span key={i} className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
+            {h.multiplier.toFixed(2)}×
+          </span>
+        ))}
+        {history.length === 0 && <span className="text-[10px] text-[rgba(212,175,55,0.3)]">No history rounds recorded yet</span>}
+      </div>
+
       {/* Commit hash */}
       <div className="bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.12)] rounded-xl p-2.5 text-[10px] text-[rgba(212,175,55,0.45)] font-mono truncate">
         Next round hash: {commitHash}
       </div>
 
       {/* Crash chart */}
-      <CrashChart multiplier={multiplier} crashed={phase === 'crashed'} phase={phase} />
+      <CrashChart multiplier={multiplier} crashed={phase === 'crashed'} phase={phase} liveBets={liveBets} />
 
       {/* Countdown */}
       {phase === 'betting' && (
@@ -325,11 +431,10 @@ export default function AviatorPage() {
       {/* Round History strip */}
       <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
         {history.map((h, i) => (
-          <span key={i} className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${h.multiplier < 2 ? 'bg-[#FF4D6D]/15 text-[#FF4D6D]' : h.multiplier < 5 ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'}`}>
+          <span key={i} className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-mono ${getMultiplierChipClass(h.multiplier)}`}>
             {h.multiplier.toFixed(2)}×
           </span>
         ))}
-        {history.length === 0 && <span className="text-xs text-[rgba(212,175,55,0.3)]">No history yet</span>}
       </div>
 
       {/* Bet Panel */}
@@ -385,7 +490,7 @@ export default function AviatorPage() {
         <div className="flex gap-1 bg-[#0d2419] rounded-xl p-1 mb-3 border border-[rgba(212,175,55,0.12)]">
           {(['live', 'history'] as const).map(t => (
             <button key={t} onClick={() => setActiveTab(t)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize cursor-pointer transition-all ${activeTab === t ? 'bg-[rgba(212,175,55,0.18)] text-gold border border-[rgba(212,175,55,0.35)]' : 'text-[rgba(212,175,55,0.4)]'}`}>
+              className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize cursor-pointer transition-all ${activeTab === t ? 'bg-[rgba(212,175,55,0.18)] text-[#E8C97A] border border-[rgba(212,175,55,0.35)]' : 'text-[rgba(212,175,55,0.4)]'}`}>
               {t === 'live' ? <span className="flex items-center justify-center gap-1.5"><Users className="w-3.5 h-3.5" /> Live Bets</span> : <span className="flex items-center justify-center gap-1.5"><History className="w-3.5 h-3.5" /> Round History</span>}
             </button>
           ))}
@@ -409,7 +514,7 @@ export default function AviatorPage() {
         {activeTab === 'history' && (
           <div className="grid grid-cols-5 gap-1.5">
             {history.map((h, i) => (
-              <div key={i} className={`text-center py-2 rounded-xl text-xs font-black ${h.multiplier < 2 ? 'bg-[#FF4D6D]/10 text-[#FF4D6D] border border-[#FF4D6D]/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+              <div key={i} className={`text-center py-2 rounded-xl text-xs font-black ${getMultiplierChipClass(h.multiplier)}`}>
                 {h.multiplier.toFixed(2)}×
               </div>
             ))}
