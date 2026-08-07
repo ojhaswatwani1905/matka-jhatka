@@ -183,7 +183,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [addBonusBalance, addTransaction]);
 
-  const deductBalance = useCallback((amount: number, description?: string): boolean => {
+  const deductBalance = useCallback((amount: number, description?: string, type: Transaction['type'] = 'bet'): boolean => {
     const mainBal = balanceRef.current;
     const bonusBal = bonusBalanceRef.current;
 
@@ -223,7 +223,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     addTransaction({
       userId: 'demo',
-      type: 'bet',
+      type: type || 'bet',
       amount,
       status: 'completed',
       description: description || `Bet ₹${amount}`,

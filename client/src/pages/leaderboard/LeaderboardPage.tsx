@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Crown, TrendingUp } from 'lucide-react';
+import { Trophy, Medal, Crown } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { formatCurrency } from '../../lib/utils';
@@ -221,7 +221,7 @@ export default function LeaderboardPage() {
             <span className="text-[10px] text-[rgba(212,175,55,0.4)]">Your Position</span>
             <div className="flex-1 h-px border-t border-dashed border-[rgba(212,175,55,0.2)]" />
           </div>
-          <LeaderRow entry={{ ...myEntry, weekWin: tab === 'week' ? myEntry.weekWin : myEntry.monthWin }} rank={myRank} />
+          <LeaderRow entry={{ ...myEntry, weekWin: tab === 'week' ? myEntry.weekWin : myEntry.monthWin }} rank={myRank} tab={tab} />
         </div>
       )}
     </div>

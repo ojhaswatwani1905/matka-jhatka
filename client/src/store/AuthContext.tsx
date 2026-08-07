@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email?: string, password?: string) => {
+  const login = useCallback(async (email?: string, _password?: string) => {
     // Admin login shortcut
     if (email === 'admin@playarena.com') {
       localStorage.setItem('playarena_user', JSON.stringify(ADMIN_USER));

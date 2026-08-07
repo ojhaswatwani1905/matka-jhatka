@@ -183,8 +183,6 @@ const FISHING_GAMES: Game[] = [
   },
 ];
 
-const COMING_SOON: Game[] = [];
-
 /* ─── Category tabs ─────────────────────────────────────────────── */
 const CATS = [
   { id: 'all', label: '🔥 All Games' },

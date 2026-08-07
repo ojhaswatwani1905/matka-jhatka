@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
@@ -34,6 +35,7 @@ const markets: Market[] = [
 
 export default function MatkaPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(markets[0]);
@@ -357,9 +359,9 @@ export default function MatkaPage() {
         balance={balance}
         intervalMs={5000}
         onPlaceBet={async (amount) => {
-          if (!requireAuth()) return 0;
+          if (!isAuthenticated) return 0;
           if (balance < amount) return 0;
-          deductBalance(amount, `Auto-Bet — Matka Jhatka`, 'bet');
+          deductBalance(amount, `Auto-Bet — Matka Jhatka`);
           const won = Math.random() > 0.65;
           const mult = won ? 9.0 : 0;
           const payout = won ? Math.round(amount * mult) : 0;

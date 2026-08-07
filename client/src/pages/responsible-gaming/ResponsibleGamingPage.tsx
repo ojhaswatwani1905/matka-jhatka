@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Clock, Ban, AlertTriangle, ChevronRight, Check } from 'lucide-react';
+import { Shield, Clock, Ban, AlertTriangle, Check } from 'lucide-react';
 import { useRG, type ExclusionPeriod, type SessionLimit } from '../../store/RGContext';
 import { useAuth } from '../../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -45,13 +45,13 @@ function SectionCard({ icon, title, subtitle, children }: { icon: React.ReactNod
 }
 
 export default function ResponsibleGamingPage() {
-  const { settings, updateSettings, updateDepositCaps, cancelPendingIncrease, setExclusion, isExcluded } = useRG();
+  const { settings, updateSettings, updateDepositCaps, setExclusion, isExcluded } = useRG();
   const { logout } = useAuth();
   const navigate = useNavigate();
 
   const [depositDay, setDepositDay] = useState(settings.depositCap.daily?.toString() ?? '');
   const [depositWeek, setDepositWeek] = useState(settings.depositCap.weekly?.toString() ?? '');
-  const [depositMonth, setDepositMonth] = useState(settings.depositCap.month?.toString() ?? '');
+  const [depositMonth, setDepositMonth] = useState(settings.depositCap.monthly?.toString() ?? '');
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [confirmExclusion, setConfirmExclusion] = useState<ExclusionPeriod | null>(null);
   const [showExclusionWarning, setShowExclusionWarning] = useState(false);

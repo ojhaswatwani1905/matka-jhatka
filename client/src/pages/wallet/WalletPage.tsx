@@ -14,7 +14,7 @@ import { useWithdrawalAccounts } from '../../store/WithdrawalAccountsContext';
 import { useRG } from '../../store/RGContext';
 import { useToast } from '../../components/ui/Toast';
 import { getTimeAgo } from '../../lib/utils';
-import { Tag, Sparkles, Building, QrCode } from 'lucide-react';
+import { Tag } from 'lucide-react';
 
 const STATUS_BADGE: Record<string, string> = {
   pending: 'text-amber-400 bg-amber-500/10 border border-amber-500/30',
@@ -27,7 +27,7 @@ export default function WalletPage() {
   const { user } = useAuth();
   const { redeemCode } = usePromo();
   const { accounts, defaultAccount } = useWithdrawalAccounts();
-  const { checkDepositAllowed, settings: rgSettings } = useRG();
+  const { checkDepositAllowed } = useRG();
   const { status: kycStatus } = useKYC();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'deposit' | 'withdrawal'>('all');

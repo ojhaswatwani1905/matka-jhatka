@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, RotateCcw } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
-import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { GameChat } from '../../components/ui/GameChat';
 
@@ -119,7 +118,7 @@ function PlayingCard({ card, faceDown = false, delay = 0 }: { card?: Card; faceD
 type GamePhase = 'idle' | 'dealt' | 'reveal' | 'result';
 
 export default function TeenPattiPage() {
-  const { balance, deductBalance, addBalance } = useWallet();
+  const { deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
 
@@ -206,7 +205,7 @@ export default function TeenPattiPage() {
     addToast({ type: 'warning', title: `Folded — lost ₹${currentBet} ante` });
     setResult('lose');
     setShowHouseCards(true);
-    setHistory(prev => ['lose', ...prev].slice(0, 20));
+    setHistory(prev => (['lose', ...prev] as ('win' | 'lose' | 'tie')[]).slice(0, 20));
     setPhase('result');
   };
 

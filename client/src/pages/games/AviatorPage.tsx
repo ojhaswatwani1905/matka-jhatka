@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Plane, Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { generateId, getRandomNumber } from '../../lib/utils';
@@ -227,6 +228,7 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
 /* ─── Main Page ────────────────────────────────────────────────── */
 export default function AviatorPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
 
@@ -240,7 +242,7 @@ export default function AviatorPage() {
   const [countdown, setCountdown] = useState(5);
   const [soundOn, setSoundOn] = useState(true);
   const [commitHash, setCommitHash] = useState('');
-  const [seed, setSeed] = useState('');
+  const [, setSeed] = useState('');
   const [crashPoint, setCrashPoint] = useState(2.0);
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
 
@@ -252,7 +254,7 @@ export default function AviatorPage() {
   phaseRef.current = phase;
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<any>(null);
 
   function generateMockBets(): LiveBet[] {
     return Array.from({ length: getRandomNumber(4, 8) }, () => ({
@@ -509,9 +511,9 @@ export default function AviatorPage() {
             disabled={phase !== 'betting'}
             intervalMs={6000}
             onPlaceBet={async (amount) => {
-              if (!requireAuth()) return 0;
+              if (!isAuthenticated) return 0;
               if (balance < amount) return 0;
-              deductBalance(amount, `Auto-Bet — Aviator`, 'bet');
+              deductBalance(amount, `Auto-Bet — Aviator`);
               // Simulate: 40% chance win at 1.5–3x
               const won = Math.random() > 0.6;
               const mult = won ? parseFloat((1.5 + Math.random() * 1.5).toFixed(2)) : 0;

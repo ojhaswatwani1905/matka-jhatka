@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, Plus, Check, Trash2, Star, Building, QrCode } from 'lucide-react';
-import { useWithdrawalAccounts, type SavedAccount } from '../../store/WithdrawalAccountsContext';
+import { CreditCard, Plus, Trash2, Star, Building, QrCode } from 'lucide-react';
+import { useWithdrawalAccounts } from '../../store/WithdrawalAccountsContext';
 
 export function SavedAccountsManager() {
   const { accounts, addAccount, deleteAccount, setDefault } = useWithdrawalAccounts();
@@ -9,7 +9,7 @@ export function SavedAccountsManager() {
 
   const [accType, setAccType] = useState<'bank' | 'upi'>('upi');
   const [label, setLabel] = useState('');
-  const [accountHolder, setAccountHolder] = useState('Demo Player');
+  const [accountHolder] = useState('Demo Player');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, CheckCircle2, Trophy, Gift, ArrowDownLeft, Crown, Star, Shield, Zap, ArrowUpRight } from 'lucide-react';
+import { Bell, CheckCircle2, Trophy, Gift, ArrowDownLeft, Crown, Star, Shield, Zap } from 'lucide-react';
 import { useNotifications, type AppNotification } from '../../store/NotificationContext';
 import { getTimeAgo } from '../../lib/utils';
 

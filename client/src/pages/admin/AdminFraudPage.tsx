@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ShieldAlert, CheckCircle, Ban, UserX, Bell, Lock } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Ban, Bell, Lock } from 'lucide-react';
 import { useNotifications } from '../../store/NotificationContext';
 
 interface FraudFlag {
@@ -89,13 +89,13 @@ export default function AdminFraudPage() {
       addNotification({
         title: '⚠️ Security Notice',
         message: 'Our automated compliance system detected unusual activity on your account. Please review terms of service.',
-        type: 'warning',
+        type: 'system',
       });
     } else if (action === 'restricted') {
       addNotification({
         title: '🔒 Account Temporarily Restricted',
         message: 'Withdrawals are currently locked pending security review. Contact support for assistance.',
-        type: 'error',
+        type: 'system',
       });
     }
 

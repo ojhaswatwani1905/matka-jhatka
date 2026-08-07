@@ -19,7 +19,6 @@ export default function AdminKYCPage() {
   );
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [viewModal, setViewModal] = useState<KYCData | null>(null);
 
   const saveQueue = (updated: typeof queue) => {
     setQueue(updated);

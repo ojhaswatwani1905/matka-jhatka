@@ -9,6 +9,7 @@ import Modal from '../../components/ui/Modal';
 import { StatusBadge } from '../../components/shared/HistoryTable';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId, generatePeriod } from '../../lib/utils';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
@@ -28,6 +29,7 @@ interface WinGoBet {
 
 export default function WinGoPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [period, setPeriod] = useState(generatePeriod());
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
@@ -234,9 +236,9 @@ export default function WinGoPage() {
         disabled={isLocked}
         intervalMs={5000}
         onPlaceBet={async (amount) => {
-          if (!requireAuth()) return 0;
+          if (!isAuthenticated) return 0;
           if (balance < amount) return 0;
-          deductBalance(amount, `Auto-Bet — WinGo`, 'bet');
+          deductBalance(amount, `Auto-Bet — WinGo`);
           const won = Math.random() > 0.5;
           const mult = won ? 2.0 : 0;
           const payout = won ? Math.round(amount * mult) : 0;

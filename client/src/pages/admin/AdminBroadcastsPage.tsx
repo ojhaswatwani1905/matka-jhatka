@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Megaphone, Send, History, Users, CheckCircle, BellRing } from 'lucide-react';
 import { useNotifications } from '../../store/NotificationContext';
 
@@ -57,7 +56,7 @@ export default function AdminBroadcastsPage() {
     addNotification({
       title: `📢 ${title}`,
       message,
-      type: 'info',
+      type: 'system',
     });
 
     const newRecord: BroadcastRecord = {

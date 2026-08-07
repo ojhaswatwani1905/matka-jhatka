@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Tag, Plus, CheckCircle, XCircle, Clock, Users, Gift, Sparkles } from 'lucide-react';
+import { Tag, Plus, Users, Gift, Sparkles } from 'lucide-react';
 import { usePromo } from '../../store/PromoContext';
 import { formatCurrency } from '../../lib/utils';
 

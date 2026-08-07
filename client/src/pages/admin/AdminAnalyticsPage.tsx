@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Calendar, Gamepad2, Percent } from 'lucide-react';
-import { useWallet } from '../../store/WalletContext';
+import { BarChart3, TrendingUp, Gamepad2, Percent } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 
 type TimeRange = 'today' | '7d' | '30d' | 'all';
@@ -27,7 +26,6 @@ const GAMES_LIST = [
 ];
 
 export default function AdminAnalyticsPage() {
-  const { transactions } = useWallet();
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
 
   const analyticsData = useMemo(() => {

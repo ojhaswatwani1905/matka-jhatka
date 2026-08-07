@@ -40,7 +40,7 @@ export { SEGMENTS };
 export function SpinWheelModal({ isOpen, onClose, onSpin, canSpin, cooldownLeft }: SpinWheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
-  const animRef = useRef<number>();
+  const animRef = useRef<any>(null);
   const isSpinningRef = useRef(false);
 
   const drawWheel = useCallback((rotation: number) => {

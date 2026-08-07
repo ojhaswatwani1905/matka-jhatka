@@ -7,7 +7,7 @@ import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
 import { SessionWarningBanner, RealityCheckPopup } from '../ui/SessionWidgets';
 import { useRG } from '../../store/RGContext';
-import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Crown, Globe, ShieldAlert } from 'lucide-react';
+import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Globe, ShieldAlert } from 'lucide-react';
 
 const iconRailItems = [
   { icon: Flame,         label: 'Popular',   path: '/games',               activeMatch: '/games',    exact: true  },

@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
-import { generateId } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
@@ -122,19 +122,20 @@ function PegBoard({ path, isDropping, landedSlot }: { path: ('L' | 'R')[]; isDro
 /* ─── Main Page ─────────────────────────────────────────────────── */
 export default function PlinkoPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
 
   const [risk, setRisk] = useState<'low' | 'medium' | 'high'>('medium');
   const [betAmount, setBetAmount] = useState(100);
   const [gameState, setGameState] = useState<'idle' | 'dropping' | 'result'>('idle');
-  const [path, setPath] = useState<('L' | 'R')[]>([]);
+  const [, setPath] = useState<('L' | 'R')[]>([]);
   const [animPath, setAnimPath] = useState<('L' | 'R')[]>([]);
   const [landedSlot, setLandedSlot] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<{ multiplier: number; win: number; slot: number } | null>(null);
   const [commitHash, setCommitHash] = useState('');
-  const [history, setHistory] = useState<{ slot: number; multiplier: number; win: number }[]>([]);
-  const animIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const [, setHistory] = useState<{ slot: number; multiplier: number; win: number }[]>([]);
+  const animIntervalRef = useRef<any>(null);
 
   const multipliers = MULTIPLIERS[risk];
 
@@ -282,9 +283,9 @@ export default function PlinkoPage() {
             disabled={gameState === 'dropping'}
             intervalMs={3500}
             onPlaceBet={async (amount) => {
-              if (!requireAuth()) return 0;
+              if (!isAuthenticated) return 0;
               if (balance < amount) return 0;
-              deductBalance(amount, `Auto-Bet — Plinko`, 'bet');
+              deductBalance(amount, `Auto-Bet — Plinko`);
               const MULTS = [0.5, 0.5, 1, 1, 2, 2, 5, 16];
               const mult = MULTS[Math.floor(Math.random() * MULTS.length)];
               const payout = Math.round(amount * mult);

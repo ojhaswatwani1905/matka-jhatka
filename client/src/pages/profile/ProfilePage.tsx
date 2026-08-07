@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard, LockKeyhole, Zap, Mail, Phone } from 'lucide-react';
+import { User, CreditCard, Shield, Bell, LogOut, ChevronRight, Camera, Gift, Check, Wallet, Crown, ShieldCheck, LayoutDashboard, LockKeyhole, Mail, Phone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../../components/ui/Button';
@@ -40,9 +40,6 @@ export default function ProfilePage() {
 
   const [name, setName] = useState(user?.name || 'Demo Player');
   const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
-  const [bankName, setBankName] = useState('HDFC Bank');
-  const [accNumber, setAccNumber] = useState('XXXX XXXX 8492');
-  const [ifsc, setIfsc] = useState('HDFC0001234');
 
   const handleClaimBonus = () => {
     if (claimedToday) return;

@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId } from '../../lib/utils';
 import confetti from 'canvas-confetti';
@@ -27,7 +28,8 @@ interface LotteryTicket {
 }
 
 export default function LotteryPage() {
-  const { deductBalance, addBalance } = useWallet();
+  const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [tickets, setTickets] = useState<LotteryTicket[]>([]);
@@ -268,9 +270,9 @@ export default function LotteryPage() {
         balance={balance}
         intervalMs={4000}
         onPlaceBet={async (amount) => {
-          if (!requireAuth()) return 0;
+          if (!isAuthenticated) return 0;
           if (balance < amount) return 0;
-          deductBalance(amount, `Auto-Bet — Lottery 5D`, 'bet');
+          deductBalance(amount, `Auto-Bet — Lottery 5D`);
           const won = Math.random() > 0.7;
           const mult = won ? 5.0 : 0;
           const payout = won ? Math.round(amount * mult) : 0;

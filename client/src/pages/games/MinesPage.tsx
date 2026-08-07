@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bomb, Shield, TrendingUp } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
-import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
@@ -82,6 +82,7 @@ function Tile({ state, onClick, disabled }: { state: TileState; onClick: () => v
 /* ─── Main Page ─────────────────────────────────────────────────── */
 export default function MinesPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
 
@@ -94,7 +95,7 @@ export default function MinesPage() {
   const [minePositions, setMinePositions] = useState<Set<number>>(new Set());
   const [revealed, setRevealed] = useState(0);
   const [commitHash, setCommitHash] = useState('');
-  const [seed, setSeed] = useState('');
+  const [, setSeed] = useState('');
 
   const currentMultiplier = revealed > 0 ? calcMultiplier(revealed, gridSize, mineCount) : 1;
 
@@ -265,9 +266,9 @@ export default function MinesPage() {
             disabled={gameState === 'playing'}
             intervalMs={4000}
             onPlaceBet={async (amount) => {
-              if (!requireAuth()) return 0;
+              if (!isAuthenticated) return 0;
               if (balance < amount) return 0;
-              deductBalance(amount, `Auto-Bet — Mines`, 'bet');
+              deductBalance(amount, `Auto-Bet — Mines`);
               const won = Math.random() > 0.45;
               const mult = won ? parseFloat((1.3 + Math.random() * 4).toFixed(2)) : 0;
               const payout = won ? Math.round(amount * mult) : 0;

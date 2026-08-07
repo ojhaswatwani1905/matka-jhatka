@@ -1,7 +1,7 @@
 /**
  * LiveFeedContext — simulated real-time bets across all games
  */
-import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 
 export interface LiveBetEntry {

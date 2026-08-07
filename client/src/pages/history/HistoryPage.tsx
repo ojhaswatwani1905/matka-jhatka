@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Trophy, Crown, ShieldCheck, Filter, TrendingUp, TrendingDown, BarChart2, ChevronDown } from 'lucide-react';
+import { Clock, Crown, ShieldCheck, Filter, TrendingUp, TrendingDown, BarChart2, ChevronDown } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
 import { StatusBadge } from '../../components/shared/HistoryTable';
 import { EmptyState } from '../../components/ui/EmptyState';

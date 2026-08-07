@@ -3,7 +3,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Send, X, ChevronDown, Flag } from 'lucide-react';
+import { MessageCircle, Send, X, Flag } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { useAuthGate } from '../../hooks/useAuthGate';
 
@@ -109,26 +109,27 @@ export function GameChat({ gameId }: GameChatProps) {
   }, [open, messages.length]);
 
   const sendMessage = useCallback(() => {
-    if (!requireAuth()) return;
-    if (!input.trim()) return;
+    requireAuth(() => {
+      if (!input.trim()) return;
 
-    const now = Date.now();
-    if (now - lastSent < 3000) {
-      return; // rate limit: 1 per 3 seconds
-    }
+      const now = Date.now();
+      if (now - lastSent < 3000) {
+        return; // rate limit: 1 per 3 seconds
+      }
 
-    const filtered = filterProfanity(input.trim().slice(0, 140));
-    const newMsg: ChatMessage = {
-      id: `own_${now}`,
-      user: user?.name?.split(' ')[0] ?? 'You',
-      text: filtered,
-      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      isOwn: true,
-    };
-    chatStore[gameId].push(newMsg);
-    setMessages([...chatStore[gameId]]);
-    setInput('');
-    setLastSent(now);
+      const filtered = filterProfanity(input.trim().slice(0, 140));
+      const newMsg: ChatMessage = {
+        id: `own_${now}`,
+        user: user?.name?.split(' ')[0] ?? 'You',
+        text: filtered,
+        time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        isOwn: true,
+      };
+      chatStore[gameId].push(newMsg);
+      setMessages([...chatStore[gameId]]);
+      setInput('');
+      setLastSent(now);
+    });
   }, [input, lastSent, requireAuth, user, gameId]);
 
   const reportMessage = useCallback((id: string) => {

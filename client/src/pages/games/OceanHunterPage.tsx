@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Shield, Crosshair } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
@@ -52,6 +53,7 @@ function ProvablyFairModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 /* ─── Main Page ─────────────────────────────────────────────────── */
 export default function OceanHunterPage() {
   const { balance, deductBalance, addBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
 
@@ -73,14 +75,14 @@ export default function OceanHunterPage() {
   }, []);
 
   const shootFish = (fishId: string) => {
-    if (!requireAuth()) return;
-    if (balance < bulletCost) {
-      addToast({ type: 'error', title: 'Insufficient balance', message: `Each shot costs ₹${bulletCost}` });
-      return;
-    }
+    requireAuth(() => {
+      if (balance < bulletCost) {
+        addToast({ type: 'error', title: 'Insufficient balance', message: `Each shot costs ₹${bulletCost}` });
+        return;
+      }
 
-    deductBalance(bulletCost, `Ocean Hunter cannon shot`);
-    setShotsFired(s => s + 1);
+      deductBalance(bulletCost, `Ocean Hunter cannon shot`);
+      setShotsFired(s => s + 1);
 
     // Apply 1 HP damage per shot
     const targetIndex = activeFish.findIndex(f => f.id === fishId);
@@ -113,12 +115,12 @@ export default function OceanHunterPage() {
       setActiveFish(prev => prev.map((f, i) => (i === targetIndex ? replacement : f)));
       generateFishSeed().then(s => setSeedInfo(s));
     } else {
-      // Damage fish
       setActiveFish(prev =>
         prev.map((f, i) => (i === targetIndex ? { ...f, hp: newHp } : f))
       );
     }
-  };
+  });
+};
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
@@ -213,9 +215,9 @@ export default function OceanHunterPage() {
             balance={balance}
             intervalMs={2500}
             onPlaceBet={async (amount) => {
-              if (!requireAuth()) return 0;
+              if (!isAuthenticated) return 0;
               if (balance < amount) return 0;
-              deductBalance(amount, `Auto-Bet — Ocean Hunter Shot`, 'bet');
+              deductBalance(amount, `Auto-Bet — Ocean Hunter Shot`);
               const won = Math.random() > 0.55;
               const mult = won ? 2.5 : 0;
               const payout = won ? Math.round(amount * mult) : 0;

@@ -61,7 +61,7 @@ export function AutoBetPanel({ onPlaceBet, balance, disabled = false, intervalMs
   stateRef.current = abState;
   const configRef = useRef(config);
   configRef.current = config;
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<any>(null);
   const startingBalanceRef = useRef(0);
 
   const updateConfig = (partial: Partial<AutoBetConfig>) => setConfig(c => ({ ...c, ...partial }));
