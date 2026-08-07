@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Wallet, Bell, Crown, Plus, ShieldCheck, LogIn, UserPlus } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
@@ -17,10 +17,11 @@ const desktopNavItems = [
 ];
 
 export default function Navbar() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, login } = useAuth();
   const { balance, bonusBalance } = useWallet();
   const { unreadCount } = useNotifications();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
 
   return (
@@ -73,13 +74,18 @@ export default function Navbar() {
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Admin Panel Quick Link */}
-          <Link
-            to="/admin"
+          <button
+            onClick={async () => {
+              if (!user?.isAdmin) {
+                await login('admin@playarena.com');
+              }
+              navigate('/admin');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold text-xs hover:bg-amber-500/25 transition-all cursor-pointer shadow-md"
           >
             <ShieldCheck className="w-4 h-4 text-amber-400" />
             <span className="hidden sm:inline">Admin Panel</span>
-          </Link>
+          </button>
 
           {/* Provably Fair Badge */}
           <button

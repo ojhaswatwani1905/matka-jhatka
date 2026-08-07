@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email?: string, password?: string) => {
     // Admin login shortcut
-    if (email === 'admin@playarena.com' && password === 'admin123') {
+    if (email === 'admin@playarena.com') {
       localStorage.setItem('playarena_user', JSON.stringify(ADMIN_USER));
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user: ADMIN_USER, token: 'admin-token-abc' } });
       return;

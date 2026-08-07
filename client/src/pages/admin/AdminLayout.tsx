@@ -25,7 +25,7 @@ export default function AdminLayout() {
   }
 
   if (!isAuthenticated || !user?.isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth/login?returnTo=%2Fadmin&reason=admin_required" replace />;
   }
 
   return (
