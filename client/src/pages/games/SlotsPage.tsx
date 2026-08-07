@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, CheckCircle2 } from 'lucide-react';
+import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, CheckCircle2, Volume2, VolumeX, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useSlots } from '../../store/SlotContext';
 import { useWallet } from '../../store/WalletContext';
@@ -31,7 +31,7 @@ function generateSlotSeed(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/* ─── Detailed Paytables per Variant ───────────────────────────── */
+/* ─── Detailed Paytables for All 6 Variants ─────────────────────── */
 interface SymbolPayoutRule {
   symbol: string;
   name: string;
@@ -66,10 +66,34 @@ const VARIANT_PAYTABLES: Record<string, SymbolPayoutRule[]> = {
     { symbol: '🍌', name: 'Banana Split', threeMatch: 4, twoMatch: 1.2 },
     { symbol: '🍒', name: 'Arcade Cherry', threeMatch: 2, twoMatch: 1.0 },
   ],
+  'diamond-deluxe': [
+    { symbol: '💎', name: 'Diamond Deluxe', threeMatch: 150, twoMatch: 6 },
+    { symbol: '👑', name: 'Deluxe Crown', threeMatch: 60, twoMatch: 4 },
+    { symbol: '🔮', name: 'Mystic Orb', threeMatch: 30, twoMatch: 2.5 },
+    { symbol: '✨', name: 'Sparkle Gem', threeMatch: 15, twoMatch: 1.8 },
+    { symbol: '💙', name: 'Sapphire Heart', threeMatch: 8, twoMatch: 1.4 },
+    { symbol: '💍', name: 'Diamond Ring', threeMatch: 4, twoMatch: 1.0 },
+  ],
+  'wild-safari': [
+    { symbol: '🦁', name: 'Lion King Jackpot', threeMatch: 30, fiveMatch: 300, twoMatch: 5 },
+    { symbol: '🐘', name: 'Safari Elephant', threeMatch: 20, fiveMatch: 120, twoMatch: 3.5 },
+    { symbol: '🦏', name: 'Rhino Stampede', threeMatch: 12, fiveMatch: 60, twoMatch: 2.5 },
+    { symbol: '🦒', name: 'Tall Giraffe', threeMatch: 8, fiveMatch: 30, twoMatch: 2.0 },
+    { symbol: '🦓', name: 'Wild Zebra', threeMatch: 5, fiveMatch: 15, twoMatch: 1.5 },
+    { symbol: '🃏', name: 'Wild Safari Joker', threeMatch: 25, fiveMatch: 200, twoMatch: 4 },
+  ],
+  'golden-pharaoh': [
+    { symbol: '𓀾', name: 'Pharaoh Flagship', threeMatch: 50, fiveMatch: 500, twoMatch: 8 },
+    { symbol: '👁️', name: 'Eye of Horus', threeMatch: 30, fiveMatch: 200, twoMatch: 5 },
+    { symbol: '𓆣', name: 'Golden Scarab', threeMatch: 20, fiveMatch: 100, twoMatch: 3.5 },
+    { symbol: '🪙', name: 'Ancient Coin', threeMatch: 12, fiveMatch: 50, twoMatch: 2.5 },
+    { symbol: '🏺', name: 'Relic Urn', threeMatch: 8, fiveMatch: 25, twoMatch: 1.8 },
+    { symbol: '📜', name: 'Papyrus Scroll', threeMatch: 5, fiveMatch: 15, twoMatch: 1.2 },
+  ],
 };
 
 export default function SlotsPage() {
-  const { slots, activeSlot, setActiveSlotId } = useSlots();
+  const { slots, activeSlot, setActiveSlotId, recordWagerAndPayout } = useSlots();
   const { balance, deductBalance, addBalance } = useWallet();
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
@@ -79,6 +103,7 @@ export default function SlotsPage() {
 
   const [betAmount, setBetAmount] = useState(100);
   const [spinning, setSpinning] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(false);
   const [reels, setReels] = useState<string[]>(() =>
     Array(activeSlot.reels).fill(activeSlot.symbols[0])
   );
@@ -89,6 +114,8 @@ export default function SlotsPage() {
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [winningIndexes, setWinningIndexes] = useState<number[]>([]);
   const [showPaytable, setShowPaytable] = useState(false);
+  const [showMegaJackpotModal, setShowMegaJackpotModal] = useState(false);
+  const [megaJackpotAmount, setMegaJackpotAmount] = useState(0);
 
   // Provably Fair State
   const [currentSeed, setCurrentSeed] = useState<string>('');
@@ -125,7 +152,7 @@ export default function SlotsPage() {
       setLastWin(null);
       setWinningIndexes([]);
       setReelStoppedState(Array(activeSlot.reels).fill(false));
-      sounds.playSpin();
+      if (!soundMuted) sounds.playSpin();
 
       const isFirstBet = checkIsFirstBet();
       const symbolPool = activeSlot.symbols;
@@ -140,7 +167,7 @@ export default function SlotsPage() {
       if (isFirstBet) {
         consumeFirstBet();
         // Guaranteed 777 Jackpot / 3-of-a-kind win for 1st bet!
-        const winSym = symbolPool.includes('7️⃣') ? '7️⃣' : symbolPool.includes('⭐') ? '⭐' : symbolPool[0];
+        const winSym = symbolPool[0];
         finalReels = Array(reelsCount).fill(winSym);
         winMultiplier = activeSlot.paytable.jackpot777;
         winCols = Array.from({ length: reelsCount }, (_, i) => i);
@@ -155,7 +182,7 @@ export default function SlotsPage() {
           // Jackpot 3/5 matching
           const sym = symbolPool[hexVal % symbolPool.length];
           finalReels = Array(reelsCount).fill(sym);
-          winMultiplier = sym === '7️⃣' || sym === '🐉' || sym === '⭐'
+          winMultiplier = sym === symbolPool[0]
             ? activeSlot.paytable.jackpot777
             : activeSlot.paytable.threeOfAKind;
           winCols = Array.from({ length: reelsCount }, (_, i) => i);
@@ -174,9 +201,7 @@ export default function SlotsPage() {
         }
       }
 
-      // 3. Staggered Reel Stopping Mechanics (~150-200ms stagger between reels)
-      reelsCount === 3 ? [700, 900, 1100] : [600, 780, 960, 1140, 1320];
-
+      // 3. Staggered Reel Stopping Mechanics (~180ms stagger between reels)
       finalReels.forEach((sym, colIdx) => {
         const stopDelay = 700 + colIdx * 180;
         setTimeout(() => {
@@ -190,7 +215,7 @@ export default function SlotsPage() {
             next[colIdx] = true;
             return next;
           });
-          sounds.playChip(); // Reel lock sound effect
+          if (!soundMuted) sounds.playChip(); // Reel lock sound effect
         }, stopDelay);
       });
 
@@ -205,6 +230,7 @@ export default function SlotsPage() {
         await initSeed();
 
         const payout = winMultiplier > 0 ? Math.round(betAmount * winMultiplier) : 0;
+        recordWagerAndPayout(activeSlot.id, betAmount, payout);
         redisCache.set(`slot:last_spin:${activeSlot.id}`, { reels: finalReels, winMultiplier, payout, timestamp: Date.now() }, 3600);
 
         if (winMultiplier > 0) {
@@ -213,7 +239,7 @@ export default function SlotsPage() {
 
           // Credit wallet on win
           addBalance(payout, `Slots — ${activeSlot.name} win (${winMultiplier}×)`, 'win');
-          sounds.playWin();
+          if (!soundMuted) sounds.playWin();
 
           addToast({
             type: 'success',
@@ -221,21 +247,25 @@ export default function SlotsPage() {
             message: `Matched ${finalReels.join(' ')} (${winMultiplier}× payout)`,
           });
 
-          // Big win notification & confetti
-          if (winMultiplier >= activeSlot.paytable.threeOfAKind) {
-            confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71', '#E74C3C', '#FFF'] });
+          // Big win notification & celebratory overlays
+          if (winMultiplier >= 50) {
+            setMegaJackpotAmount(payout);
+            setShowMegaJackpotModal(true);
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71', '#E74C3C', '#FFF'] });
             addNotification({
               type: 'spin',
-              title: `🎰 HUGE JACKPOT WIN!`,
+              title: `🎰 MEGA JACKPOT WIN!`,
               message: `You won ₹${payout.toLocaleString('en-IN')} (${winMultiplier}×) on ${activeSlot.name}!`,
             });
+          } else {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71'] });
           }
         } else {
-          sounds.playLoss();
+          if (!soundMuted) sounds.playLoss();
         }
       }, totalSpinDuration);
     });
-  }, [spinning, balance, betAmount, activeSlot, deductBalance, addToast, requireAuth, checkIsFirstBet, consumeFirstBet, settings.globalRtp, currentSeed, initSeed, addBalance, addNotification]);
+  }, [spinning, balance, betAmount, activeSlot, deductBalance, addToast, requireAuth, checkIsFirstBet, consumeFirstBet, settings.globalRtp, currentSeed, initSeed, soundMuted, recordWagerAndPayout, addBalance, addNotification]);
 
   const currentPaytableRules = VARIANT_PAYTABLES[activeSlot.id] || VARIANT_PAYTABLES['royal-gold-777'];
 
@@ -251,8 +281,8 @@ export default function SlotsPage() {
 
       {/* Main Content Container (z-10 relative) */}
       <div className="relative z-10 space-y-6">
-        {/* Top Slot Game Selector Tabs */}
-        <div className="flex items-center justify-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+        {/* Top Slot Game Selector Pill Row (Scrollable horizontally) */}
+        <div className="flex items-center gap-2.5 overflow-x-auto pb-2 no-scrollbar">
           {slots.filter(s => s.enabled).map(slot => (
             <button
               key={slot.id}
@@ -263,14 +293,14 @@ export default function SlotsPage() {
                 setLastWin(null);
                 setReelStoppedState(Array(slot.reels).fill(true));
               }}
-              className={`px-5 py-3 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2.5 border-2 shadow-lg ${
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border-2 shadow-lg ${
                 activeSlot.id === slot.id
                   ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_25px_rgba(212,175,55,0.7)] scale-105'
                   : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.25)] hover:border-gold hover:text-gold hover:scale-102'
               }`}
             >
               <span className="text-xl drop-shadow">{slot.emoji}</span>
-              <span className="tracking-wide uppercase">{slot.name}</span>
+              <span className="tracking-wide uppercase font-heading">{slot.name}</span>
               <span className="text-[10px] opacity-80 font-mono bg-black/40 px-2 py-0.5 rounded-full font-bold">
                 {slot.reels} Reels
               </span>
@@ -284,7 +314,7 @@ export default function SlotsPage() {
           <div className="lg:col-span-8 w-full space-y-6">
             <div className="rounded-[32px] p-1 bg-gradient-to-b from-[#FFD700] via-[#3A290B] via-[#0D261A] to-[#FFD700] shadow-[0_15px_50px_rgba(0,0,0,0.9),0_0_40px_rgba(212,175,55,0.3)] border-2 border-[#FFD700] relative">
               <div className="rounded-[28px] p-6 sm:p-8 space-y-6 bg-gradient-to-b from-[#0B2A1E] via-[#030E09] to-[#0B2A1E] relative overflow-hidden shadow-inner">
-                {/* Cabinet Header & LED Marquee */}
+                {/* Cabinet Header & Audio Toggle */}
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(212,175,55,0.25)] pb-4">
                   <div className="flex items-center gap-3.5">
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] p-0.5 shadow-[0_0_20px_rgba(212,175,55,0.6)] flex items-center justify-center shrink-0">
@@ -300,6 +330,14 @@ export default function SlotsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSoundMuted(!soundMuted)}
+                      className="p-2 rounded-xl bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] text-gold hover:bg-[rgba(212,175,55,0.2)] transition-all"
+                      title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
+                    >
+                      {soundMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-gold" />}
+                    </button>
+
                     <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase font-mono bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-gold border border-amber-500/40 shadow-sm flex items-center gap-1.5">
                       <Flame className="w-4 h-4 text-gold" />
                       {activeSlot.paytable.jackpot777}x Max Jackpot
@@ -507,6 +545,48 @@ export default function SlotsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Scaled Mega Jackpot Celebration Modal Overlay */}
+      <AnimatePresence>
+        {showMegaJackpotModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              className="royal-panel p-8 rounded-3xl max-w-md w-full text-center space-y-6 border-4 border-[#FFD700] shadow-[0_0_60px_rgba(255,215,0,0.8)] relative"
+            >
+              <button
+                onClick={() => setShowMegaJackpotModal(false)}
+                className="absolute top-4 right-4 p-2 text-gold hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] flex items-center justify-center text-5xl shadow-[0_0_30px_#FFD700] animate-bounce">
+                👑
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-black text-gold font-heading uppercase tracking-wider">MEGA JACKPOT HIT!</h2>
+                <p className="text-sm text-[rgba(212,175,55,0.7)] mt-1">Congratulations! You unlocked the top prize!</p>
+              </div>
+
+              <div className="py-4 bg-[#040E0A] rounded-2xl border-2 border-emerald-400">
+                <span className="text-xs text-emerald-400 font-mono block">TOTAL WINNINGS</span>
+                <span className="text-4xl font-black font-mono text-emerald-300">₹{megaJackpotAmount.toLocaleString('en-IN')}</span>
+              </div>
+
+              <button
+                onClick={() => setShowMegaJackpotModal(false)}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] font-black text-lg uppercase tracking-wider shadow-lg"
+              >
+                COLLECT WINNINGS
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

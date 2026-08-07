@@ -8,16 +8,18 @@ export interface SlotGame {
   subtitle: string;
   emoji: string;
   reels: 3 | 5;
-  symbols: string[]; // e.g. ['👑', '💎', '7️⃣', '🔔', '🍇', '🍒']
+  symbols: string[];
   paytable: {
-    threeOfAKind: number; // e.g. 10x
-    jackpot777: number;   // e.g. 100x
-    twoOfAKind: number;   // e.g. 2x
+    threeOfAKind: number;
+    jackpot777: number;
+    twoOfAKind: number;
   };
   minBet: number;
   maxBet: number;
   targetRtp: number;
   enabled: boolean;
+  totalWagered: number;
+  totalPaidOut: number;
   createdAt: string;
 }
 
@@ -38,6 +40,8 @@ const DEFAULT_SLOTS: SlotGame[] = [
     maxBet: 1000,
     targetRtp: 95,
     enabled: true,
+    totalWagered: 148500,
+    totalPaidOut: 139100,
     createdAt: new Date().toISOString(),
   },
   {
@@ -56,6 +60,8 @@ const DEFAULT_SLOTS: SlotGame[] = [
     maxBet: 2500,
     targetRtp: 94,
     enabled: true,
+    totalWagered: 284000,
+    totalPaidOut: 266960,
     createdAt: new Date().toISOString(),
   },
   {
@@ -64,7 +70,7 @@ const DEFAULT_SLOTS: SlotGame[] = [
     subtitle: '3-Reel Arcade Juicy Spins',
     emoji: '🍓',
     reels: 3,
-    symbols: ['🍓', '🍉', '🍇', '🍌', '🍒', '🍋'],
+    symbols: ['⭐', '🍓', '🍉', '🍇', '🍌', '🍒'],
     paytable: {
       jackpot777: 75,
       threeOfAKind: 12,
@@ -74,6 +80,68 @@ const DEFAULT_SLOTS: SlotGame[] = [
     maxBet: 500,
     targetRtp: 96,
     enabled: true,
+    totalWagered: 95400,
+    totalPaidOut: 91584,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'diamond-deluxe',
+    name: 'Diamond Deluxe',
+    subtitle: '3-Reel Gem Deluxe Classic',
+    emoji: '💎',
+    reels: 3,
+    symbols: ['💎', '👑', '🔮', '✨', '💙', '💍'],
+    paytable: {
+      jackpot777: 150,
+      threeOfAKind: 20,
+      twoOfAKind: 2.5,
+    },
+    minBet: 20,
+    maxBet: 1500,
+    targetRtp: 95,
+    enabled: true,
+    totalWagered: 112000,
+    totalPaidOut: 106400,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'wild-safari',
+    name: 'Wild Safari',
+    subtitle: '5-Reel Mythic Safari Video Slot',
+    emoji: '🦁',
+    reels: 5,
+    symbols: ['🦁', '🐘', '🦏', '🦒', '🦓', '🃏'],
+    paytable: {
+      jackpot777: 300,
+      threeOfAKind: 30,
+      twoOfAKind: 3.5,
+    },
+    minBet: 50,
+    maxBet: 3000,
+    targetRtp: 94,
+    enabled: true,
+    totalWagered: 198000,
+    totalPaidOut: 186120,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'golden-pharaoh',
+    name: 'Golden Pharaoh',
+    subtitle: '5-Reel Flagship Egyptian Slot',
+    emoji: '𓀾',
+    reels: 5,
+    symbols: ['𓀾', '👁️', '𓆣', '🪙', '🏺', '📜', '✨'],
+    paytable: {
+      jackpot777: 500,
+      threeOfAKind: 50,
+      twoOfAKind: 5,
+    },
+    minBet: 100,
+    maxBet: 5000,
+    targetRtp: 93,
+    enabled: true,
+    totalWagered: 450000,
+    totalPaidOut: 418500,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -82,15 +150,16 @@ interface SlotContextType {
   slots: SlotGame[];
   activeSlot: SlotGame;
   setActiveSlotId: (id: string) => void;
-  createSlot: (newSlot: Omit<SlotGame, 'id' | 'createdAt'>) => void;
+  createSlot: (newSlot: Omit<SlotGame, 'id' | 'createdAt' | 'totalWagered' | 'totalPaidOut'>) => void;
   updateSlot: (id: string, updates: Partial<SlotGame>) => void;
   deleteSlot: (id: string) => void;
   toggleSlotStatus: (id: string) => void;
+  recordWagerAndPayout: (id: string, wagered: number, payout: number) => void;
 }
 
 const SlotContext = createContext<SlotContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'playarena_custom_slots';
+const STORAGE_KEY = 'playarena_custom_slots_v2';
 
 export function SlotProvider({ children }: { children: ReactNode }) {
   const [slots, setSlots] = useState<SlotGame[]>(() => {
@@ -114,10 +183,12 @@ export function SlotProvider({ children }: { children: ReactNode }) {
 
   const activeSlot = slots.find(s => s.id === activeSlotId) || slots[0] || DEFAULT_SLOTS[0];
 
-  const createSlot = useCallback((slotData: Omit<SlotGame, 'id' | 'createdAt'>) => {
+  const createSlot = useCallback((slotData: Omit<SlotGame, 'id' | 'createdAt' | 'totalWagered' | 'totalPaidOut'>) => {
     const newSlot: SlotGame = {
       ...slotData,
       id: `slot_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      totalWagered: 0,
+      totalPaidOut: 0,
       createdAt: new Date().toISOString(),
     };
     setSlots(prev => [newSlot, ...prev]);
@@ -135,6 +206,16 @@ export function SlotProvider({ children }: { children: ReactNode }) {
     setSlots(prev => prev.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
   }, []);
 
+  const recordWagerAndPayout = useCallback((id: string, wagered: number, payout: number) => {
+    setSlots(prev =>
+      prev.map(s =>
+        s.id === id
+          ? { ...s, totalWagered: s.totalWagered + wagered, totalPaidOut: s.totalPaidOut + payout }
+          : s
+      )
+    );
+  }, []);
+
   return (
     <SlotContext.Provider
       value={{
@@ -145,6 +226,7 @@ export function SlotProvider({ children }: { children: ReactNode }) {
         updateSlot,
         deleteSlot,
         toggleSlotStatus,
+        recordWagerAndPayout,
       }}
     >
       {children}
