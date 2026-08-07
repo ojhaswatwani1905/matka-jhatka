@@ -203,7 +203,7 @@ export default function SlotsPage() {
 
       // 3. Staggered Reel Stopping Mechanics (~180ms stagger between reels)
       finalReels.forEach((sym, colIdx) => {
-        const stopDelay = 700 + colIdx * 180;
+        const stopDelay = 600 + colIdx * 180;
         setTimeout(() => {
           setReels(prev => {
             const next = [...prev];
@@ -220,7 +220,7 @@ export default function SlotsPage() {
       });
 
       // 4. Final Win/Loss Resolution after all reels lock
-      const totalSpinDuration = 700 + reelsCount * 180 + 100;
+      const totalSpinDuration = 600 + reelsCount * 180 + 100;
 
       setTimeout(async () => {
         setSpinning(false);
@@ -270,19 +270,19 @@ export default function SlotsPage() {
   const currentPaytableRules = VARIANT_PAYTABLES[activeSlot.id] || VARIANT_PAYTABLES['royal-gold-777'];
 
   return (
-    <div className="min-h-screen py-4 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-6 relative">
+    <div className="min-h-screen py-3 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-4 relative">
       {/* Ambient Spotlight Background Layer */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
-          background: 'radial-gradient(circle at 50% 20%, rgba(212,175,55,0.15), rgba(3,12,8,0.98) 75%)',
+          background: 'radial-gradient(circle at 50% 20%, rgba(212,175,55,0.12), rgba(3,12,8,0.98) 75%)',
         }}
       />
 
       {/* Main Content Container (z-10 relative) */}
-      <div className="relative z-10 space-y-6">
+      <div className="relative z-10 space-y-4">
         {/* Top Slot Game Selector Pill Row (Scrollable horizontally) */}
-        <div className="flex items-center gap-2.5 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
           {slots.filter(s => s.enabled).map(slot => (
             <button
               key={slot.id}
@@ -293,61 +293,61 @@ export default function SlotsPage() {
                 setLastWin(null);
                 setReelStoppedState(Array(slot.reels).fill(true));
               }}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border-2 shadow-lg ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-md ${
                 activeSlot.id === slot.id
-                  ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_25px_rgba(212,175,55,0.7)] scale-105'
-                  : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.25)] hover:border-gold hover:text-gold hover:scale-102'
+                  ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.02]'
+                  : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
               }`}
             >
-              <span className="text-xl drop-shadow">{slot.emoji}</span>
+              <span className="text-lg drop-shadow">{slot.emoji}</span>
               <span className="tracking-wide uppercase font-heading">{slot.name}</span>
-              <span className="text-[10px] opacity-80 font-mono bg-black/40 px-2 py-0.5 rounded-full font-bold">
-                {slot.reels} Reels
+              <span className="text-[9px] opacity-80 font-mono bg-black/40 px-1.5 py-0.5 rounded-full font-bold">
+                {slot.reels} R
               </span>
             </button>
           ))}
         </div>
 
         {/* Master Center-Stage Grid (12 Columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Left/Center Column: 3D Metallic Casino Cabinet (lg:col-span-8) */}
-          <div className="lg:col-span-8 w-full space-y-6">
-            <div className="rounded-[32px] p-1 bg-gradient-to-b from-[#FFD700] via-[#3A290B] via-[#0D261A] to-[#FFD700] shadow-[0_15px_50px_rgba(0,0,0,0.9),0_0_40px_rgba(212,175,55,0.3)] border-2 border-[#FFD700] relative">
-              <div className="rounded-[28px] p-6 sm:p-8 space-y-6 bg-gradient-to-b from-[#0B2A1E] via-[#030E09] to-[#0B2A1E] relative overflow-hidden shadow-inner">
+          <div className="lg:col-span-8 w-full space-y-4">
+            <div className="rounded-3xl p-1 bg-gradient-to-b from-[#FFD700] via-[#3A290B] via-[#0D261A] to-[#FFD700] shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_30px_rgba(212,175,55,0.25)] border border-[#FFD700] relative">
+              <div className="rounded-[22px] p-4 sm:p-5 space-y-4 bg-gradient-to-b from-[#0B2A1E] via-[#030E09] to-[#0B2A1E] relative overflow-hidden shadow-inner">
                 {/* Cabinet Header & Audio Toggle */}
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[rgba(212,175,55,0.25)] pb-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] p-0.5 shadow-[0_0_20px_rgba(212,175,55,0.6)] flex items-center justify-center shrink-0">
-                      <span className="text-3xl drop-shadow">{activeSlot.emoji}</span>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(212,175,55,0.2)] pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] p-0.5 shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center justify-center shrink-0">
+                      <span className="text-2xl drop-shadow">{activeSlot.emoji}</span>
                     </div>
                     <div>
-                      <h1 className="text-2xl font-black text-[#E8C97A] font-heading tracking-wide flex items-center gap-2">
+                      <h1 className="text-lg font-black text-[#E8C97A] font-heading tracking-wide flex items-center gap-1.5">
                         {activeSlot.name}
-                        <Sparkles className="w-5 h-5 text-gold animate-bounce" />
+                        <Sparkles className="w-4 h-4 text-gold animate-bounce" />
                       </h1>
-                      <p className="text-xs text-[rgba(212,175,55,0.65)] font-mono">{activeSlot.subtitle}</p>
+                      <p className="text-[10px] text-[rgba(212,175,55,0.65)] font-mono">{activeSlot.subtitle}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSoundMuted(!soundMuted)}
-                      className="p-2 rounded-xl bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] text-gold hover:bg-[rgba(212,175,55,0.2)] transition-all"
+                      className="p-1.5 rounded-lg bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.25)] text-gold hover:bg-[rgba(212,175,55,0.2)] transition-all"
                       title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
                     >
-                      {soundMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-gold" />}
+                      {soundMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-gold" />}
                     </button>
 
-                    <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase font-mono bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-gold border border-amber-500/40 shadow-sm flex items-center gap-1.5">
-                      <Flame className="w-4 h-4 text-gold" />
-                      {activeSlot.paytable.jackpot777}x Max Jackpot
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase font-mono bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-gold border border-amber-500/30 flex items-center gap-1">
+                      <Flame className="w-3.5 h-3.5 text-gold" />
+                      {activeSlot.paytable.jackpot777}x Max
                     </span>
 
                     <button
                       onClick={() => setShowPaytable(true)}
-                      className="px-3.5 py-1.5 rounded-xl bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.35)] text-gold text-xs font-bold flex items-center gap-1.5 hover:bg-[rgba(212,175,55,0.3)] transition-all shadow-sm"
+                      className="px-2.5 py-1 rounded-lg bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.3)] text-gold text-xs font-bold flex items-center gap-1 hover:bg-[rgba(212,175,55,0.3)] transition-all"
                     >
-                      <HelpCircle className="w-4 h-4" />
+                      <HelpCircle className="w-3.5 h-3.5" />
                       Paytable
                     </button>
                   </div>
@@ -355,32 +355,41 @@ export default function SlotsPage() {
 
                 {/* Provably Fair Commit Hash Badge */}
                 {commitHash && (
-                  <div className="flex items-center justify-between bg-[#040E0A] px-3 py-1.5 rounded-xl border border-[rgba(212,175,55,0.15)] text-[10px] text-[rgba(212,175,55,0.6)] font-mono">
-                    <span className="flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-gold" />
-                      Provably Fair Seed Hash:
+                  <div className="flex items-center justify-between bg-[#040E0A] px-2.5 py-1 rounded-lg border border-[rgba(212,175,55,0.12)] text-[10px] text-[rgba(212,175,55,0.55)] font-mono">
+                    <span className="flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-gold" />
+                      Seed Hash:
                     </span>
-                    <span className="text-gold truncate max-w-[200px]">{commitHash}</span>
+                    <span className="text-gold truncate max-w-[180px]">{commitHash}</span>
                   </div>
                 )}
 
-                {/* 3D Slot Reel Stage Window */}
-                <div className="bg-gradient-to-b from-[#010604] via-[#051C12] to-[#010604] p-6 sm:p-8 rounded-3xl border-4 border-[#8B6914] shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(212,175,55,0.25)] relative">
-                  {/* Glowing Laser Payline Beam */}
-                  <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-2 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent pointer-events-none opacity-80 z-20 shadow-[0_0_20px_#FFD700]" />
+                {/* Compact 3D Slot Reel Stage Window (Matching Mines Tile Proportions) */}
+                <div className="bg-gradient-to-b from-[#010604] via-[#051C12] to-[#010604] p-4 sm:p-5 rounded-2xl border-2 border-[#8B6914] shadow-[inset_0_0_35px_rgba(0,0,0,0.98),0_0_20px_rgba(212,175,55,0.2)] relative">
+                  {/* Winning Payline Laser Beam — ONLY visible on active winning matches! */}
+                  {winningIndexes.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent pointer-events-none z-20 shadow-[0_0_25px_#FFD700]"
+                    />
+                  )}
 
-                  {/* Staggered Reels Grid */}
-                  <div className={`grid gap-4 ${activeSlot.reels === 3 ? 'grid-cols-3' : 'grid-cols-5'}`}>
+                  {/* Compact Staggered Reels Grid */}
+                  <div className={`grid gap-2.5 ${activeSlot.reels === 3 ? 'grid-cols-3' : 'grid-cols-5'}`}>
                     {reels.map((sym, idx) => {
                       const isStopped = reelStoppedState[idx];
                       const isWinning = winningIndexes.includes(idx);
+                      const tileHeightClass = activeSlot.reels === 3 ? 'h-24 sm:h-28' : 'h-20 sm:h-24';
+                      const fontSizeClass = activeSlot.reels === 3 ? 'text-4xl sm:text-5xl' : 'text-3xl sm:text-4xl';
+
                       return (
                         <div
                           key={idx}
-                          className={`h-36 sm:h-44 rounded-2xl border-2 flex items-center justify-center text-5xl sm:text-7xl relative overflow-hidden transition-all duration-300 ${
+                          className={`${tileHeightClass} ${fontSizeClass} rounded-xl border-2 flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
                             isWinning
-                              ? 'bg-gradient-to-b from-[#184E38] via-[#0F3827] to-[#184E38] border-[#FFD700] shadow-[0_0_35px_#FFD700,inset_0_0_25px_rgba(255,215,0,0.5)] scale-105 z-30'
-                              : 'bg-gradient-to-b from-[#061C13] via-[#0E3A28] to-[#061C13] border-[rgba(212,175,55,0.35)] shadow-[inset_0_0_25px_rgba(0,0,0,0.9)]'
+                              ? 'bg-gradient-to-b from-[#184E38] via-[#0F3827] to-[#184E38] border-[#FFD700] shadow-[0_0_30px_#FFD700,inset_0_0_20px_rgba(255,215,0,0.5)] scale-105 z-30'
+                              : 'bg-gradient-to-b from-[#061C13] via-[#0E3A28] to-[#061C13] border-[rgba(212,175,55,0.3)] shadow-[inset_0_0_20px_rgba(0,0,0,0.9)]'
                           }`}
                         >
                           {/* 3D Glass Reflection Overlay */}
@@ -389,20 +398,20 @@ export default function SlotsPage() {
                           <AnimatePresence mode="wait">
                             <motion.span
                               key={!isStopped ? `spin_${Date.now()}_${idx}` : sym}
-                              initial={!isStopped ? { y: -120, opacity: 0.1, filter: 'blur(8px)' } : { scale: 0.7 }}
+                              initial={!isStopped ? { y: -100, opacity: 0.1, filter: 'blur(6px)' } : { scale: 0.8 }}
                               animate={
                                 !isStopped
-                                  ? { y: [120, -120, 0], opacity: [0.1, 1, 1], filter: ['blur(8px)', 'blur(0px)'] }
+                                  ? { y: [100, -100, 0], opacity: [0.1, 1, 1], filter: ['blur(6px)', 'blur(0px)'] }
                                   : isWinning
-                                  ? { scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }
+                                  ? { scale: [1, 1.12, 1], rotate: [0, 4, -4, 0] }
                                   : { scale: 1 }
                               }
                               transition={{
-                                duration: !isStopped ? 0.35 : 0.4,
+                                duration: !isStopped ? 0.35 : 0.35,
                                 repeat: !isStopped ? Infinity : isWinning ? Infinity : 0,
                                 repeatDelay: isWinning ? 1 : 0,
                               }}
-                              className="drop-shadow-[0_8px_15px_rgba(0,0,0,0.8)]"
+                              className="drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]"
                             >
                               {sym}
                             </motion.span>
@@ -415,59 +424,56 @@ export default function SlotsPage() {
                   {/* Winner Jackpot Banner */}
                   {lastWin !== null && (
                     <motion.div
-                      initial={{ scale: 0.7, opacity: 0 }}
+                      initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="mt-6 text-center py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600/40 via-emerald-500/50 to-emerald-600/40 border-2 border-emerald-400 text-emerald-200 font-black text-2xl shadow-[0_0_30px_rgba(46,204,113,0.5)] flex items-center justify-center gap-3 tracking-wide uppercase"
+                      className="mt-4 text-center py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600/40 via-emerald-500/50 to-emerald-600/40 border border-emerald-400 text-emerald-200 font-black text-xl shadow-[0_0_25px_rgba(46,204,113,0.4)] flex items-center justify-center gap-2 uppercase tracking-wide"
                     >
-                      <Trophy className="w-8 h-8 text-gold animate-bounce" />
+                      <Trophy className="w-6 h-6 text-gold animate-bounce" />
                       JACKPOT WINNER! +₹{lastWin.toLocaleString('en-IN')}
                     </motion.div>
                   )}
                 </div>
 
-                {/* 3D Circular Casino Chips Bar */}
-                <div className="space-y-4 pt-2">
+                {/* Tighter 3D Circular Casino Chips Bar */}
+                <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[rgba(212,175,55,0.8)] font-black uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-gold" />
+                    <span className="text-[11px] text-[rgba(212,175,55,0.8)] font-black uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-gold" />
                       Select Bet Chip
                     </span>
-                    <span className="text-xs font-mono text-gold font-bold bg-[#030E09] px-3.5 py-1.5 rounded-full border border-[rgba(212,175,55,0.3)] shadow-sm">
+                    <span className="text-[11px] font-mono text-gold font-bold bg-[#030E09] px-3 py-1 rounded-full border border-[rgba(212,175,55,0.25)]">
                       Wallet: ₹{balance.toLocaleString('en-IN')}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-5 gap-2">
                     {CHIP_VALUES.map(val => (
                       <button
                         key={val}
                         onClick={() => setBetAmount(val)}
-                        className={`py-3 rounded-2xl text-xs font-black transition-all border-2 relative overflow-hidden shadow-lg flex flex-col items-center justify-center gap-0.5 ${
+                        className={`py-2 rounded-xl text-xs font-black transition-all border relative overflow-hidden shadow-md flex flex-col items-center justify-center gap-0.5 ${
                           betAmount === val
-                            ? 'bg-gradient-to-b from-[#FFD700] via-[#D4AF37] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.7)] -translate-y-1 scale-105'
-                            : 'bg-[#040E0A] text-[rgba(212,175,55,0.7)] border-[rgba(212,175,55,0.25)] hover:border-gold hover:text-gold hover:-translate-y-0.5'
+                            ? 'bg-gradient-to-b from-[#FFD700] via-[#D4AF37] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_15px_rgba(212,175,55,0.6)] scale-[1.03]'
+                            : 'bg-[#040E0A] text-[rgba(212,175,55,0.7)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
                         }`}
                       >
-                        <span className="text-[9px] opacity-75 font-mono uppercase">Chip</span>
-                        <span className="text-sm font-mono font-black">₹{val}</span>
+                        <span className="text-[8px] opacity-75 font-mono uppercase">Chip</span>
+                        <span className="text-xs font-mono font-black">₹{val}</span>
                       </button>
                     ))}
                   </div>
 
-                  {/* High-Impact Shimmering Spin Button */}
+                  {/* High-Impact Tactile Spin Button */}
                   <button
                     onClick={spinReels}
                     disabled={spinning}
-                    className={`w-full py-4 sm:py-5 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center gap-3 transition-all uppercase tracking-widest border-2 border-[#FFF8DC] relative overflow-hidden shadow-2xl ${
+                    className={`w-full py-3.5 sm:py-4 rounded-xl font-black text-lg sm:text-xl flex items-center justify-center gap-2.5 transition-all uppercase tracking-widest border border-[#FFF8DC] relative overflow-hidden shadow-xl ${
                       spinning
                         ? 'bg-gray-800 text-gray-500 border-gray-600 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-[#FFD700] via-[#FFF8DC] to-[#B8860B] text-[#061510] shadow-[0_0_35px_rgba(212,175,55,0.7)] hover:brightness-115 active:scale-[0.98]'
+                        : 'bg-gradient-to-r from-[#FFD700] via-[#FFF8DC] to-[#B8860B] text-[#061510] shadow-[0_0_25px_rgba(212,175,55,0.6)] hover:brightness-110 active:scale-[0.98]'
                     }`}
                   >
-                    {/* Metallic Light Sweep Shimmer */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
-
-                    <Play className="w-7 h-7 sm:w-8 sm:h-8 fill-current" />
+                    <Play className="w-6 h-6 fill-current" />
                     {spinning ? 'Spinning Reels...' : `SPIN SLOT (₹${betAmount})`}
                   </button>
                 </div>
@@ -491,9 +497,9 @@ export default function SlotsPage() {
 
                 {/* Last Revealed Seed Verification Log */}
                 {lastRevealedSeed && (
-                  <div className="text-[10px] text-[rgba(212,175,55,0.5)] font-mono flex items-center gap-1.5 justify-center pt-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Last Spin Provably Fair Seed Revealed: <span className="text-gold font-bold">{lastRevealedSeed.slice(0, 24)}...</span>
+                  <div className="text-[10px] text-[rgba(212,175,55,0.5)] font-mono flex items-center gap-1 justify-center pt-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    Last Seed Revealed: <span className="text-gold font-bold">{lastRevealedSeed.slice(0, 20)}...</span>
                   </div>
                 )}
               </div>
@@ -501,7 +507,7 @@ export default function SlotsPage() {
           </div>
 
           {/* Right Column: Live Chat & Community Feed (lg:col-span-4) */}
-          <div className="lg:col-span-4 w-full space-y-6">
+          <div className="lg:col-span-4 w-full space-y-4">
             <GameChat gameId={`slot_${activeSlot.id}`} />
           </div>
         </div>
