@@ -19,6 +19,17 @@ interface Game {
 
 const TOP_GAMES: Game[] = [
   {
+    id: 'slots',
+    name: 'Slot Machines',
+    sub: 'Royal 777 & Custom Slots',
+    img: '/games/slots.png',
+    path: '/games/slots',
+    badge: '🎰 NEW',
+    badgeColor: 'bg-amber-500',
+    hot: true,
+    players: 5930,
+  },
+  {
     id: 'matka',
     name: 'Matka Jhatka',
     sub: 'Kalyan & Mumbai',

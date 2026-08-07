@@ -12,6 +12,7 @@ const sidebarItems = [
   { path: '/admin/fraud', icon: <ShieldAlert className="w-5 h-5" />, label: 'Fraud Queue' },
   { path: '/admin/analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Revenue Analytics' },
   { path: '/admin/games', icon: <Settings className="w-5 h-5" />, label: 'Game Control' },
+  { path: '/admin/slots', icon: <Gamepad2 className="w-5 h-5" />, label: 'Slot Creator' },
 ];
 
 export default function AdminLayout() {

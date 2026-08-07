@@ -10,6 +10,7 @@ import { LiveFeedProvider } from './store/LiveFeedContext';
 import { PromoProvider } from './store/PromoContext';
 import { WithdrawalAccountsProvider } from './store/WithdrawalAccountsContext';
 import { GameControlProvider } from './store/GameControlContext';
+import { SlotProvider } from './store/SlotContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -27,6 +28,7 @@ import MinesPage from './pages/games/MinesPage';
 import PlinkoPage from './pages/games/PlinkoPage';
 import TeenPattiPage from './pages/games/TeenPattiPage';
 import OceanHunterPage from './pages/games/OceanHunterPage';
+import SlotsPage from './pages/games/SlotsPage';
 import WalletPage from './pages/wallet/WalletPage';
 import HistoryPage from './pages/history/HistoryPage';
 import ProfilePage from './pages/profile/ProfilePage';
@@ -45,6 +47,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminKYCPage from './pages/admin/AdminKYCPage';
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
 import AdminGamesPage from './pages/admin/AdminGamesPage';
+import AdminSlotsPage from './pages/admin/AdminSlotsPage';
 import AdminPromosPage from './pages/admin/AdminPromosPage';
 import AdminBroadcastsPage from './pages/admin/AdminBroadcastsPage';
 import AdminFraudPage from './pages/admin/AdminFraudPage';
@@ -104,6 +107,7 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <GameControlProvider>
+            <SlotProvider>
             <WalletProvider>
             <LiveFeedProvider>
               <NotificationProvider>
@@ -134,6 +138,7 @@ export default function App() {
                             <Route path="fraud" element={<AdminFraudPage />} />
                             <Route path="analytics" element={<AdminAnalyticsPage />} />
                             <Route path="games" element={<AdminGamesPage />} />
+                            <Route path="slots" element={<AdminSlotsPage />} />
                           </Route>
 
                           {/* Main app routes with layout */}
@@ -156,6 +161,7 @@ export default function App() {
                             <Route path="/games/plinko" element={<PlinkoPage />} />
                             <Route path="/games/teen-patti" element={<TeenPattiPage />} />
                             <Route path="/games/ocean-hunter" element={<OceanHunterPage />} />
+                            <Route path="/games/slots" element={<SlotsPage />} />
 
                             {/* Protected routes */}
                             <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
@@ -181,6 +187,7 @@ export default function App() {
           </NotificationProvider>
             </LiveFeedProvider>
           </WalletProvider>
+            </SlotProvider>
         </GameControlProvider>
       </AuthProvider>
       </ErrorBoundary>
