@@ -95,20 +95,20 @@ function PlayingCard({ card, faceDown = false, delay = 0 }: { card?: Card; faceD
       initial={{ rotateY: 180, scale: 0.8, opacity: 0 }}
       animate={{ rotateY: faceDown ? 180 : 0, scale: 1, opacity: 1 }}
       transition={{ delay, duration: 0.35, type: 'spring', stiffness: 200 }}
-      className="w-14 h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-xl relative select-none"
+      className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.6)] relative select-none"
       style={{
-        background: faceDown ? 'linear-gradient(135deg, #0d2419, #1a3a28)' : 'linear-gradient(135deg, #f8f8f8, #e8e8e8)',
-        borderColor: faceDown ? 'rgba(212,175,55,0.3)' : 'rgba(200,200,200,0.5)',
+        background: faceDown ? 'linear-gradient(135deg, #8B6914, #2A1D08)' : 'linear-gradient(135deg, #FFFFFF, #F5F1E6)',
+        borderColor: faceDown ? '#FFD700' : '#D4AF37',
         backfaceVisibility: 'hidden',
       }}
     >
       {faceDown ? (
-        <span className="text-2xl" style={{ opacity: 0.4 }}>🂠</span>
+        <span className="text-3xl font-black text-gold drop-shadow-md">👑</span>
       ) : card ? (
         <>
-          <span className="text-xs font-black absolute top-1.5 left-2" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.rank}</span>
-          <span className="text-2xl" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.suit}</span>
-          <span className="text-xs font-black absolute bottom-1.5 right-2 rotate-180" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.rank}</span>
+          <span className="text-xs font-black absolute top-1.5 left-2 font-mono" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.rank}</span>
+          <span className="text-3xl" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.suit}</span>
+          <span className="text-xs font-black absolute bottom-1.5 right-2 rotate-180 font-mono" style={{ color: isRed ? '#e74c3c' : '#1a1a2e' }}>{card.rank}</span>
         </>
       ) : null}
     </motion.div>
@@ -258,8 +258,8 @@ export default function TeenPattiPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="royal-panel rounded-2xl p-6 space-y-6">
+      {/* Emerald Velvet Felt Table */}
+      <div className="rounded-3xl p-6 sm:p-8 space-y-6 bg-gradient-to-b from-[#0B3C26] via-[#041A10] to-[#0B3C26] border-4 border-[#D4AF37] shadow-[inset_0_0_50px_rgba(0,0,0,0.95),0_10px_30px_rgba(0,0,0,0.8)] relative overflow-hidden">
         {/* House cards */}
         <div className="text-center space-y-3">
           <p className="text-xs font-black text-[rgba(212,175,55,0.5)] uppercase tracking-wider">🏦 House Hand</p>

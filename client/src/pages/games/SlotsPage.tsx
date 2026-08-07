@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, HelpCircle } from 'lucide-react';
+import { Play, HelpCircle, Sparkles, Trophy, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useSlots } from '../../store/SlotContext';
 import { useWallet } from '../../store/WalletContext';
@@ -92,7 +92,6 @@ export default function SlotsPage() {
         redisCache.set(`slot:last_spin:${activeSlot.id}`, { reels: finalReels, winMultiplier, payout, timestamp: Date.now() }, 3600);
 
         if (winMultiplier > 0) {
-          const payout = Math.round(betAmount * winMultiplier);
           setLastWin(payout);
           addBalance(payout, `Slot Win (${winMultiplier}×) — ${activeSlot.name}`, 'win');
           sounds.playWin();
@@ -101,7 +100,7 @@ export default function SlotsPage() {
             title: `🎰 WINNER! ₹${payout}`,
             message: `Matched ${finalReels.join(' ')} (${winMultiplier}× payout)`,
           });
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71', '#E74C3C'] });
         } else {
           sounds.playLoss();
         }
@@ -122,132 +121,156 @@ export default function SlotsPage() {
               setActiveSlotId(slot.id);
               setReels(Array(slot.reels).fill(slot.symbols[0]));
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border ${
               activeSlot.id === slot.id
-                ? 'bg-gradient-to-r from-[#D4AF37] to-[#8B6914] text-[#061510] shadow-[0_0_15px_rgba(212,175,55,0.4)]'
-                : 'royal-panel text-[rgba(212,175,55,0.7)] hover:text-gold'
+                ? 'bg-gradient-to-r from-[#D4AF37] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFD700] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.02]'
+                : 'bg-[#061510]/80 text-[rgba(212,175,55,0.7)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
             }`}
           >
-            <span className="text-base">{slot.emoji}</span>
+            <span className="text-lg">{slot.emoji}</span>
             {slot.name}
-            <span className="text-[10px] opacity-75 font-mono">({slot.reels} Reels)</span>
+            <span className="text-[10px] opacity-80 font-mono bg-black/30 px-1.5 py-0.5 rounded">({slot.reels} Reels)</span>
           </button>
         ))}
       </div>
 
-      {/* Main Desktop Grid */}
+      {/* Main Desktop Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Slot Machine Engine (lg:col-span-8) */}
-        <div className="lg:col-span-8 royal-panel rounded-3xl p-6 space-y-6 relative overflow-hidden border border-[rgba(212,175,55,0.25)]">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{activeSlot.emoji}</span>
-              <div>
-                <h1 className="text-xl font-black text-[#E8C97A] font-heading">{activeSlot.name}</h1>
-                <p className="text-xs text-[rgba(212,175,55,0.5)]">{activeSlot.subtitle}</p>
+        {/* Left Column: 3D Casino Cabinet Frame (lg:col-span-8) */}
+        <div className="lg:col-span-8 relative rounded-3xl p-1 bg-gradient-to-b from-[#D4AF37] via-[#2A1D08] to-[#D4AF37] shadow-[0_10px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(212,175,55,0.25)] border-2 border-[#FFD700]">
+          <div className="royal-panel rounded-[22px] p-6 space-y-6 bg-gradient-to-b from-[#0B251C] via-[#040E0A] to-[#0B251C] relative overflow-hidden">
+            {/* LED Marquee Lights Top Bar */}
+            <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.25)] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FFD700] to-[#8B6914] p-0.5 shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center justify-center">
+                  <span className="text-2xl">{activeSlot.emoji}</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-black text-[#E8C97A] font-heading tracking-wide flex items-center gap-2">
+                    {activeSlot.name}
+                    <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+                  </h1>
+                  <p className="text-xs text-[rgba(212,175,55,0.6)] font-mono">{activeSlot.subtitle}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase font-mono bg-amber-500/10 text-gold border border-amber-500/30 flex items-center gap-1">
+                  <Flame className="w-3 h-3 text-gold" />
+                  {activeSlot.paytable.jackpot777}x Max Jackpot
+                </span>
+
+                <button
+                  onClick={() => setShowPaytable(true)}
+                  className="px-3 py-1.5 rounded-xl bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.3)] text-gold text-xs font-bold flex items-center gap-1.5 hover:bg-[rgba(212,175,55,0.3)] transition-all shadow-sm"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Paytable
+                </button>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowPaytable(true)}
-              className="px-3 py-1.5 rounded-xl bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.2)] text-gold text-xs font-bold flex items-center gap-1.5 hover:bg-[rgba(212,175,55,0.2)] transition-all"
-            >
-              <HelpCircle className="w-4 h-4" />
-              Paytable
-            </button>
-          </div>
+            {/* 3D Slot Reels Screen Box */}
+            <div className="bg-gradient-to-b from-[#020806] via-[#061B12] to-[#020806] p-6 rounded-2xl border-4 border-[#8B6914] shadow-[inset_0_0_40px_rgba(0,0,0,0.95),0_0_20px_rgba(212,175,55,0.2)] relative">
+              {/* Payline Laser Line */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent pointer-events-none opacity-60 z-20 shadow-[0_0_12px_#FFD700]" />
 
-          {/* Slot Reels Container */}
-          <div className="bg-[#040E0A] p-6 rounded-2xl border-2 border-[rgba(212,175,55,0.3)] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] relative">
-            {/* Payline Overlay Line */}
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent pointer-events-none opacity-40 z-10" />
+              <div className={`grid gap-3 ${activeSlot.reels === 3 ? 'grid-cols-3' : 'grid-cols-5'}`}>
+                {reels.map((sym, idx) => (
+                  <div
+                    key={idx}
+                    className="h-32 sm:h-40 bg-gradient-to-b from-[#05140E] via-[#0E3525] to-[#05140E] rounded-xl border-2 border-[rgba(212,175,55,0.35)] flex items-center justify-center text-4xl sm:text-6xl shadow-[inset_0_0_20px_rgba(0,0,0,0.8),0_4px_10px_rgba(0,0,0,0.5)] relative overflow-hidden"
+                  >
+                    {/* Glass Reflection Glare */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
 
-            <div className={`grid gap-3 ${activeSlot.reels === 3 ? 'grid-cols-3' : 'grid-cols-5'}`}>
-              {reels.map((sym, idx) => (
-                <div
-                  key={idx}
-                  className="h-28 sm:h-36 bg-gradient-to-b from-[#091F16] via-[#0E2C20] to-[#091F16] rounded-xl border border-[rgba(212,175,55,0.2)] flex items-center justify-center text-4xl sm:text-6xl shadow-inner relative overflow-hidden"
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={spinning ? `spin_${Date.now()}_${idx}` : sym}
+                        initial={spinning ? { y: -100, opacity: 0.2, filter: 'blur(6px)' } : { scale: 0.8 }}
+                        animate={spinning ? { y: [100, -100, 0], opacity: [0.2, 1, 1], filter: ['blur(6px)', 'blur(0px)'] } : { scale: 1 }}
+                        transition={{ duration: 0.35 + idx * 0.15, repeat: spinning ? Infinity : 0 }}
+                      >
+                        {sym}
+                      </motion.span>
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+
+              {/* Win Display Banner */}
+              {lastWin !== null && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="mt-4 text-center py-2.5 rounded-xl bg-gradient-to-r from-emerald-600/30 via-emerald-500/40 to-emerald-600/30 border-2 border-emerald-400 text-emerald-300 font-black text-xl shadow-[0_0_20px_rgba(46,204,113,0.4)] flex items-center justify-center gap-2"
                 >
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={spinning ? `spin_${Date.now()}_${idx}` : sym}
-                      initial={spinning ? { y: -80, opacity: 0.2, filter: 'blur(4px)' } : { scale: 0.8 }}
-                      animate={spinning ? { y: [80, -80, 0], opacity: [0.2, 1, 1], filter: ['blur(4px)', 'blur(0px)'] } : { scale: 1 }}
-                      transition={{ duration: 0.4 + idx * 0.15, repeat: spinning ? Infinity : 0 }}
-                    >
-                      {sym}
-                    </motion.span>
-                  </AnimatePresence>
-                </div>
-              ))}
+                  <Trophy className="w-6 h-6 text-gold" />
+                  JACKPOT PAYOUT! +₹{lastWin}
+                </motion.div>
+              )}
             </div>
 
-            {/* Win Display */}
-            {lastWin !== null && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="mt-4 text-center py-2 rounded-xl bg-gradient-to-r from-emerald-500/20 via-emerald-500/30 to-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black text-lg"
+            {/* 3D Embossed Casino Chips Selector */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[rgba(212,175,55,0.7)] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-gold" />
+                  Casino Bet Chips
+                </span>
+                <span className="text-xs font-mono text-gold font-bold bg-[#040E0A] px-3 py-1 rounded-full border border-[rgba(212,175,55,0.2)]">
+                  Wallet: ₹{balance.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {CHIP_VALUES.map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setBetAmount(val)}
+                    className={`flex-1 min-w-[65px] py-2.5 rounded-full text-xs font-black transition-all border-2 relative overflow-hidden shadow-md ${
+                      betAmount === val
+                        ? 'bg-gradient-to-b from-[#FFD700] via-[#D4AF37] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_15px_rgba(212,175,55,0.6)] scale-105'
+                        : 'bg-[#040E0A] text-[rgba(212,175,55,0.6)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
+                    }`}
+                  >
+                    ₹{val}
+                  </button>
+                ))}
+              </div>
+
+              {/* Physical Metallic Spin Lever Button */}
+              <button
+                onClick={spinReels}
+                disabled={spinning}
+                className={`w-full py-4 rounded-2xl font-black text-xl flex items-center justify-center gap-3 transition-all uppercase tracking-widest border-2 border-[#FFE4B5] ${
+                  spinning
+                    ? 'bg-gray-800 text-gray-500 border-gray-600 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#B8860B] text-[#061510] shadow-[0_0_30px_rgba(212,175,55,0.6)] hover:brightness-115 active:scale-[0.98]'
+                }`}
               >
-                🎉 BIG WIN! +₹{lastWin}
-              </motion.div>
-            )}
-          </div>
-
-          {/* Bet Selector & Spin Control */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[rgba(212,175,55,0.6)] font-bold">Select Bet Amount</span>
-              <span className="text-xs font-mono text-gold font-bold">Balance: ₹{balance.toLocaleString('en-IN')}</span>
+                <Play className="w-7 h-7 fill-current" />
+                {spinning ? 'Spinning Reels...' : `SPIN SLOT (₹${betAmount})`}
+              </button>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {CHIP_VALUES.map(val => (
-                <button
-                  key={val}
-                  onClick={() => setBetAmount(val)}
-                  className={`flex-1 min-w-[60px] py-2 rounded-xl text-xs font-black transition-all border ${
-                    betAmount === val
-                      ? 'bg-[rgba(212,175,55,0.2)] text-gold border-[#D4AF37]'
-                      : 'bg-[#061510] text-[rgba(212,175,55,0.5)] border-[rgba(212,175,55,0.15)]'
-                  }`}
-                >
-                  ₹{val}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={spinReels}
+            {/* Auto-Bet Integration */}
+            <AutoBetPanel
+              balance={balance}
               disabled={spinning}
-              className={`w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all uppercase tracking-wider ${
-                spinning
-                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#D4AF37] via-[#F5D576] to-[#8B6914] text-[#061510] shadow-[0_0_25px_rgba(212,175,55,0.4)] hover:brightness-110 active:scale-[0.99]'
-              }`}
-            >
-              <Play className="w-6 h-6 fill-current" />
-              {spinning ? 'Spinning Reels...' : `SPIN SLOT (₹${betAmount})`}
-            </button>
+              intervalMs={2500}
+              onPlaceBet={async (amount) => {
+                if (!isAuthenticated) return 0;
+                if (balance < amount) return 0;
+                deductBalance(amount, `Auto-Bet — ${activeSlot.name}`);
+                const won = Math.random() > 0.6;
+                const mult = won ? activeSlot.paytable.threeOfAKind : 0;
+                const payout = won ? Math.round(amount * mult) : 0;
+                if (won) addBalance(payout, `Auto-Bet Win — ${activeSlot.name} ${mult}×`, 'win');
+                return won ? payout - amount : -amount;
+              }}
+            />
           </div>
-
-          {/* Auto-Bet Integration */}
-          <AutoBetPanel
-            balance={balance}
-            disabled={spinning}
-            intervalMs={2500}
-            onPlaceBet={async (amount) => {
-              if (!isAuthenticated) return 0;
-              if (balance < amount) return 0;
-              deductBalance(amount, `Auto-Bet — ${activeSlot.name}`);
-              const won = Math.random() > 0.6;
-              const mult = won ? activeSlot.paytable.threeOfAKind : 0;
-              const payout = won ? Math.round(amount * mult) : 0;
-              if (won) addBalance(payout, `Auto-Bet Win — ${activeSlot.name} ${mult}×`, 'win');
-              return won ? payout - amount : -amount;
-            }}
-          />
         </div>
 
         {/* Right Column: Live Chat (lg:col-span-4) */}
