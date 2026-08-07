@@ -315,9 +315,26 @@ export default function LoginPage() {
           )}
         </button>
 
-        {/* Social Logins */}
-        <div className="pt-1 mt-3">
-          <p className="text-[9px] text-center text-[rgba(212,175,55,0.45)] uppercase tracking-wider mb-2 font-bold">Or Sign In With</p>
+        {/* Social & Quick Demo Logins */}
+        <div className="pt-1 mt-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => performLogin('player@tirangagames.com')}
+              className="py-2 px-3 rounded-xl bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.25)] text-gold hover:bg-[rgba(212,175,55,0.15)] transition-all flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+            >
+              <span>👤 Quick Player</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => performLogin('admin@playarena.com')}
+              className="py-2 px-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500/25 transition-all flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+            >
+              <span>⚡ Quick Admin</span>
+            </button>
+          </div>
+
+          <p className="text-[9px] text-center text-[rgba(212,175,55,0.45)] uppercase tracking-wider my-2 font-bold">Or Sign In With</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
