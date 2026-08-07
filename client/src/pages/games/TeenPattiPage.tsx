@@ -364,6 +364,7 @@ export default function TeenPattiPage() {
             </span>
           ))}
         </div>
+      )}
         </div>
 
         {/* Right Column: Game Chat */}
