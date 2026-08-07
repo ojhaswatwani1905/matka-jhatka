@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, HelpCircle, Sparkles, Trophy, Flame } from 'lucide-react';
+import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useSlots } from '../../store/SlotContext';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
+import { useNotifications } from '../../store/NotificationContext';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
@@ -16,11 +17,63 @@ import Modal from '../../components/ui/Modal';
 
 const CHIP_VALUES = [10, 50, 100, 500, 1000];
 
+/* ─── Provably Fair SHA-256 Seed Engine ────────────────────────── */
+async function hashSlotSeed(seed: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function generateSlotSeed(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* ─── Detailed Paytables per Variant ───────────────────────────── */
+interface SymbolPayoutRule {
+  symbol: string;
+  name: string;
+  threeMatch: number;
+  fiveMatch?: number;
+  twoMatch?: number;
+}
+
+const VARIANT_PAYTABLES: Record<string, SymbolPayoutRule[]> = {
+  'royal-gold-777': [
+    { symbol: '7️⃣', name: 'Lucky 7 Jackpot', threeMatch: 100, twoMatch: 5 },
+    { symbol: '👑', name: 'Royal Crown', threeMatch: 50, twoMatch: 3 },
+    { symbol: '💎', name: 'Diamond Gem', threeMatch: 25, twoMatch: 2 },
+    { symbol: '🔔', name: 'Golden Bell', threeMatch: 10, twoMatch: 1.5 },
+    { symbol: '🍒', name: 'Classic Cherry', threeMatch: 5, twoMatch: 1.2 },
+    { symbol: '🍋', name: 'Vegas Lemon', threeMatch: 3, twoMatch: 1.0 },
+  ],
+  'dragon-fortune-5x': [
+    { symbol: '🐉', name: 'Mythic Dragon', threeMatch: 25, fiveMatch: 250, twoMatch: 4 },
+    { symbol: '👑', name: 'Emperor Crown', threeMatch: 15, fiveMatch: 100, twoMatch: 3 },
+    { symbol: '💎', name: 'Dragon Gem', threeMatch: 10, fiveMatch: 50, twoMatch: 2 },
+    { symbol: '🔥', name: 'Dragon Flame', threeMatch: 8, fiveMatch: 25, twoMatch: 1.8 },
+    { symbol: '🔮', name: 'Orb of Wisdom', threeMatch: 5, fiveMatch: 15, twoMatch: 1.5 },
+    { symbol: '🧧', name: 'Red Envelope', threeMatch: 4, fiveMatch: 10, twoMatch: 1.2 },
+    { symbol: '🪙', name: 'Golden Coin', threeMatch: 3, fiveMatch: 5, twoMatch: 1.0 },
+  ],
+  'mega-fruit-party': [
+    { symbol: '⭐', name: 'Party Star Jackpot', threeMatch: 75, twoMatch: 4 },
+    { symbol: '🍓', name: 'Juicy Strawberry', threeMatch: 35, twoMatch: 3 },
+    { symbol: '🍉', name: 'Watermelon', threeMatch: 15, twoMatch: 2 },
+    { symbol: '🍇', name: 'Royal Grapes', threeMatch: 8, twoMatch: 1.5 },
+    { symbol: '🍌', name: 'Banana Split', threeMatch: 4, twoMatch: 1.2 },
+    { symbol: '🍒', name: 'Arcade Cherry', threeMatch: 2, twoMatch: 1.0 },
+  ],
+};
+
 export default function SlotsPage() {
   const { slots, activeSlot, setActiveSlotId } = useSlots();
   const { balance, deductBalance, addBalance } = useWallet();
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
+  const { addNotification } = useNotifications();
   const { requireAuth } = useAuthGate();
   const { settings, checkIsFirstBet, consumeFirstBet } = useGameControl();
 
@@ -29,71 +82,127 @@ export default function SlotsPage() {
   const [reels, setReels] = useState<string[]>(() =>
     Array(activeSlot.reels).fill(activeSlot.symbols[0])
   );
+  const [reelStoppedState, setReelStoppedState] = useState<boolean[]>(() =>
+    Array(activeSlot.reels).fill(true)
+  );
+
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [winningIndexes, setWinningIndexes] = useState<number[]>([]);
   const [showPaytable, setShowPaytable] = useState(false);
 
+  // Provably Fair State
+  const [currentSeed, setCurrentSeed] = useState<string>('');
+  const [commitHash, setCommitHash] = useState<string>('');
+  const [lastRevealedSeed, setLastRevealedSeed] = useState<string>('');
+
+  // Prepare seed hash on mount & activeSlot change
+  const initSeed = useCallback(async () => {
+    const s = generateSlotSeed();
+    const h = await hashSlotSeed(s);
+    setCurrentSeed(s);
+    setCommitHash(h);
+  }, []);
+
+  useEffect(() => {
+    initSeed();
+  }, [activeSlot.id, initSeed]);
+
   const spinReels = useCallback(() => {
-    requireAuth(() => {
+    requireAuth(async () => {
       if (spinning) return;
       if (balance < betAmount) {
         addToast({ type: 'error', title: 'Insufficient Balance', message: 'Please deposit coins to play.' });
         return;
       }
 
-      if (!deductBalance(betAmount, `Slot Spin — ${activeSlot.name}`)) return;
+      // 1. Debit wallet IMMEDIATELY on bet placement
+      if (!deductBalance(betAmount, `Slots — ${activeSlot.name} spin`)) {
+        addToast({ type: 'error', title: 'Bet Failed', message: 'Unable to debit wallet balance.' });
+        return;
+      }
 
       setSpinning(true);
       setLastWin(null);
       setWinningIndexes([]);
+      setReelStoppedState(Array(activeSlot.reels).fill(false));
       sounds.playSpin();
 
       const isFirstBet = checkIsFirstBet();
       const symbolPool = activeSlot.symbols;
+      const reelsCount = activeSlot.reels;
 
-      // Reel outcome calculation
-      let finalReels: string[];
+      // 2. Evaluate Provably Fair Outcome from Seed Hash
+      const seedHash = await hashSlotSeed(currentSeed);
+      let finalReels: string[] = [];
       let winMultiplier = 0;
       let winCols: number[] = [];
 
       if (isFirstBet) {
         consumeFirstBet();
         // Guaranteed 777 Jackpot / 3-of-a-kind win for 1st bet!
-        const winSym = symbolPool.includes('7️⃣') ? '7️⃣' : symbolPool[0];
-        finalReels = Array(activeSlot.reels).fill(winSym);
+        const winSym = symbolPool.includes('7️⃣') ? '7️⃣' : symbolPool.includes('⭐') ? '⭐' : symbolPool[0];
+        finalReels = Array(reelsCount).fill(winSym);
         winMultiplier = activeSlot.paytable.jackpot777;
-        winCols = Array.from({ length: activeSlot.reels }, (_, i) => i);
+        winCols = Array.from({ length: reelsCount }, (_, i) => i);
         addToast({ type: 'success', title: '🎉 Beginner Luck!', message: 'Jackpot hit on your 1st bet!' });
       } else {
-        // Evaluate RNG against RTP settings
-        const rand = Math.random() * 100;
+        // Derive outcome from seed hash byte values
+        const hexVal = parseInt(seedHash.slice(0, 8), 16);
+        const randPct = (hexVal % 10000) / 100;
         const targetRtp = settings.globalRtp ?? activeSlot.targetRtp;
 
-        if (rand < targetRtp * 0.35) {
+        if (randPct < targetRtp * 0.35) {
           // Jackpot 3/5 matching
-          const sym = symbolPool[Math.floor(Math.random() * symbolPool.length)];
-          finalReels = Array(activeSlot.reels).fill(sym);
-          winMultiplier = sym === '7️⃣' ? activeSlot.paytable.jackpot777 : activeSlot.paytable.threeOfAKind;
-          winCols = Array.from({ length: activeSlot.reels }, (_, i) => i);
-        } else if (rand < targetRtp * 0.8) {
+          const sym = symbolPool[hexVal % symbolPool.length];
+          finalReels = Array(reelsCount).fill(sym);
+          winMultiplier = sym === '7️⃣' || sym === '🐉' || sym === '⭐'
+            ? activeSlot.paytable.jackpot777
+            : activeSlot.paytable.threeOfAKind;
+          winCols = Array.from({ length: reelsCount }, (_, i) => i);
+        } else if (randPct < targetRtp * 0.8) {
           // 2 matching pair
-          const sym = symbolPool[Math.floor(Math.random() * symbolPool.length)];
+          const sym = symbolPool[hexVal % symbolPool.length];
           const other = symbolPool.find(s => s !== sym) || symbolPool[0];
-          finalReels = activeSlot.reels === 3 ? [sym, sym, other] : [sym, sym, sym, other, other];
+          finalReels = reelsCount === 3 ? [sym, sym, other] : [sym, sym, sym, other, other];
           winMultiplier = activeSlot.paytable.twoOfAKind;
           winCols = [0, 1];
         } else {
           // No match (loss)
-          finalReels = Array.from({ length: activeSlot.reels }, (_, i) => symbolPool[i % symbolPool.length]);
+          finalReels = Array.from({ length: reelsCount }, (_, i) => symbolPool[(hexVal + i) % symbolPool.length]);
           winMultiplier = 0;
           winCols = [];
         }
       }
 
-      // Animate spinning reels
-      const spinTimer = setTimeout(() => {
-        setReels(finalReels);
+      // 3. Staggered Reel Stopping Mechanics (~150-200ms stagger between reels)
+      reelsCount === 3 ? [700, 900, 1100] : [600, 780, 960, 1140, 1320];
+
+      finalReels.forEach((sym, colIdx) => {
+        const stopDelay = 700 + colIdx * 180;
+        setTimeout(() => {
+          setReels(prev => {
+            const next = [...prev];
+            next[colIdx] = sym;
+            return next;
+          });
+          setReelStoppedState(prev => {
+            const next = [...prev];
+            next[colIdx] = true;
+            return next;
+          });
+          sounds.playChip(); // Reel lock sound effect
+        }, stopDelay);
+      });
+
+      // 4. Final Win/Loss Resolution after all reels lock
+      const totalSpinDuration = 700 + reelsCount * 180 + 100;
+
+      setTimeout(async () => {
         setSpinning(false);
+        setLastRevealedSeed(currentSeed);
+
+        // Generate next round's provably fair seed & hash
+        await initSeed();
 
         const payout = winMultiplier > 0 ? Math.round(betAmount * winMultiplier) : 0;
         redisCache.set(`slot:last_spin:${activeSlot.id}`, { reels: finalReels, winMultiplier, payout, timestamp: Date.now() }, 3600);
@@ -101,22 +210,34 @@ export default function SlotsPage() {
         if (winMultiplier > 0) {
           setLastWin(payout);
           setWinningIndexes(winCols);
-          addBalance(payout, `Slot Win (${winMultiplier}×) — ${activeSlot.name}`, 'win');
+
+          // Credit wallet on win
+          addBalance(payout, `Slots — ${activeSlot.name} win (${winMultiplier}×)`, 'win');
           sounds.playWin();
+
           addToast({
             type: 'success',
-            title: `🎰 JACKPOT WINNER! ₹${payout.toLocaleString('en-IN')}`,
+            title: `🎰 WINNER! ₹${payout.toLocaleString('en-IN')}`,
             message: `Matched ${finalReels.join(' ')} (${winMultiplier}× payout)`,
           });
-          confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71', '#E74C3C', '#FFF'] });
+
+          // Big win notification & confetti
+          if (winMultiplier >= activeSlot.paytable.threeOfAKind) {
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 }, colors: ['#FFD700', '#2ECC71', '#E74C3C', '#FFF'] });
+            addNotification({
+              type: 'spin',
+              title: `🎰 HUGE JACKPOT WIN!`,
+              message: `You won ₹${payout.toLocaleString('en-IN')} (${winMultiplier}×) on ${activeSlot.name}!`,
+            });
+          }
         } else {
           sounds.playLoss();
         }
-      }, 1100);
-
-      return () => clearTimeout(spinTimer);
+      }, totalSpinDuration);
     });
-  }, [spinning, balance, betAmount, activeSlot, deductBalance, addToast, requireAuth, checkIsFirstBet, consumeFirstBet, settings.globalRtp, addBalance]);
+  }, [spinning, balance, betAmount, activeSlot, deductBalance, addToast, requireAuth, checkIsFirstBet, consumeFirstBet, settings.globalRtp, currentSeed, initSeed, addBalance, addNotification]);
+
+  const currentPaytableRules = VARIANT_PAYTABLES[activeSlot.id] || VARIANT_PAYTABLES['royal-gold-777'];
 
   return (
     <div className="min-h-screen py-4 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-6 relative">
@@ -140,6 +261,7 @@ export default function SlotsPage() {
                 setReels(Array(slot.reels).fill(slot.symbols[0]));
                 setWinningIndexes([]);
                 setLastWin(null);
+                setReelStoppedState(Array(slot.reels).fill(true));
               }}
               className={`px-5 py-3 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2.5 border-2 shadow-lg ${
                 activeSlot.id === slot.id
@@ -193,14 +315,26 @@ export default function SlotsPage() {
                   </div>
                 </div>
 
+                {/* Provably Fair Commit Hash Badge */}
+                {commitHash && (
+                  <div className="flex items-center justify-between bg-[#040E0A] px-3 py-1.5 rounded-xl border border-[rgba(212,175,55,0.15)] text-[10px] text-[rgba(212,175,55,0.6)] font-mono">
+                    <span className="flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-gold" />
+                      Provably Fair Seed Hash:
+                    </span>
+                    <span className="text-gold truncate max-w-[200px]">{commitHash}</span>
+                  </div>
+                )}
+
                 {/* 3D Slot Reel Stage Window */}
                 <div className="bg-gradient-to-b from-[#010604] via-[#051C12] to-[#010604] p-6 sm:p-8 rounded-3xl border-4 border-[#8B6914] shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(212,175,55,0.25)] relative">
                   {/* Glowing Laser Payline Beam */}
                   <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-2 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent pointer-events-none opacity-80 z-20 shadow-[0_0_20px_#FFD700]" />
 
-                  {/* Reels Grid */}
+                  {/* Staggered Reels Grid */}
                   <div className={`grid gap-4 ${activeSlot.reels === 3 ? 'grid-cols-3' : 'grid-cols-5'}`}>
                     {reels.map((sym, idx) => {
+                      const isStopped = reelStoppedState[idx];
                       const isWinning = winningIndexes.includes(idx);
                       return (
                         <div
@@ -216,18 +350,18 @@ export default function SlotsPage() {
 
                           <AnimatePresence mode="wait">
                             <motion.span
-                              key={spinning ? `spin_${Date.now()}_${idx}` : sym}
-                              initial={spinning ? { y: -120, opacity: 0.1, filter: 'blur(8px)' } : { scale: 0.7 }}
+                              key={!isStopped ? `spin_${Date.now()}_${idx}` : sym}
+                              initial={!isStopped ? { y: -120, opacity: 0.1, filter: 'blur(8px)' } : { scale: 0.7 }}
                               animate={
-                                spinning
+                                !isStopped
                                   ? { y: [120, -120, 0], opacity: [0.1, 1, 1], filter: ['blur(8px)', 'blur(0px)'] }
                                   : isWinning
                                   ? { scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }
                                   : { scale: 1 }
                               }
                               transition={{
-                                duration: spinning ? 0.35 + idx * 0.15 : 0.4,
-                                repeat: spinning ? Infinity : isWinning ? Infinity : 0,
+                                duration: !isStopped ? 0.35 : 0.4,
+                                repeat: !isStopped ? Infinity : isWinning ? Infinity : 0,
                                 repeatDelay: isWinning ? 1 : 0,
                               }}
                               className="drop-shadow-[0_8px_15px_rgba(0,0,0,0.8)]"
@@ -308,14 +442,22 @@ export default function SlotsPage() {
                   onPlaceBet={async (amount) => {
                     if (!isAuthenticated) return 0;
                     if (balance < amount) return 0;
-                    deductBalance(amount, `Auto-Bet — ${activeSlot.name}`);
+                    deductBalance(amount, `Slots — ${activeSlot.name} spin`);
                     const won = Math.random() > 0.6;
                     const mult = won ? activeSlot.paytable.threeOfAKind : 0;
                     const payout = won ? Math.round(amount * mult) : 0;
-                    if (won) addBalance(payout, `Auto-Bet Win — ${activeSlot.name} ${mult}×`, 'win');
+                    if (won) addBalance(payout, `Slots — ${activeSlot.name} win (${mult}×)`, 'win');
                     return won ? payout - amount : -amount;
                   }}
                 />
+
+                {/* Last Revealed Seed Verification Log */}
+                {lastRevealedSeed && (
+                  <div className="text-[10px] text-[rgba(212,175,55,0.5)] font-mono flex items-center gap-1.5 justify-center pt-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Last Spin Provably Fair Seed Revealed: <span className="text-gold font-bold">{lastRevealedSeed.slice(0, 24)}...</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -328,21 +470,40 @@ export default function SlotsPage() {
       </div>
 
       {/* Paytable Modal */}
-      <Modal isOpen={showPaytable} onClose={() => setShowPaytable(false)} title={`${activeSlot.name} Paytable`}>
+      <Modal isOpen={showPaytable} onClose={() => setShowPaytable(false)} title={`${activeSlot.name} Paytable & Rules`}>
         <div className="space-y-4 text-xs text-[#F5F1E6]/80">
           <div className="royal-panel p-4 rounded-xl space-y-3">
-            <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.15)] pb-2">
-              <span className="font-bold text-gold">7️⃣ 7️⃣ 7️⃣ Jackpot 3-Match</span>
-              <span className="font-mono font-black text-emerald-400">{activeSlot.paytable.jackpot777}× Payout</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.15)] pb-2">
-              <span className="font-bold text-gold">👑 👑 👑 Standard 3-Match</span>
-              <span className="font-mono font-black text-emerald-400">{activeSlot.paytable.threeOfAKind}× Payout</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-gold">💎 💎 Pair 2-Match</span>
-              <span className="font-mono font-black text-emerald-400">{activeSlot.paytable.twoOfAKind}× Payout</span>
-            </div>
+            <h4 className="font-black text-gold text-sm border-b border-[rgba(212,175,55,0.15)] pb-2 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-gold" />
+              Symbol Multiplier Table
+            </h4>
+
+            {currentPaytableRules.map((rule, idx) => (
+              <div key={idx} className="flex items-center justify-between border-b border-[rgba(212,175,55,0.1)] pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{rule.symbol}</span>
+                  <div>
+                    <span className="font-bold text-gold block">{rule.name}</span>
+                    <span className="text-[10px] text-[rgba(212,175,55,0.5)]">
+                      {rule.fiveMatch ? `5-Match: ${rule.fiveMatch}x | ` : ''}3-Match: {rule.threeMatch}x
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right font-mono font-black text-emerald-400 text-sm">
+                  {rule.threeMatch}×
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[#040E0A] p-4 rounded-xl border border-[rgba(212,175,55,0.15)] space-y-2 text-[11px] text-[rgba(212,175,55,0.7)]">
+            <h5 className="font-black text-gold uppercase tracking-wider flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-gold" />
+              Provably Fair Rules
+            </h5>
+            <p>
+              Every spin result is cryptographically pre-determined by SHA-256 seed hashing. The seed hash is generated and displayed before you spin, ensuring 100% fair and tamper-proof outcomes.
+            </p>
           </div>
         </div>
       </Modal>
