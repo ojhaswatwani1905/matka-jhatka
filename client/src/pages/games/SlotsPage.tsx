@@ -9,6 +9,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
+import { redisCache } from '../../lib/redisCache';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import Modal from '../../components/ui/Modal';
@@ -86,6 +87,9 @@ export default function SlotsPage() {
       const spinTimer = setTimeout(() => {
         setReels(finalReels);
         setSpinning(false);
+
+        const payout = winMultiplier > 0 ? Math.round(betAmount * winMultiplier) : 0;
+        redisCache.set(`slot:last_spin:${activeSlot.id}`, { reels: finalReels, winMultiplier, payout, timestamp: Date.now() }, 3600);
 
         if (winMultiplier > 0) {
           const payout = Math.round(betAmount * winMultiplier);

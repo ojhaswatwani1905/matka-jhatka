@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { redisCache } from '../lib/redisCache';
 
 export interface SlotGame {
   id: string;
@@ -108,6 +109,7 @@ export function SlotProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
+    redisCache.set('slots:configs', slots);
   }, [slots]);
 
   const activeSlot = slots.find(s => s.id === activeSlotId) || slots[0] || DEFAULT_SLOTS[0];
