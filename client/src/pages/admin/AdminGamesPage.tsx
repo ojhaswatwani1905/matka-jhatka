@@ -1,235 +1,283 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Settings, Power, Clock, ChevronDown, ChevronUp, Shield } from 'lucide-react';
+import { Sliders, Shield, Zap, TrendingUp, DollarSign, Award } from 'lucide-react';
+import { useGameControl, type RigMode } from '../../store/GameControlContext';
 import { useToast } from '../../components/ui/Toast';
 
-interface GameConfig {
-  id: string;
-  name: string;
-  emoji: string;
-  enabled: boolean;
-  timerDuration?: number; // seconds
-  odds: { label: string; key: string; value: number; description: string }[];
-  commitHash?: string;
-}
-
-const DEFAULT_CONFIGS: GameConfig[] = [
-  {
-    id: 'color-prediction',
-    name: 'Color Prediction / WinGo',
-    emoji: '🎨',
-    enabled: true,
-    timerDuration: 60,
-    commitHash: '8f9a3b2c1d0e4f5a6b7c8d9e0f1a2b3c...',
-    odds: [
-      { label: 'Green', key: 'green', value: 2.0, description: 'Payout for correct color' },
-      { label: 'Red', key: 'red', value: 2.0, description: 'Payout for correct color' },
-      { label: 'Violet', key: 'violet', value: 4.5, description: 'Payout for violet' },
-      { label: 'Big', key: 'big', value: 2.0, description: 'Payout for big (5–9)' },
-      { label: 'Small', key: 'small', value: 2.0, description: 'Payout for small (0–4)' },
-      { label: 'Single Number', key: 'number', value: 9.0, description: 'Exact number match' },
-    ],
-  },
-  {
-    id: 'matka',
-    name: 'Matka Jhatka',
-    emoji: '🎲',
-    enabled: true,
-    commitHash: '7a8b9c1d2e3f4a5b6c7d8e9f0a1b2c3d...',
-    odds: [
-      { label: 'Single', key: 'single', value: 9.0, description: '1 digit (0–9)' },
-      { label: 'Jodi', key: 'jodi', value: 90.0, description: '2-digit pair' },
-      { label: 'Patti', key: 'patti', value: 900.0, description: '3-digit combo' },
-    ],
-  },
-  {
-    id: 'lottery',
-    name: 'Lottery 5D',
-    emoji: '🎫',
-    enabled: true,
-    commitHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6...',
-    odds: [
-      { label: 'All 6 Match', key: 'jackpot', value: 10000.0, description: 'Jackpot payout' },
-      { label: '5 Match', key: 'five', value: 500.0, description: '5 correct numbers' },
-      { label: '4 Match', key: 'four', value: 50.0, description: '4 correct numbers' },
-      { label: '3 Match', key: 'three', value: 10.0, description: '3 correct numbers' },
-    ],
-  },
-  {
-    id: 'ocean-hunter',
-    name: 'Ocean Hunter',
-    emoji: '🌊',
-    enabled: false,
-    commitHash: '—',
-    odds: [
-      { label: 'Base RTP', key: 'rtp', value: 96.0, description: 'Return to player (%)' },
-    ],
-  },
-];
-
-const TIMER_OPTIONS = [
-  { label: '1 Min', value: 60 },
-  { label: '3 Min', value: 180 },
-  { label: '5 Min', value: 300 },
-];
-
-function loadConfigs(): GameConfig[] {
-  const saved = localStorage.getItem('playarena_game_config');
-  if (saved) {
-    try { return JSON.parse(saved); } catch { /* fallback */ }
-  }
-  return DEFAULT_CONFIGS;
-}
-
 export default function AdminGamesPage() {
+  const { settings, updateSettings, updateGameSetting, applyPreset } = useGameControl();
   const { addToast } = useToast();
-  const [configs, setConfigs] = useState<GameConfig[]>(loadConfigs);
-  const [expanded, setExpanded] = useState<string | null>('color-prediction');
 
-  const saveConfigs = (updated: GameConfig[]) => {
-    setConfigs(updated);
-    localStorage.setItem('playarena_game_config', JSON.stringify(updated));
-    addToast({ type: 'success', title: 'Game config saved', message: 'Changes applied immediately.' });
+  const handleGlobalRtpChange = (val: number) => {
+    updateSettings({ globalRtp: val });
   };
 
-  const toggleGame = (id: string) => {
-    const updated = configs.map(g => g.id === id ? { ...g, enabled: !g.enabled } : g);
-    saveConfigs(updated);
-  };
-
-  const updateOdd = (gameId: string, key: string, value: number) => {
-    const updated = configs.map(g =>
-      g.id === gameId
-        ? { ...g, odds: g.odds.map(o => o.key === key ? { ...o, value } : o) }
-        : g
-    );
-    setConfigs(updated);
-  };
-
-  const updateTimer = (gameId: string, value: number) => {
-    const updated = configs.map(g => g.id === gameId ? { ...g, timerDuration: value } : g);
-    setConfigs(updated);
-  };
-
-  const applyChanges = (gameId: string) => {
-    localStorage.setItem('playarena_game_config', JSON.stringify(configs));
-    addToast({ type: 'success', title: 'Changes applied', message: `Game config for ${configs.find(g => g.id === gameId)?.name} saved.` });
+  const handleRigModeChange = (mode: RigMode) => {
+    applyPreset(mode);
+    addToast({
+      type: 'success',
+      title: `Applied ${mode.toUpperCase().replace('_', ' ')} Preset`,
+      message: `Platform RTP and game probabilities adjusted immediately.`,
+    });
   };
 
   return (
-    <div className="space-y-5 max-w-4xl pt-4">
-      <div>
-        <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
-          <Settings className="w-6 h-6" /> Game Control
-        </h1>
-        <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">Manage game odds, status, and round timers</p>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(212,175,55,0.15)] pb-5">
+        <div>
+          <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
+            <Sliders className="w-6 h-6 text-gold" />
+            Game Control & RTP System
+          </h1>
+          <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">
+            Configure real-time Return-To-Player (RTP) %, win-loss probability biases, crash caps, and house profit modes.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-gold border border-amber-500/30 flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-gold" />
+            Live Control Engine Active
+          </span>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {configs.map(game => (
-          <motion.div
-            key={game.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="royal-panel rounded-2xl overflow-hidden"
-          >
-            {/* Game header */}
-            <div
-              className="flex items-center gap-3 p-4 cursor-pointer"
-              onClick={() => setExpanded(expanded === game.id ? null : game.id)}
-            >
-              <span className="text-2xl">{game.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-[#F5F1E6]">{game.name}</p>
-                <p className="text-xs text-[rgba(212,175,55,0.4)]">{game.odds.length} configurable odds</p>
+      {/* Quick Preset Selector Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Preset 1: Fair */}
+        <button
+          onClick={() => handleRigModeChange('fair')}
+          className={`text-left p-5 rounded-2xl border transition-all ${
+            settings.rigMode === 'fair'
+              ? 'bg-[rgba(46,204,113,0.12)] border-[#2ECC71] shadow-[0_0_20px_rgba(46,204,113,0.2)]'
+              : 'royal-panel border-[rgba(212,175,55,0.15)] hover:border-[rgba(212,175,55,0.3)]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black text-[#2ECC71] flex items-center gap-2">
+              <Award className="w-4 h-4" />
+              ⚖️ Standard Fair Mode
+            </span>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-[#2ECC71]">
+              95% RTP
+            </span>
+          </div>
+          <p className="text-[11px] text-[rgba(212,175,55,0.6)] mt-2">
+            Balanced casino house edge (~5%). Standard mathematical probabilities with natural payouts.
+          </p>
+        </button>
+
+        {/* Preset 2: House Profit */}
+        <button
+          onClick={() => handleRigModeChange('house_profit')}
+          className={`text-left p-5 rounded-2xl border transition-all ${
+            settings.rigMode === 'house_profit'
+              ? 'bg-[rgba(231,76,60,0.15)] border-[#E74C3C] shadow-[0_0_20px_rgba(231,76,60,0.2)]'
+              : 'royal-panel border-[rgba(212,175,55,0.15)] hover:border-[rgba(212,175,55,0.3)]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black text-[#E74C3C] flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              💰 Max House Profit Mode
+            </span>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-500/20 text-[#E74C3C]">
+              75% RTP
+            </span>
+          </div>
+          <p className="text-[11px] text-[rgba(212,175,55,0.6)] mt-2">
+            Increases house margin to ~25%. High early crash rates, mine explosion frequency, and dealer hand boost.
+          </p>
+        </button>
+
+        {/* Preset 3: Player Festival Boost */}
+        <button
+          onClick={() => handleRigModeChange('player_boost')}
+          className={`text-left p-5 rounded-2xl border transition-all ${
+            settings.rigMode === 'player_boost'
+              ? 'bg-[rgba(241,196,15,0.15)] border-[#F1C40F] shadow-[0_0_20px_rgba(241,196,15,0.2)]'
+              : 'royal-panel border-[rgba(212,175,55,0.15)] hover:border-[rgba(212,175,55,0.3)]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black text-[#F1C40F] flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              🚀 Player Festival Boost
+            </span>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-[#F1C40F]">
+              98% RTP
+            </span>
+          </div>
+          <p className="text-[11px] text-[rgba(212,175,55,0.6)] mt-2">
+            High payout frequency for marketing & events. Reduced crash risk and boosted player luck.
+          </p>
+        </button>
+      </div>
+
+      {/* Global RTP Slider Panel */}
+      <div className="royal-panel rounded-2xl p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[rgba(212,175,55,0.1)] pb-4">
+          <div>
+            <h2 className="text-base font-black text-[#E8C97A] flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-gold" />
+              Global Platform RTP Slider
+            </h2>
+            <p className="text-xs text-[rgba(212,175,55,0.5)]">
+              Directly scales the win-loss algorithm across all 8 platform games in real time.
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-black font-mono text-gold">{settings.globalRtp}%</span>
+            <span className="block text-[10px] text-[rgba(212,175,55,0.4)]">Target Return to Player</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <input
+            type="range"
+            min="50"
+            max="99"
+            step="1"
+            value={settings.globalRtp}
+            onChange={e => handleGlobalRtpChange(parseInt(e.target.value))}
+            className="w-full h-3 bg-[#061510] rounded-lg appearance-none cursor-pointer accent-[#D4AF37]"
+          />
+          <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.4)] font-mono">
+            <span>50% (Tight House Edge)</span>
+            <span>75% (Profit Mode)</span>
+            <span>92% (Standard)</span>
+            <span>99% (High Payout)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Per-Game Tuning Controls Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Aviator Controls */}
+        <div className="royal-panel rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.1)] pb-3">
+            <h3 className="text-sm font-black text-[#E8C97A] flex items-center gap-2">
+              ✈️ Aviator Crash Settings
+            </h3>
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.7)] mb-1">
+                <span>Max Crash Cap Multiplier</span>
+                <span className="font-mono text-gold font-bold">{settings.aviator.maxCrash}×</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={e => { e.stopPropagation(); toggleGame(game.id); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer ${
-                    game.enabled
-                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
-                      : 'text-rose-400 bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/20'
-                  }`}
-                >
-                  <Power className="w-3.5 h-3.5" />
-                  {game.enabled ? 'Live' : 'Off'}
-                </button>
-                {expanded === game.id ? <ChevronUp className="w-4 h-4 text-[rgba(212,175,55,0.4)]" /> : <ChevronDown className="w-4 h-4 text-[rgba(212,175,55,0.4)]" />}
-              </div>
+              <input
+                type="range"
+                min="2"
+                max="200"
+                step="1"
+                value={settings.aviator.maxCrash}
+                onChange={e => updateGameSetting('aviator', { maxCrash: parseInt(e.target.value) })}
+                className="w-full h-2 bg-[#061510] rounded appearance-none cursor-pointer accent-[#D4AF37]"
+              />
             </div>
 
-            {expanded === game.id && (
-              <div className="border-t border-[rgba(212,175,55,0.1)] p-4 space-y-4">
-                {/* Provably Fair */}
-                <div className="flex items-start gap-2 bg-[rgba(212,175,55,0.04)] border border-[rgba(212,175,55,0.1)] rounded-xl p-3 text-xs">
-                  <Shield className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-[rgba(212,175,55,0.7)] mb-0.5">Provably Fair — Active Commit Hash</p>
-                    <p className="font-mono text-[rgba(212,175,55,0.45)] break-all">{game.commitHash || '—'}</p>
-                  </div>
-                </div>
-
-                {/* Timer (WinGo only) */}
-                {game.timerDuration !== undefined && (
-                  <div>
-                    <p className="text-xs font-bold text-[rgba(212,175,55,0.7)] mb-2 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" /> Round Timer Duration
-                    </p>
-                    <div className="flex gap-2">
-                      {TIMER_OPTIONS.map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => updateTimer(game.id, opt.value)}
-                          className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                            game.timerDuration === opt.value
-                              ? 'btn-royal-gold'
-                              : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.5)] hover:text-[#E8C97A]'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Odds */}
-                <div>
-                  <p className="text-xs font-bold text-[rgba(212,175,55,0.7)] mb-2">Payout Multipliers</p>
-                  <div className="space-y-2">
-                    {game.odds.map(odd => (
-                      <div key={odd.key} className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <p className="text-xs font-bold text-[#F5F1E6]">{odd.label}</p>
-                          <p className="text-[10px] text-[rgba(212,175,55,0.4)]">{odd.description}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={odd.value}
-                            step={0.1}
-                            min={1}
-                            onChange={e => updateOdd(game.id, odd.key, parseFloat(e.target.value))}
-                            className="w-20 bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-lg px-2 py-1.5 text-xs text-gold font-black text-center focus:outline-none focus:border-[rgba(212,175,55,0.5)]"
-                          />
-                          <span className="text-xs text-[rgba(212,175,55,0.4)]">×</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => applyChanges(game.id)}
-                  className="btn-royal-gold w-full py-2.5 rounded-xl font-black text-xs cursor-pointer"
-                >
-                  Save Changes
-                </button>
+            <div>
+              <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.7)] mb-1">
+                <span>Instant Crash Rate (1.00x)</span>
+                <span className="font-mono text-rose-400 font-bold">{settings.aviator.instantCrashRate}%</span>
               </div>
-            )}
-          </motion.div>
-        ))}
+              <input
+                type="range"
+                min="0"
+                max="25"
+                step="1"
+                value={settings.aviator.instantCrashRate}
+                onChange={e => updateGameSetting('aviator', { instantCrashRate: parseInt(e.target.value) })}
+                className="w-full h-2 bg-[#061510] rounded appearance-none cursor-pointer accent-[#E74C3C]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mines Controls */}
+        <div className="royal-panel rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.1)] pb-3">
+            <h3 className="text-sm font-black text-[#E8C97A] flex items-center gap-2">
+              💣 Mines Bomb Explosion Bias
+            </h3>
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.7)] mb-1">
+              <span>Bomb Hit Odds Modifier</span>
+              <span className={`font-mono font-bold ${settings.mines.bombBias > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {settings.mines.bombBias > 0 ? `+${settings.mines.bombBias}% (Harder)` : `${settings.mines.bombBias}% (Easier)`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-30"
+              max="30"
+              step="5"
+              value={settings.mines.bombBias}
+              onChange={e => updateGameSetting('mines', { bombBias: parseInt(e.target.value) })}
+              className="w-full h-2 bg-[#061510] rounded appearance-none cursor-pointer accent-[#D4AF37]"
+            />
+            <p className="text-[10px] text-[rgba(212,175,55,0.4)]">
+              Positive values increase the chance of hitting a bomb early; negative values boost safe tile reveals.
+            </p>
+          </div>
+        </div>
+
+        {/* Teen Patti Controls */}
+        <div className="royal-panel rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.1)] pb-3">
+            <h3 className="text-sm font-black text-[#E8C97A] flex items-center gap-2">
+              🃏 Teen Patti Dealer Win Boost
+            </h3>
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.7)] mb-1">
+              <span>Dealer Win Advantage Boost</span>
+              <span className="font-mono text-gold font-bold">+{settings.teenPatti.houseWinBoost}%</span>
+            </div>
+            <input
+              type="range"
+              min="-20"
+              max="50"
+              step="5"
+              value={settings.teenPatti.houseWinBoost}
+              onChange={e => updateGameSetting('teenPatti', { houseWinBoost: parseInt(e.target.value) })}
+              className="w-full h-2 bg-[#061510] rounded appearance-none cursor-pointer accent-[#D4AF37]"
+            />
+          </div>
+        </div>
+
+        {/* Ocean Hunter Controls */}
+        <div className="royal-panel rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-[rgba(212,175,55,0.1)] pb-3">
+            <h3 className="text-sm font-black text-[#E8C97A] flex items-center gap-2">
+              🌊 Ocean Hunter Fish Catch Rate
+            </h3>
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between text-[11px] text-[rgba(212,175,55,0.7)] mb-1">
+              <span>Catch Ease Multiplier</span>
+              <span className="font-mono text-gold font-bold">{settings.oceanHunter.catchRate}×</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="2.0"
+              step="0.1"
+              value={settings.oceanHunter.catchRate}
+              onChange={e => updateGameSetting('oceanHunter', { catchRate: parseFloat(e.target.value) })}
+              className="w-full h-2 bg-[#061510] rounded appearance-none cursor-pointer accent-[#D4AF37]"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
 import { GameChat } from '../../components/ui/GameChat';
 
@@ -121,6 +122,7 @@ export default function TeenPattiPage() {
   const { deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
+  const { settings } = useGameControl();
 
   const [betAmount, setBetAmount] = useState(100);
   const [phase, setPhase] = useState<GamePhase>('idle');
@@ -176,15 +178,19 @@ export default function TeenPattiPage() {
     setTimeout(() => {
       const ph = rankHand(playerCards);
       const hh = rankHand(houseCards);
+      let dealerScore = hh.score;
+      if (settings.teenPatti.houseWinBoost > 0 && Math.random() * 100 < settings.teenPatti.houseWinBoost) {
+        dealerScore = ph.score + 1;
+      }
       let outcome: 'win' | 'lose' | 'tie';
 
-      if (ph.score > hh.score) {
+      if (ph.score > dealerScore) {
         outcome = 'win';
         const win = currentBet * 3.8; // Ante + call + profit
         addBalance(win, `Teen Patti win — ${ph.rank}`);
         addToast({ type: 'success', title: `You Win! ₹${win.toFixed(0)}`, message: ph.description });
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
-      } else if (ph.score < hh.score) {
+      } else if (ph.score < dealerScore) {
         outcome = 'lose';
         addToast({ type: 'error', title: `House Wins`, message: hh.description });
       } else {

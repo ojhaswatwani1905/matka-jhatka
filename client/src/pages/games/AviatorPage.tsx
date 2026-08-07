@@ -6,6 +6,7 @@ import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
@@ -25,12 +26,12 @@ async function hashSeed(seed: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function seedToCrashPoint(seed: string): number {
+function seedToCrashPoint(seed: string, maxCrash = 50, instantCrashRate = 3): number {
   const n = parseInt(seed.slice(0, 8), 16);
   const r = n / 0xffffffff; // 0–1
-  if (r < 0.03) return 1.00; // 3% instant crash
+  if (r < instantCrashRate / 100) return 1.00;
   const crash = Math.max(1.00, 0.99 / (1 - r));
-  return Math.min(100, Math.round(crash * 100) / 100);
+  return Math.min(maxCrash, Math.round(crash * 100) / 100);
 }
 
 /* ─── Types ────────────────────────────────────────────────────── */
@@ -231,6 +232,7 @@ export default function AviatorPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
+  const { settings } = useGameControl();
 
   const [phase, setPhase] = useState<'betting' | 'flying' | 'crashed'>('betting');
   const [multiplier, setMultiplier] = useState(1.00);
@@ -291,7 +293,7 @@ export default function AviatorPage() {
     setTimeout(async () => {
       const newSeed = generateSeed();
       const hash = await hashSeed(newSeed);
-      const cp2 = seedToCrashPoint(newSeed);
+      const cp2 = seedToCrashPoint(newSeed, settings.aviator.maxCrash, settings.aviator.instantCrashRate);
       setSeed(newSeed);
       setCommitHash(hash);
       setCrashPoint(cp2);

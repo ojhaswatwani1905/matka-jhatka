@@ -6,6 +6,7 @@ import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
@@ -85,6 +86,7 @@ export default function MinesPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
+  const { settings } = useGameControl();
 
   const [gridSize, setGridSize] = useState(25);
   const [mineCount, setMineCount] = useState(3);
@@ -122,7 +124,13 @@ export default function MinesPage() {
   const handleTileClick = useCallback((idx: number) => {
     if (gameState !== 'playing' || tiles[idx] !== 'hidden') return;
 
-    if (minePositions.has(idx)) {
+    const isMine = minePositions.has(idx);
+    const bombBias = settings.mines.bombBias;
+    const forceBomb = bombBias > 0 && Math.random() * 100 < bombBias;
+    const forceSafe = bombBias < 0 && Math.random() * 100 < Math.abs(bombBias);
+    const hitMine = (isMine || forceBomb) && !forceSafe;
+
+    if (hitMine) {
       // BUSTED
       sounds.playLoss();
       setGameState('busted');

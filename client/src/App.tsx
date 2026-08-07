@@ -9,6 +9,7 @@ import { RGProvider } from './store/RGContext';
 import { LiveFeedProvider } from './store/LiveFeedContext';
 import { PromoProvider } from './store/PromoContext';
 import { WithdrawalAccountsProvider } from './store/WithdrawalAccountsContext';
+import { GameControlProvider } from './store/GameControlContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -102,7 +103,8 @@ export default function App() {
       <ScrollToTop />
       <ErrorBoundary>
         <AuthProvider>
-          <WalletProvider>
+          <GameControlProvider>
+            <WalletProvider>
             <LiveFeedProvider>
               <NotificationProvider>
                 <AchievementProvider>
@@ -179,7 +181,8 @@ export default function App() {
           </NotificationProvider>
             </LiveFeedProvider>
           </WalletProvider>
-        </AuthProvider>
+        </GameControlProvider>
+      </AuthProvider>
       </ErrorBoundary>
     </BrowserRouter>
   );

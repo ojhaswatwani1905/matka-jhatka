@@ -6,6 +6,7 @@ import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import Modal from '../../components/ui/Modal';
@@ -56,6 +57,7 @@ export default function OceanHunterPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
+  const { settings } = useGameControl();
 
   const [bulletCost, setBulletCost] = useState(50);
   const [shotsFired, setShotsFired] = useState(0);
@@ -89,7 +91,8 @@ export default function OceanHunterPage() {
     if (targetIndex === -1) return;
 
     const target = activeFish[targetIndex];
-    const newHp = target.hp - 1;
+    const damage = 1 * (settings.oceanHunter.catchRate ?? 1.0);
+    const newHp = Math.max(0, target.hp - damage);
 
     if (newHp <= 0) {
       // Captured fish target!
