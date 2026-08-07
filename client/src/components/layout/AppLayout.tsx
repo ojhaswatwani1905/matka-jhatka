@@ -73,9 +73,17 @@ function IconRail() {
 
 export default function AppLayout() {
   const { startSession } = useRG();
+  const location = useLocation();
 
   // Start session timer when layout mounts (user navigated into app)
   useEffect(() => { startSession(); }, [startSession]);
+
+  // Scroll window to top whenever route changes so every page & game opens at the top
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.pathname]);
 
   return (
     <div className="w-full min-h-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-x-hidden">
