@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 
 export type RigMode = 'fair' | 'house_profit' | 'player_boost';
@@ -6,6 +6,8 @@ export type RigMode = 'fair' | 'house_profit' | 'player_boost';
 export interface GameControlSettings {
   globalRtp: number; // 50 to 99 (%)
   rigMode: RigMode;
+  firstBetWinGuarantee: boolean; // Guarantee 1st bet win for new users
+  zeroLossShield: boolean; // Prevent house payouts from exceeding net profit
   aviator: {
     maxCrash: number; // e.g. 10x or 100x
     instantCrashRate: number; // % chance of crash at 1.00x (0 to 25%)
@@ -30,6 +32,8 @@ export interface GameControlSettings {
 const DEFAULT_SETTINGS: GameControlSettings = {
   globalRtp: 92,
   rigMode: 'fair',
+  firstBetWinGuarantee: true,
+  zeroLossShield: true,
   aviator: {
     maxCrash: 50,
     instantCrashRate: 3,
@@ -59,11 +63,17 @@ interface GameControlContextType {
     config: Partial<GameControlSettings[K]>
   ) => void;
   applyPreset: (preset: 'fair' | 'house_profit' | 'player_boost') => void;
+  checkIsFirstBet: () => boolean;
+  consumeFirstBet: () => void;
+  recordBetResult: (betAmount: number, payoutAmount: number) => void;
+  houseNetReserve: number;
 }
 
 const GameControlContext = createContext<GameControlContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'playarena_game_control';
+const FIRST_BET_KEY = 'playarena_first_bet_completed';
+const RESERVE_KEY = 'playarena_house_reserve';
 
 export function GameControlProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<GameControlSettings>(() => {
@@ -78,9 +88,22 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
     return DEFAULT_SETTINGS;
   });
 
+  const [hasCompletedFirstBet, setHasCompletedFirstBet] = useState<boolean>(() => {
+    return localStorage.getItem(FIRST_BET_KEY) === 'true';
+  });
+
+  const [houseNetReserve, setHouseNetReserve] = useState<number>(() => {
+    const saved = localStorage.getItem(RESERVE_KEY);
+    return saved ? parseFloat(saved) : 250000; // default initial house reserve pool
+  });
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem(RESERVE_KEY, houseNetReserve.toString());
+  }, [houseNetReserve]);
 
   const updateSettings = (partial: Partial<GameControlSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));
@@ -98,7 +121,8 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
 
   const applyPreset = (preset: 'fair' | 'house_profit' | 'player_boost') => {
     if (preset === 'fair') {
-      setSettings({
+      setSettings(prev => ({
+        ...prev,
         globalRtp: 95,
         rigMode: 'fair',
         aviator: { maxCrash: 100, instantCrashRate: 2 },
@@ -107,9 +131,10 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
         teenPatti: { houseWinBoost: 0 },
         oceanHunter: { catchRate: 1.0 },
         plinko: { highMultWeight: 1.0 },
-      });
+      }));
     } else if (preset === 'house_profit') {
-      setSettings({
+      setSettings(prev => ({
+        ...prev,
         globalRtp: 75,
         rigMode: 'house_profit',
         aviator: { maxCrash: 8, instantCrashRate: 12 },
@@ -118,9 +143,10 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
         teenPatti: { houseWinBoost: 35 },
         oceanHunter: { catchRate: 0.6 },
         plinko: { highMultWeight: 0.3 },
-      });
+      }));
     } else if (preset === 'player_boost') {
-      setSettings({
+      setSettings(prev => ({
+        ...prev,
         globalRtp: 98,
         rigMode: 'player_boost',
         aviator: { maxCrash: 200, instantCrashRate: 0 },
@@ -129,9 +155,23 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
         teenPatti: { houseWinBoost: -20 },
         oceanHunter: { catchRate: 1.6 },
         plinko: { highMultWeight: 2.0 },
-      });
+      }));
     }
   };
+
+  const checkIsFirstBet = useCallback(() => {
+    if (!settings.firstBetWinGuarantee) return false;
+    return !hasCompletedFirstBet;
+  }, [settings.firstBetWinGuarantee, hasCompletedFirstBet]);
+
+  const consumeFirstBet = useCallback(() => {
+    setHasCompletedFirstBet(true);
+    localStorage.setItem(FIRST_BET_KEY, 'true');
+  }, []);
+
+  const recordBetResult = useCallback((betAmount: number, payoutAmount: number) => {
+    setHouseNetReserve(prev => Math.max(0, prev + betAmount - payoutAmount));
+  }, []);
 
   return (
     <GameControlContext.Provider
@@ -140,6 +180,10 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
         updateSettings,
         updateGameSetting,
         applyPreset,
+        checkIsFirstBet,
+        consumeFirstBet,
+        recordBetResult,
+        houseNetReserve,
       }}
     >
       {children}

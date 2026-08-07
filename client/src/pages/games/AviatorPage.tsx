@@ -232,7 +232,7 @@ export default function AviatorPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
-  const { settings } = useGameControl();
+  const { settings, checkIsFirstBet, consumeFirstBet } = useGameControl();
 
   const [phase, setPhase] = useState<'betting' | 'flying' | 'crashed'>('betting');
   const [multiplier, setMultiplier] = useState(1.00);
@@ -293,7 +293,12 @@ export default function AviatorPage() {
     setTimeout(async () => {
       const newSeed = generateSeed();
       const hash = await hashSeed(newSeed);
-      const cp2 = seedToCrashPoint(newSeed, settings.aviator.maxCrash, settings.aviator.instantCrashRate);
+      let cp2 = seedToCrashPoint(newSeed, settings.aviator.maxCrash, settings.aviator.instantCrashRate);
+      if (checkIsFirstBet()) {
+        consumeFirstBet();
+        cp2 = Math.max(3.5, cp2); // Guaranteed high multiplier flight on 1st bet!
+        addToast({ type: 'success', title: '🎉 Beginner Luck!', message: 'High multiplier flight guaranteed on your 1st bet!' });
+      }
       setSeed(newSeed);
       setCommitHash(hash);
       setCrashPoint(cp2);

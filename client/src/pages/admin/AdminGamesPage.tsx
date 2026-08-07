@@ -1,9 +1,10 @@
-import { Sliders, Shield, Zap, TrendingUp, DollarSign, Award } from 'lucide-react';
+import { Sliders, Shield, Zap, TrendingUp, DollarSign, Award, Gift, Lock } from 'lucide-react';
 import { useGameControl, type RigMode } from '../../store/GameControlContext';
 import { useToast } from '../../components/ui/Toast';
+import { formatCurrency } from '../../lib/utils';
 
 export default function AdminGamesPage() {
-  const { settings, updateSettings, updateGameSetting, applyPreset } = useGameControl();
+  const { settings, updateSettings, updateGameSetting, applyPreset, houseNetReserve } = useGameControl();
   const { addToast } = useToast();
 
   const handleGlobalRtpChange = (val: number) => {
@@ -19,6 +20,26 @@ export default function AdminGamesPage() {
     });
   };
 
+  const toggleFirstBetGuarantee = () => {
+    const nextVal = !settings.firstBetWinGuarantee;
+    updateSettings({ firstBetWinGuarantee: nextVal });
+    addToast({
+      type: nextVal ? 'success' : 'warning',
+      title: nextVal ? '🎉 First-Bet Win Guarantee ENABLED' : '⚠️ First-Bet Win Guarantee DISABLED',
+      message: nextVal ? 'New players are guaranteed to win their very first bet.' : 'New players subject to standard RNG.',
+    });
+  };
+
+  const toggleZeroLossShield = () => {
+    const nextVal = !settings.zeroLossShield;
+    updateSettings({ zeroLossShield: nextVal });
+    addToast({
+      type: nextVal ? 'success' : 'warning',
+      title: nextVal ? '🛡️ Zero-Loss Protection Shield ENABLED' : '⚠️ Zero-Loss Protection Shield DISABLED',
+      message: nextVal ? 'House net profit will never drop below reserve thresholds.' : 'Standard house risk enabled.',
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
@@ -26,18 +47,77 @@ export default function AdminGamesPage() {
         <div>
           <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
             <Sliders className="w-6 h-6 text-gold" />
-            Game Control & RTP System
+            Game Control & Win-Loss Engine
           </h1>
           <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">
-            Configure real-time Return-To-Player (RTP) %, win-loss probability biases, crash caps, and house profit modes.
+            Configure real-time Return-To-Player (RTP) %, first-bet win guarantees, house loss safeguards, and crash caps.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-xs font-mono font-bold text-emerald-400 block">{formatCurrency(houseNetReserve)}</span>
+            <span className="text-[10px] text-[rgba(212,175,55,0.4)]">House Net Reserve</span>
+          </div>
           <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-gold border border-amber-500/30 flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-gold" />
             Live Control Engine Active
           </span>
+        </div>
+      </div>
+
+      {/* Smart Risk & Welcome Protections Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Protection 1: First-Bet Win Guarantee */}
+        <div
+          onClick={toggleFirstBetGuarantee}
+          className={`cursor-pointer p-5 rounded-2xl border transition-all flex items-start justify-between gap-4 ${
+            settings.firstBetWinGuarantee
+              ? 'bg-[rgba(46,204,113,0.12)] border-[#2ECC71] shadow-[0_0_20px_rgba(46,204,113,0.15)]'
+              : 'royal-panel border-[rgba(212,175,55,0.15)] opacity-70'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Gift className="w-5 h-5 text-[#2ECC71]" />
+              <h3 className="text-sm font-black text-[#E8C97A]">🎉 New Player First-Bet Win Guarantee</h3>
+            </div>
+            <p className="text-xs text-[rgba(212,175,55,0.6)]">
+              Guarantees that a brand new player **NEVER loses their first bet** on any game to maximize onboarding retention.
+            </p>
+          </div>
+
+          <div className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center shrink-0 ${
+            settings.firstBetWinGuarantee ? 'bg-[#2ECC71] justify-end' : 'bg-gray-700 justify-start'
+          }`}>
+            <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+          </div>
+        </div>
+
+        {/* Protection 2: Zero-Loss Protection Shield */}
+        <div
+          onClick={toggleZeroLossShield}
+          className={`cursor-pointer p-5 rounded-2xl border transition-all flex items-start justify-between gap-4 ${
+            settings.zeroLossShield
+              ? 'bg-[rgba(212,175,55,0.12)] border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+              : 'royal-panel border-[rgba(212,175,55,0.15)] opacity-70'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-gold" />
+              <h3 className="text-sm font-black text-[#E8C97A]">🛡️ Admin Zero-Loss Protection Shield</h3>
+            </div>
+            <p className="text-xs text-[rgba(212,175,55,0.6)]">
+              Automatically clamps risk so overall platform House Net Reserve **never drops below 0** (Admin never in loss).
+            </p>
+          </div>
+
+          <div className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center shrink-0 ${
+            settings.zeroLossShield ? 'bg-[#D4AF37] justify-end' : 'bg-gray-700 justify-start'
+          }`}>
+            <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+          </div>
         </div>
       </div>
 

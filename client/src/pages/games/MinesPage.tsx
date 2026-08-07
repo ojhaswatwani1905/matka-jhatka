@@ -86,7 +86,7 @@ export default function MinesPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
-  const { settings } = useGameControl();
+  const { settings, checkIsFirstBet, consumeFirstBet } = useGameControl();
 
   const [gridSize, setGridSize] = useState(25);
   const [mineCount, setMineCount] = useState(3);
@@ -124,11 +124,17 @@ export default function MinesPage() {
   const handleTileClick = useCallback((idx: number) => {
     if (gameState !== 'playing' || tiles[idx] !== 'hidden') return;
 
+    const isFirstBet = checkIsFirstBet();
     const isMine = minePositions.has(idx);
     const bombBias = settings.mines.bombBias;
     const forceBomb = bombBias > 0 && Math.random() * 100 < bombBias;
     const forceSafe = bombBias < 0 && Math.random() * 100 < Math.abs(bombBias);
-    const hitMine = (isMine || forceBomb) && !forceSafe;
+    const hitMine = isFirstBet ? false : (isMine || forceBomb) && !forceSafe;
+
+    if (isFirstBet) {
+      consumeFirstBet();
+      addToast({ type: 'success', title: '🎉 Beginner Luck!', message: 'Safe tile guaranteed on your 1st bet!' });
+    }
 
     if (hitMine) {
       // BUSTED

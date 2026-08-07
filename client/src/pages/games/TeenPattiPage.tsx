@@ -122,7 +122,7 @@ export default function TeenPattiPage() {
   const { deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
-  const { settings } = useGameControl();
+  const { settings, checkIsFirstBet, consumeFirstBet } = useGameControl();
 
   const [betAmount, setBetAmount] = useState(100);
   const [phase, setPhase] = useState<GamePhase>('idle');
@@ -179,7 +179,11 @@ export default function TeenPattiPage() {
       const ph = rankHand(playerCards);
       const hh = rankHand(houseCards);
       let dealerScore = hh.score;
-      if (settings.teenPatti.houseWinBoost > 0 && Math.random() * 100 < settings.teenPatti.houseWinBoost) {
+      if (checkIsFirstBet()) {
+        consumeFirstBet();
+        dealerScore = ph.score - 1; // Guaranteed player win!
+        addToast({ type: 'success', title: '🎉 Beginner Luck!', message: 'First bet win guaranteed!' });
+      } else if (settings.teenPatti.houseWinBoost > 0 && Math.random() * 100 < settings.teenPatti.houseWinBoost) {
         dealerScore = ph.score + 1;
       }
       let outcome: 'win' | 'lose' | 'tie';
