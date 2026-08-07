@@ -73,15 +73,13 @@ export default function Navbar() {
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Admin Panel Quick Link */}
-          {user?.isAdmin && (
-            <Link
-              to="/admin"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs hover:bg-amber-500/30 transition-all cursor-pointer shadow-md"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Admin Panel</span>
-            </Link>
-          )}
+          <Link
+            to="/admin"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold text-xs hover:bg-amber-500/25 transition-all cursor-pointer shadow-md"
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Admin Panel</span>
+          </Link>
 
           {/* Provably Fair Badge */}
           <button

@@ -7,7 +7,7 @@ import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
 import { SessionWarningBanner, RealityCheckPopup } from '../ui/SessionWidgets';
 import { useRG } from '../../store/RGContext';
-import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Crown, Globe } from 'lucide-react';
+import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Crown, Globe, ShieldAlert } from 'lucide-react';
 
 const iconRailItems = [
   { icon: Flame,         label: 'Popular',   path: '/games',               activeMatch: '/games',    exact: true  },
@@ -18,7 +18,7 @@ const iconRailItems = [
   { icon: MessageCircle, label: 'Support',   path: '/support',             activeMatch: '/support',  exact: false },
   { icon: Medal,         label: 'VIP',       path: '/vip',                 activeMatch: '/vip',      exact: false },
   { icon: Users,         label: 'Referral',  path: '/referral',            activeMatch: '/referral', exact: false },
-  { icon: Crown,         label: 'Royal VIP', path: '/vip',                 activeMatch: null,        exact: false },
+  { icon: ShieldAlert,   label: 'Admin',     path: '/admin',               activeMatch: '/admin',    exact: false },
 ];
 
 function IconRail() {

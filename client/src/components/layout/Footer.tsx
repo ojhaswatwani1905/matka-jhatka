@@ -51,6 +51,7 @@ export const Footer: React.FC = () => {
           <ul className="space-y-2 text-[rgba(212,175,55,0.5)]">
             <li><button onClick={() => setIsFairnessOpen(true)} className="hover:text-gold transition-colors cursor-pointer">Hash Audit Tool</button></li>
             <li><a href="/support" className="hover:text-gold transition-colors">Responsible Gaming</a></li>
+            <li><a href="/admin" className="hover:text-amber-300 text-amber-400 font-bold transition-colors">🛡️ Admin Portal</a></li>
             <li><a href="/support" className="hover:text-gold transition-colors">Terms of Service & Privacy</a></li>
             <li><a href="/support" className="hover:text-gold transition-colors">Customer Support FAQ</a></li>
           </ul>
