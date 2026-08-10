@@ -31,7 +31,7 @@ class EmailService {
     const subject = `Your PlayArena Verification Code: ${otpCode}`;
 
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; background-color: #061A10; color: #F5F1E6; padding: 30px; borderRadius: 16px; max-width: 500px; margin: 0 auto; border: 1px solid rgba(212,175,55,0.3);">
+      <div style="font-family: Arial, sans-serif; background-color: #061A10; color: #F5F1E6; padding: 30px; border-radius: 16px; max-width: 500px; margin: 0 auto; border: 1px solid rgba(212,175,55,0.3);">
         <div style="text-align: center; margin-bottom: 20px;">
           <h1 style="color: #E8C97A; margin: 0; font-size: 24px; font-weight: 900; letter-spacing: 1px;">PLAYARENA</h1>
           <p style="color: rgba(212,175,55,0.6); font-size: 11px; font-weight: 700; margin-top: 4px; text-transform: uppercase;">Royal Casino Verification</p>
@@ -55,6 +55,32 @@ class EmailService {
     console.log(`VALID FOR: 5 MINUTES`);
     console.log(`==============================================\n`);
 
+    // Option 1: Send via Resend.com API (Free 3,000 emails/mo, instant key)
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({
+            from: 'PlayArena <onboarding@resend.dev>',
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
+        if (res.ok) {
+          console.log(`[EmailService] Resend API successfully sent email to ${toEmail}`);
+          return true;
+        }
+      } catch (resendErr) {
+        console.error(`[EmailService] Resend API error:`, resendErr);
+      }
+    }
+
+    // Option 2: Send via SMTP (Gmail / Brevo)
     if (this.transporter && process.env.SMTP_USER) {
       try {
         await this.transporter.sendMail({
@@ -73,6 +99,7 @@ class EmailService {
 
     return true;
   }
+
 }
 
 export const emailService = new EmailService();
