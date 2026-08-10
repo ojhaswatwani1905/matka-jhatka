@@ -13,7 +13,10 @@ import { getRandomNumber } from '../../lib/utils';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 
+import { useGameControl } from '../../store/GameControlContext';
+
 type MarketType = 'single' | 'jodi' | 'patti';
+
 
 interface Market {
   id: string;
@@ -38,6 +41,7 @@ export default function MatkaPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
+  const { getManualOverrideForGame } = useGameControl();
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(markets[0]);
   const [marketType, setMarketType] = useState<MarketType>('single');
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
@@ -96,8 +100,13 @@ export default function MatkaPage() {
 
     if (soundEnabled) sounds.playSpin();
 
-    // Generate SHA-256 backed Matka outcome
-    const resultNum = marketType === 'single'
+    // Check for Admin live manual number override
+    const marketKey = selectedMarket.id === '1' ? 'matka-mumbai' : selectedMarket.id === '2' ? 'matka-kalyan' : 'matka-rajdhani';
+    const manualDigit = getManualOverrideForGame(marketKey) ?? getManualOverrideForGame('matka-kalyan') ?? getManualOverrideForGame('matka');
+
+    const resultNum = (marketType === 'single' && manualDigit !== undefined)
+      ? manualDigit
+      : marketType === 'single'
       ? getRandomNumber(0, 9)
       : marketType === 'jodi'
       ? getRandomNumber(0, 99)
@@ -105,6 +114,7 @@ export default function MatkaPage() {
 
     const selectionStr = selectedNumbers.join('');
     const resultNumStr = String(resultNum).padStart(requiredCount, '0');
+
     const won = resultNumStr === selectionStr.padStart(requiredCount, '0');
     const payout = won ? betAmount * currentMultiplier : 0;
 

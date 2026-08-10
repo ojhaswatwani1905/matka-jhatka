@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma.js';
 import { authenticate, type AuthRequest } from '../middleware/auth.js';
+import { betRateLimiter } from '../middleware/rateLimiter.js';
 import { gameManager } from '../services/gameManager.service.js';
 import { ProvablyFairService } from '../services/provablyFair.service.js';
 
 const router = Router();
-const prisma = new PrismaClient();
+
 
 // GET /api/games/active-round/:gameType
 router.get('/active-round/:gameType', (req: Request, res: Response) => {
@@ -58,7 +59,8 @@ router.post('/verify', (req: Request, res: Response) => {
 });
 
 // POST /api/games/bet
-router.post('/bet', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/bet', authenticate, betRateLimiter, async (req: AuthRequest, res: Response) => {
+
   try {
     const { gameType, period, selection, amount } = req.body;
     

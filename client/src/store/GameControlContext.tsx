@@ -67,6 +67,10 @@ interface GameControlContextType {
   consumeFirstBet: () => void;
   recordBetResult: (betAmount: number, payoutAmount: number) => void;
   houseNetReserve: number;
+  manualOverrides: Record<string, { digit: number; period?: string }>;
+  setManualOverrideForGame: (gameType: string, digit: number, period?: string) => void;
+  getManualOverrideForGame: (gameType: string) => number | undefined;
+  clearManualOverrideForGame: (gameType: string) => void;
 }
 
 const GameControlContext = createContext<GameControlContextType | undefined>(undefined);
@@ -74,6 +78,7 @@ const GameControlContext = createContext<GameControlContextType | undefined>(und
 const STORAGE_KEY = 'playarena_game_control';
 const FIRST_BET_KEY = 'playarena_first_bet_completed';
 const RESERVE_KEY = 'playarena_house_reserve';
+const MANUAL_OVERRIDES_KEY = 'playarena_manual_overrides';
 
 export function GameControlProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<GameControlSettings>(() => {
@@ -86,6 +91,15 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
       // fallback
     }
     return DEFAULT_SETTINGS;
+  });
+
+  const [manualOverrides, setManualOverrides] = useState<Record<string, { digit: number; period?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem(MANUAL_OVERRIDES_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
 
   const [hasCompletedFirstBet, setHasCompletedFirstBet] = useState<boolean>(() => {
@@ -105,9 +119,33 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(RESERVE_KEY, houseNetReserve.toString());
   }, [houseNetReserve]);
 
+  useEffect(() => {
+    localStorage.setItem(MANUAL_OVERRIDES_KEY, JSON.stringify(manualOverrides));
+  }, [manualOverrides]);
+
   const updateSettings = (partial: Partial<GameControlSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));
   };
+
+  const setManualOverrideForGame = useCallback((gameType: string, digit: number, period?: string) => {
+    setManualOverrides(prev => ({
+      ...prev,
+      [gameType]: { digit, period },
+    }));
+  }, []);
+
+  const getManualOverrideForGame = useCallback((gameType: string): number | undefined => {
+    const override = manualOverrides[gameType];
+    return override?.digit;
+  }, [manualOverrides]);
+
+  const clearManualOverrideForGame = useCallback((gameType: string) => {
+    setManualOverrides(prev => {
+      const next = { ...prev };
+      delete next[gameType];
+      return next;
+    });
+  }, []);
 
   const updateGameSetting = <K extends keyof GameControlSettings>(
     game: K,
@@ -184,6 +222,10 @@ export function GameControlProvider({ children }: { children: ReactNode }) {
         consumeFirstBet,
         recordBetResult,
         houseNetReserve,
+        manualOverrides,
+        setManualOverrideForGame,
+        getManualOverrideForGame,
+        clearManualOverrideForGame,
       }}
     >
       {children}
@@ -198,3 +240,4 @@ export function useGameControl() {
   }
   return context;
 }
+

@@ -96,45 +96,62 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const wagerReqRef = useRef({ req: state.bonusWagerRequired, prog: state.bonusWagerProgress });
   wagerReqRef.current = { req: state.bonusWagerRequired, prog: state.bonusWagerProgress };
 
-  // Load from localStorage
+  // Load balance & transactions for active logged in user
   useEffect(() => {
-    const saved = localStorage.getItem('wallet');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        dispatch({ type: 'SET_BALANCE', payload: parsed.balance ?? 10000 });
-        dispatch({ type: 'SET_BONUS_BALANCE', payload: parsed.bonusBalance ?? 1500 });
-        dispatch({
-          type: 'SET_WAGER_REQUIREMENT',
-          payload: { required: parsed.bonusWagerRequired ?? 5000, progress: parsed.bonusWagerProgress ?? 2340 },
-        });
-        if (parsed.transactions && parsed.transactions.length > 0) {
-          dispatch({ type: 'SET_TRANSACTIONS', payload: parsed.transactions });
-        } else {
-          dispatch({ type: 'SET_TRANSACTIONS', payload: defaultDemoTxns });
+    const syncUserWallet = () => {
+      const savedUserStr = localStorage.getItem('playarena_user');
+      if (savedUserStr) {
+        try {
+          const u = JSON.parse(savedUserStr);
+          const savedWallet = localStorage.getItem(`wallet_${u.id}`) || localStorage.getItem('wallet');
+          let userBal = typeof u.balance === 'number' ? u.balance : 0;
+          let userTxns = defaultDemoTxns;
+
+          if (savedWallet) {
+            const parsed = JSON.parse(savedWallet);
+            if (typeof parsed.balance === 'number') userBal = parsed.balance;
+            if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
+              userTxns = parsed.transactions;
+            }
+          }
+          dispatch({ type: 'SET_BALANCE', payload: userBal });
+          dispatch({ type: 'SET_TRANSACTIONS', payload: userTxns });
+        } catch {
+          dispatch({ type: 'SET_BALANCE', payload: 0 });
         }
-      } catch {
-        dispatch({ type: 'SET_TRANSACTIONS', payload: defaultDemoTxns });
       }
-    } else {
-      dispatch({ type: 'SET_TRANSACTIONS', payload: defaultDemoTxns });
-    }
+    };
+
+    syncUserWallet();
+    window.addEventListener('storage', syncUserWallet);
+    return () => window.removeEventListener('storage', syncUserWallet);
   }, []);
 
-  // Persist to localStorage
+  // Persist balance & transactions to user storage
   useEffect(() => {
-    localStorage.setItem(
-      'wallet',
-      JSON.stringify({
-        balance: state.balance,
-        bonusBalance: state.bonusBalance,
-        bonusWagerRequired: state.bonusWagerRequired,
-        bonusWagerProgress: state.bonusWagerProgress,
-        transactions: state.transactions.slice(0, 200),
-      })
-    );
-    localStorage.setItem('playarena_all_transactions', JSON.stringify(state.transactions.slice(0, 200)));
-  }, [state.balance, state.bonusBalance, state.bonusWagerRequired, state.bonusWagerProgress, state.transactions]);
+    const savedUserStr = localStorage.getItem('playarena_user');
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        u.balance = state.balance;
+        localStorage.setItem('playarena_user', JSON.stringify(u));
+        localStorage.setItem(`wallet_${u.id}`, JSON.stringify({
+          balance: state.balance,
+          bonusBalance: state.bonusBalance,
+          transactions: state.transactions.slice(0, 200),
+        }));
+
+        // Sync to users directory
+        const users = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+        const idx = users.findIndex((usr: any) => usr.id === u.id || usr.email.toLowerCase() === u.email.toLowerCase());
+        if (idx >= 0) {
+          users[idx].balance = state.balance;
+          localStorage.setItem('playarena_users', JSON.stringify(users));
+        }
+      } catch { /* ignore */ }
+    }
+  }, [state.balance, state.bonusBalance, state.transactions]);
+
 
   const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'createdAt'>): string => {
     const transaction: Transaction = {

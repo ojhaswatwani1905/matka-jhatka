@@ -10,6 +10,7 @@ import walletRoutes from './routes/wallet.routes.js';
 import gameRoutes from './routes/game.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { globalRateLimiter } from './middleware/rateLimiter.js';
 import { gameManager } from './services/gameManager.service.js';
 
 const app = express();
@@ -21,6 +22,19 @@ const allowedOrigins = process.env.CLIENT_URL
 
 const io = new SocketServer(httpServer, {
   cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
+  pingTimeout: 20000,
+  pingInterval: 10000,
+  transports: ['websocket', 'polling'],
+  maxHttpBufferSize: 1e6, // 1MB payload cap to prevent RAM overflow
+});
+
+// Global crash protection guards
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CrashGuard] Trapped Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CrashGuard] Trapped Uncaught Exception:', err);
 });
 
 // Register Socket.io with GameManagerService
@@ -30,8 +44,10 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use('/api', globalRateLimiter);
+
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -42,7 +58,13 @@ app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', environment: process.env.NODE_ENV || 'development', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    uptimeSec: Math.floor(process.uptime()),
+    memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
+  });
 });
 
 // Static files for client (Production on Render.com)
@@ -60,8 +82,6 @@ if (fs.existsSync(clientDistPath)) {
 
 // Socket.io
 io.on('connection', (socket) => {
-  console.log(`Client connected: ${socket.id}`);
-
   socket.on('join-game', (gameType: string) => {
     socket.join(`game:${gameType}`);
     const activeRound = gameManager.getActiveRound(gameType);
@@ -71,7 +91,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`);
+    // Graceful disconnect cleanup
   });
 });
 
@@ -81,7 +101,28 @@ app.use(errorHandler);
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.io ready & GameManager active`);
+
+  // Render Self-Ping Keep-Alive service (prevents Render free tier from sleeping)
+  const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes
+  setInterval(async () => {
+    try {
+      const pingUrl = process.env.RENDER_EXTERNAL_URL
+        ? (process.env.RENDER_EXTERNAL_URL.startsWith('http')
+            ? `${process.env.RENDER_EXTERNAL_URL}/api/health`
+            : `https://${process.env.RENDER_EXTERNAL_URL}/api/health`)
+        : `http://localhost:${PORT}/api/health`;
+
+      const response = await fetch(pingUrl);
+      if (response.ok) {
+        console.log(`[KeepAlive] Self-ping pulse active: ${pingUrl} (${new Date().toLocaleTimeString()})`);
+      }
+    } catch {
+      // Keep silent on minor local network ticks
+    }
+  }, KEEP_ALIVE_INTERVAL_MS);
 });
 
 export { io };
+
+
 

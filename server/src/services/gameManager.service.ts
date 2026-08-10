@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma.js';
 import { ProvablyFairService, type ProvablyFairResult, type MatkaOutcomeResult } from './provablyFair.service.js';
 
-const prisma = new PrismaClient();
-
 export interface ActiveRound {
+
   gameType: string; // 'wingo-1m' | 'wingo-3m' | 'wingo-5m' | 'matka-kalyan' | 'matka-mumbai' etc.
   period: string;   // e.g. '202607310001'
   serverSeed: string;
@@ -13,6 +12,21 @@ export interface ActiveRound {
   clientSeed: string;
   nonce: number;
   status: 'active' | 'locked' | 'resolved';
+  manualOverride?: {
+    digit: number;
+    resultString: string;
+    color: string;
+    size: string;
+    isManual: boolean;
+  };
+}
+
+export interface DigitBetStat {
+  digit: number;
+  totalBetsOnDigit: number;
+  totalPayoutIfWins: number;
+  projectedHouseProfit: number;
+  isLowestPayout: boolean;
 }
 
 export class GameManagerService {
@@ -60,6 +74,150 @@ export class GameManagerService {
 
   public getActiveRound(gameType: string): ActiveRound | undefined {
     return this.activeRounds.get(gameType);
+  }
+
+  public getAllActiveRounds(): ActiveRound[] {
+    return Array.from(this.activeRounds.values());
+  }
+
+  public setManualOverride(gameType: string, period: string, digit: number) {
+    const round = this.activeRounds.get(gameType);
+    if (!round) throw new Error(`Game round not found for ${gameType}`);
+
+    const color = digit === 0 ? 'violet-red' : digit === 5 ? 'violet-green' : digit % 2 === 0 ? 'red' : 'green';
+    const size = digit >= 5 ? 'big' : 'small';
+
+    round.manualOverride = {
+      digit,
+      resultString: digit.toString(),
+      color,
+      size,
+      isManual: true,
+    };
+
+    if (this.ioServer) {
+      this.ioServer.to(`game:${gameType}`).emit('admin-override-set', { gameType, period: round.period, digit });
+    }
+
+    return round.manualOverride;
+  }
+
+  public clearManualOverride(gameType: string) {
+    const round = this.activeRounds.get(gameType);
+    if (round) {
+      delete round.manualOverride;
+    }
+  }
+
+  public async autoSelectLowestPayoutDigit(gameType: string, period: string) {
+    const summary = await this.getRoundBetsSummary(gameType, period);
+    const lowestDigit = summary.lowestPayoutDigit;
+    return this.setManualOverride(gameType, period, lowestDigit);
+  }
+
+  public async getRoundBetsSummary(gameType: string, period: string) {
+    const round = this.activeRounds.get(gameType);
+    const activePeriod = period || round?.period || '';
+
+    let bets: any[] = [];
+    try {
+      bets = await prisma.bet.findMany({
+        where: {
+          gameType,
+          period: activePeriod,
+        },
+      });
+    } catch {
+      // Graceful fallback if database offline
+      bets = [];
+    }
+
+    const totalVolume = bets.reduce((sum, b) => sum + (b.amount || 0), 0);
+
+    const digitStats: DigitBetStat[] = [];
+    let lowestPayout = Infinity;
+    let lowestPayoutDigit = 0;
+
+    for (let d = 0; d <= 9; d++) {
+      const resultString = d.toString();
+      const colorStr = d === 0 ? 'violet-red' : d === 5 ? 'violet-green' : d % 2 === 0 ? 'red' : 'green';
+      const sizeStr = d >= 5 ? 'big' : 'small';
+
+      let totalPayout = 0;
+      let totalBetsOnDigit = 0;
+
+      for (const b of bets) {
+        let isWin = false;
+        let payout = 0;
+
+        if (b.selection === resultString) {
+          totalBetsOnDigit += b.amount;
+        }
+
+        if (gameType.startsWith('wingo') || gameType.startsWith('color')) {
+          if (b.selection === 'green' && (colorStr === 'green' || colorStr === 'violet-green')) {
+            isWin = true;
+            payout = colorStr === 'violet-green' ? b.amount * 1.5 : b.amount * 2;
+          } else if (b.selection === 'red' && (colorStr === 'red' || colorStr === 'violet-red')) {
+            isWin = true;
+            payout = colorStr === 'violet-red' ? b.amount * 1.5 : b.amount * 2;
+          } else if (b.selection === 'violet' && colorStr.includes('violet')) {
+            isWin = true;
+            payout = b.amount * 4.5;
+          } else if (b.selection === 'big' && sizeStr === 'big') {
+            isWin = true;
+            payout = b.amount * 2;
+          } else if (b.selection === 'small' && sizeStr === 'small') {
+            isWin = true;
+            payout = b.amount * 2;
+          } else if (b.selection === resultString) {
+            isWin = true;
+            payout = b.amount * 9;
+          }
+        } else {
+          if (b.selection === resultString) {
+            isWin = true;
+            payout = b.amount * 9;
+          }
+        }
+
+        if (isWin) {
+          totalPayout += payout;
+        }
+      }
+
+      const houseProfit = totalVolume - totalPayout;
+
+      if (totalPayout < lowestPayout) {
+        lowestPayout = totalPayout;
+        lowestPayoutDigit = d;
+      }
+
+      digitStats.push({
+        digit: d,
+        totalBetsOnDigit,
+        totalPayoutIfWins: totalPayout,
+        projectedHouseProfit: houseProfit,
+        isLowestPayout: false,
+      });
+    }
+
+    // Mark lowest payout digit
+    digitStats.forEach((st) => {
+      if (st.digit === lowestPayoutDigit) {
+        st.isLowestPayout = true;
+      }
+    });
+
+    return {
+      gameType,
+      period: activePeriod,
+      totalVolume,
+      totalBetsCount: bets.length,
+      lowestPayoutDigit,
+      manualOverride: round?.manualOverride,
+      digitStats,
+    };
   }
 
   private async tick() {
@@ -128,7 +286,14 @@ export class GameManagerService {
       let numberVal = 0;
       let sizeStr = '';
 
-      if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
+      if (round.manualOverride) {
+        // Use Admin manual override decision
+        resultString = round.manualOverride.resultString;
+        colorStr = round.manualOverride.color;
+        numberVal = round.manualOverride.digit;
+        sizeStr = round.manualOverride.size;
+        console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using ADMIN MANUAL OVERRIDE digit: ${numberVal}`);
+      } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
         const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
           round.serverSeed,
           round.clientSeed,
@@ -174,62 +339,65 @@ export class GameManagerService {
           },
         });
 
-        for (const bet of pendingBets) {
-          let isWin = false;
-          let payout = 0;
+        await Promise.all(
+          pendingBets.map(async (bet) => {
+            let isWin = false;
+            let payout = 0;
 
-          if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
-            if (bet.selection === 'green' && (colorStr === 'green' || colorStr === 'violet-green')) {
-              isWin = true;
-              payout = colorStr === 'violet-green' ? bet.amount * 1.5 : bet.amount * 2;
-            } else if (bet.selection === 'red' && (colorStr === 'red' || colorStr === 'violet-red')) {
-              isWin = true;
-              payout = colorStr === 'violet-red' ? bet.amount * 1.5 : bet.amount * 2;
-            } else if (bet.selection === 'violet' && (colorStr.includes('violet'))) {
-              isWin = true;
-              payout = bet.amount * 4.5;
-            } else if (bet.selection === 'big' && sizeStr === 'big') {
-              isWin = true;
-              payout = bet.amount * 2;
-            } else if (bet.selection === 'small' && sizeStr === 'small') {
-              isWin = true;
-              payout = bet.amount * 2;
-            } else if (bet.selection === resultString) {
-              isWin = true;
-              payout = bet.amount * 9;
+            if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
+              if (bet.selection === 'green' && (colorStr === 'green' || colorStr === 'violet-green')) {
+                isWin = true;
+                payout = colorStr === 'violet-green' ? bet.amount * 1.5 : bet.amount * 2;
+              } else if (bet.selection === 'red' && (colorStr === 'red' || colorStr === 'violet-red')) {
+                isWin = true;
+                payout = colorStr === 'violet-red' ? bet.amount * 1.5 : bet.amount * 2;
+              } else if (bet.selection === 'violet' && (colorStr.includes('violet'))) {
+                isWin = true;
+                payout = bet.amount * 4.5;
+              } else if (bet.selection === 'big' && sizeStr === 'big') {
+                isWin = true;
+                payout = bet.amount * 2;
+              } else if (bet.selection === 'small' && sizeStr === 'small') {
+                isWin = true;
+                payout = bet.amount * 2;
+              } else if (bet.selection === resultString) {
+                isWin = true;
+                payout = bet.amount * 9;
+              }
+            } else {
+              if (bet.selection === resultString) {
+                isWin = true;
+                payout = bet.amount * 9;
+              }
             }
-          } else {
-            if (bet.selection === resultString) {
-              isWin = true;
-              payout = bet.amount * 9;
-            }
-          }
 
-          await prisma.bet.update({
-            where: { id: bet.id },
-            data: {
-              result: isWin ? 'win' : 'loss',
-              payout: isWin ? payout : 0,
-            },
-          });
-
-          if (isWin && payout > 0) {
-            await prisma.user.update({
-              where: { id: bet.userId },
-              data: { balance: { increment: payout } },
-            });
-
-            await prisma.transaction.create({
+            await prisma.bet.update({
+              where: { id: bet.id },
               data: {
-                userId: bet.userId,
-                type: 'win',
-                amount: payout,
-                status: 'completed',
-                description: `Won ${round.gameType} round ${round.period}`,
+                result: isWin ? 'win' : 'loss',
+                payout: isWin ? payout : 0,
               },
             });
-          }
-        }
+
+            if (isWin && payout > 0) {
+              await prisma.user.update({
+                where: { id: bet.userId },
+                data: { balance: { increment: payout } },
+              });
+
+              await prisma.transaction.create({
+                data: {
+                  userId: bet.userId,
+                  type: 'win',
+                  amount: payout,
+                  status: 'completed',
+                  description: `Won ${round.gameType} round ${round.period}`,
+                },
+              });
+            }
+          })
+        );
+
       } catch (dbErr) {
         // Log DB notice, keep round manager ticking cleanly
         console.log(`[GameManager] DB sync skipped: ${round.gameType} ${round.period}`);
@@ -246,6 +414,7 @@ export class GameManagerService {
           size: sizeStr,
           revealedServerSeed: round.serverSeed,
           commitHash: round.commitHash,
+          isManual: Boolean(round.manualOverride),
         });
       }
     } catch (err) {
@@ -255,3 +424,4 @@ export class GameManagerService {
 }
 
 export const gameManager = new GameManagerService();
+

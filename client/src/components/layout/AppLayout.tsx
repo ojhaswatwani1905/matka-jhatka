@@ -86,7 +86,7 @@ export default function AppLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="w-full min-h-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-x-hidden">
+    <div className="h-screen w-screen bg-[#0B2318] text-[#F5F1E6] flex flex-col relative overflow-hidden">
       {/* Ambient background glows for wide viewports */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.07)_0%,transparent_70%)] blur-3xl" />
@@ -101,21 +101,21 @@ export default function AppLayout() {
       <SessionWarningBanner />
       <RealityCheckPopup />
 
-      {/* Top Website Header */}
+      {/* Top Fixed Website Header */}
       <Navbar />
 
-      {/* Left Icon Rail (desktop) */}
+      {/* Left Fixed Icon Rail (desktop) */}
       <IconRail />
 
-      {/* Main Website Container — offset left on desktop for sidebar */}
-      <main className="flex-1 w-full pt-24 pb-20 lg:pl-16 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Outlet />
-        </div>
-      </main>
+      {/* Independently Scrolling Content Container */}
+      <div className="flex-1 h-full w-full overflow-y-auto pt-16 lg:pl-16 relative z-10">
+        <main className="w-full pb-16 pt-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Outlet />
+          </div>
+        </main>
 
-      {/* Footer */}
-      <div className="lg:pl-16">
+        {/* Footer */}
         <Footer />
       </div>
 
@@ -126,3 +126,4 @@ export default function AppLayout() {
     </div>
   );
 }
+

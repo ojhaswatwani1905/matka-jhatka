@@ -32,7 +32,7 @@ export default function WinGoPage() {
   const { balance, deductBalance, addBalance } = useWallet();
   const { isAuthenticated } = useAuth();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
-  const { checkIsFirstBet, consumeFirstBet } = useGameControl();
+  const { checkIsFirstBet, consumeFirstBet, getManualOverrideForGame } = useGameControl();
   const [period, setPeriod] = useState(generatePeriod());
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [betAmount, setBetAmount] = useState(100);
@@ -50,12 +50,15 @@ export default function WinGoPage() {
 
     setTimeout(() => {
       const currentBets = bets.filter(b => b.period === period && !b.result);
-      let resultNumber = getRandomNumber(0, 9);
+      const manualDigit = getManualOverrideForGame('wingo-1m') ?? getManualOverrideForGame('wingo');
 
-      if (currentBets.length > 0 && checkIsFirstBet()) {
+      let resultNumber = manualDigit !== undefined ? manualDigit : getRandomNumber(0, 9);
+
+      if (manualDigit === undefined && currentBets.length > 0 && checkIsFirstBet()) {
         consumeFirstBet();
         resultNumber = currentBets[0].selection; // Guaranteed win!
       }
+
 
       const result = { period, number: resultNumber };
       setLastResult(result);

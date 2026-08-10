@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma.js';
 import { generateToken } from '../middleware/auth.js';
+import { authRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authRateLimiter, async (req: Request, res: Response) => {
+
   try {
     const { name, email, password, phone } = req.body;
 
@@ -20,8 +21,9 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, phone, balance: 10000 },
+      data: { name, email, password: hashedPassword, phone, balance: 0 },
     });
+
 
     const token = generateToken(user.id, user.role);
 
@@ -38,7 +40,8 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
+
   try {
     const { email, password } = req.body;
 

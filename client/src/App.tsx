@@ -44,7 +44,9 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminMoneyPage from './pages/admin/AdminMoneyPage';
 import AdminKYCPage from './pages/admin/AdminKYCPage';
+
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
 import AdminGamesPage from './pages/admin/AdminGamesPage';
 import AdminSlotsPage from './pages/admin/AdminSlotsPage';
@@ -100,11 +102,35 @@ function ScrollToTop() {
   return null;
 }
 
+function RenderKeepAlivePing() {
+  useEffect(() => {
+    // Ping backend health endpoint every 4 minutes to prevent Render free-tier container from going to sleep
+    const pingServer = async () => {
+      try {
+        await fetch('/api/health');
+      } catch {
+        // Silent background ping
+      }
+    };
+    
+    // Initial pulse
+    pingServer();
+
+    const interval = setInterval(pingServer, 4 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <RenderKeepAlivePing />
+
       <ErrorBoundary>
+
         <AuthProvider>
           <GameControlProvider>
             <SlotProvider>
@@ -131,6 +157,7 @@ export default function App() {
                           <Route path="/admin" element={<AdminLayout />}>
                             <Route index element={<AdminDashboard />} />
                             <Route path="users" element={<AdminUsersPage />} />
+                            <Route path="money" element={<AdminMoneyPage />} />
                             <Route path="kyc" element={<AdminKYCPage />} />
                             <Route path="transactions" element={<AdminTransactionsPage />} />
                             <Route path="promos" element={<AdminPromosPage />} />
@@ -140,6 +167,7 @@ export default function App() {
                             <Route path="games" element={<AdminGamesPage />} />
                             <Route path="slots" element={<AdminSlotsPage />} />
                           </Route>
+
 
                           {/* Main app routes with layout */}
                           <Route element={<AppLayout />}>
