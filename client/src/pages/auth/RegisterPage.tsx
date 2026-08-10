@@ -77,7 +77,7 @@ export default function RegisterPage() {
       addToast({
         type: 'success',
         title: 'Account Created!',
-        message: `Welcome to PlayArena, ${formData.name}! $10,000 Demo Bonus credited.`,
+        message: `Welcome to PlayArena, ${formData.name}! Your account has been registered successfully.`,
       });
       navigate(decodeURIComponent(returnTo));
     } catch {
@@ -91,9 +91,10 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title={step === 'form' ? 'Create Player Account' : 'Verify Registration'}
-      subtitle={step === 'form' ? 'Register now and receive $10,000 Free Demo Coins!' : 'Complete 6-digit verification code step'}
+      subtitle={step === 'form' ? 'Register now to access casino wallet, live draws & games' : 'Complete 6-digit verification code step'}
       activeMode="register"
     >
+
       <AnimatePresence mode="wait">
         {step === 'otp' && formData ? (
           <OtpVerificationStep
