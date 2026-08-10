@@ -71,19 +71,92 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/forgot-password (demo — returns success)
-router.post('/forgot-password', async (req: Request, res: Response) => {
-  res.json({ success: true, message: 'OTP sent to email (demo)' });
+import { otpService } from '../services/otp.service.js';
+import { emailService } from '../services/email.service.js';
+
+// POST /api/auth/send-otp (Generates dynamic unique 6-digit OTP and dispatches email)
+router.post('/send-otp', authRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email, name } = req.body;
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email address is required.' });
+      return;
+    }
+
+    const code = otpService.generateOtp(email);
+    await emailService.sendOtpEmail(email, code, name);
+
+    res.json({
+      success: true,
+      message: `Verification code sent to ${email}`,
+      debugCode: code, // Dynamic OTP code generated for this user
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: 'Failed to send OTP code.' });
+  }
 });
 
-// POST /api/auth/verify-otp (demo — always succeeds)
+// POST /api/auth/verify-otp (Validates dynamic 6-digit OTP entered by user)
 router.post('/verify-otp', async (req: Request, res: Response) => {
-  res.json({ success: true, message: 'OTP verified (demo)' });
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
+      return;
+    }
+
+    const result = otpService.verifyOtp(email, otp);
+    if (!result.valid) {
+      res.status(400).json({ success: false, message: result.message });
+      return;
+    }
+
+    res.json({ success: true, message: 'OTP verified successfully.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: 'OTP verification failed.' });
+  }
 });
 
-// POST /api/auth/reset-password (demo)
-router.post('/reset-password', async (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Password reset successful (demo)' });
+// POST /api/auth/forgot-password (Generates dynamic OTP for password reset)
+router.post('/forgot-password', authRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'No account registered with this email.' });
+      return;
+    }
+
+    const code = otpService.generateOtp(email);
+    await emailService.sendOtpEmail(email, code, user.name);
+
+    res.json({ success: true, message: `Password reset OTP sent to ${email}`, debugCode: code });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to send reset email' });
+  }
 });
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const verifyResult = otpService.verifyOtp(email, otp);
+    if (!verifyResult.valid) {
+      res.status(400).json({ success: false, message: verifyResult.message });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    res.json({ success: true, message: 'Password reset successful. Please sign in.' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Password reset failed.' });
+  }
+});
+
 
 export default router;

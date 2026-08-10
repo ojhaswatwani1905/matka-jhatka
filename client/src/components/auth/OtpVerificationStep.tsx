@@ -124,25 +124,7 @@ export const OtpVerificationStep: React.FC<OtpVerificationStepProps> = ({
         ))}
       </div>
 
-      {/* Demo OTP Banner & Auto-Fill CTA */}
-      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-1.5 my-2">
-        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-400">
-          Demo OTP Code: <span className="font-mono text-gold font-black underline tracking-wider">123456</span>
-        </div>
-        <p className="text-[10px] text-slate-400">
-          Enter <span className="text-white font-bold">123456</span> (or any 6 digits) to complete registration.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setDigits(['1', '2', '3', '4', '5', '6']);
-            triggerSubmit('123456');
-          }}
-          className="w-full py-1.5 rounded-lg font-bold text-xs text-black bg-gold hover:bg-amber-400 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-        >
-          Auto-Fill Code (123456)
-        </button>
-      </div>
+
 
       <div className="pt-1">
         <button

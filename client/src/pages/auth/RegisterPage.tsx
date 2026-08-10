@@ -55,19 +55,50 @@ export default function RegisterPage() {
   const strengthLabels = ['Too Weak', 'Weak', 'Fair', 'Strong', 'Excellent'];
   const strengthColors = ['bg-rose-500', 'bg-rose-400', 'bg-amber-400', 'bg-emerald-400', 'bg-emerald-500'];
 
-  const onFormSubmit = (data: RegisterForm) => {
+  const onFormSubmit = async (data: RegisterForm) => {
     if (!agreed18Plus) {
       addToast({ type: 'warning', title: 'Age Confirmation Required', message: 'You must confirm you are 18+ to register.' });
       return;
     }
     setFormData(data);
-    setStep('otp');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, name: data.name }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        addToast({ type: 'info', title: 'OTP Sent!', message: `Verification code sent to ${data.email}` });
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setIsLoading(false);
+      setStep('otp');
+    }
   };
 
-  const handleOtpVerified = async () => {
+  const handleOtpVerified = async (enteredOtp: string) => {
     if (!formData) return;
     setIsLoading(true);
     try {
+      // Verify dynamic OTP against server
+      const verifyRes = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp: enteredOtp }),
+      });
+      const verifyJson = await verifyRes.json();
+
+      if (!verifyRes.ok || !verifyJson.success) {
+        addToast({ type: 'error', title: 'Invalid OTP', message: verifyJson.message || 'Incorrect verification code. Please check your email.' });
+        setIsLoading(false);
+        return;
+      }
+
       await registerUser({
         name: formData.name,
         email: formData.email,
@@ -87,6 +118,7 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <AuthLayout
