@@ -2,6 +2,10 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../prisma.js';
 
 export async function seedDemoAccounts() {
+  if (!process.env.DATABASE_URL) {
+    console.log('ℹ️ [SeedAuth] DATABASE_URL not set. Running in decoupled mode.');
+    return;
+  }
   try {
     const adminPassword = await bcrypt.hash('adminpassword123', 12);
     const demoPlayerPassword = await bcrypt.hash('demoplayer123', 12);

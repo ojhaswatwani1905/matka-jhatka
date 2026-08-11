@@ -319,7 +319,8 @@ export class GameManagerService {
 
       // Persist GameResult in database (graceful fallback if DB offline)
       try {
-        await prisma.gameResult.create({
+        if (process.env.DATABASE_URL) {
+          await prisma.gameResult.create({
           data: {
             gameType: round.gameType,
             period: round.period,
@@ -397,7 +398,7 @@ export class GameManagerService {
             }
           })
         );
-
+        }
       } catch (dbErr) {
         // Log DB notice, keep round manager ticking cleanly
         console.log(`[GameManager] DB sync skipped: ${round.gameType} ${round.period}`);
