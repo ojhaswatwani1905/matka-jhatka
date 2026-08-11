@@ -21,7 +21,7 @@ router.post('/register', authRateLimiter, async (req: Request, res: Response) =>
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, phone, balance: 10000 },
+      data: { name, email, password: hashedPassword, phone, balance: 0 },
     });
 
     const token = generateToken(user.id, user.role, true);

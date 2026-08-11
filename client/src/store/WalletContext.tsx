@@ -21,20 +21,14 @@ type WalletAction =
   | { type: 'UPDATE_TRANSACTION'; payload: { id: string; updates: Partial<Transaction> } }
   | { type: 'SET_LOADING'; payload: boolean };
 
-const defaultDemoTxns: Transaction[] = [
-  { id: 'tx-1', userId: 'demo', type: 'deposit', amount: 10000, status: 'completed', description: 'Welcome Bonus Deposit', createdAt: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'tx-2', userId: 'demo', type: 'bet', amount: 100, status: 'completed', description: 'WinGo GREEN bet on Period 202607310082', createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'tx-3', userId: 'demo', type: 'win', amount: 200, status: 'completed', description: 'Won WinGo GREEN (2.0x)', createdAt: new Date(Date.now() - 3550000).toISOString() },
-  { id: 'tx-4', userId: 'demo', type: 'bet', amount: 50, status: 'completed', description: 'Matka Jhatka Single #7 bet', createdAt: new Date(Date.now() - 1800000).toISOString() },
-  { id: 'tx-5', userId: 'demo', type: 'win', amount: 450, status: 'completed', description: 'Won Matka Jhatka Single #7 (9.0x)', createdAt: new Date(Date.now() - 1750000).toISOString() },
-];
+
 
 const initialState: ExtendedWalletState = {
-  balance: 10000,
-  bonusBalance: 1500,
-  bonusWagerRequired: 5000,
-  bonusWagerProgress: 2340,
-  transactions: defaultDemoTxns,
+  balance: 0,
+  bonusBalance: 0,
+  bonusWagerRequired: 0,
+  bonusWagerProgress: 0,
+  transactions: [],
   isLoading: false,
 };
 
@@ -105,7 +99,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           const u = JSON.parse(savedUserStr);
           const savedWallet = localStorage.getItem(`wallet_${u.id}`) || localStorage.getItem('wallet');
           let userBal = typeof u.balance === 'number' ? u.balance : 0;
-          let userTxns = defaultDemoTxns;
+          let userTxns: Transaction[] = [];
 
           if (savedWallet) {
             const parsed = JSON.parse(savedWallet);

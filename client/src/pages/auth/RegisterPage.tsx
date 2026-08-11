@@ -96,8 +96,8 @@ export default function RegisterPage() {
             <Gift className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <span className="text-xs font-black text-emerald-400 block">$10,000 Welcome Demo Bonus</span>
-            <span className="text-[10px] text-slate-400">Credited instantly upon account registration</span>
+            <span className="text-xs font-black text-emerald-400 block">Instant Zero-Balance Setup (₹0)</span>
+            <span className="text-[10px] text-slate-400">Account starts with ₹0 balance. Deposit to play games!</span>
           </div>
         </div>
 

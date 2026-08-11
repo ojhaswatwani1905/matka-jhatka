@@ -15,7 +15,7 @@ model User {
   phone         String?
   avatar        String?
   role          String         @default("user") // user | admin
-  balance       Float          @default(10000)
+  balance       Float          @default(0)
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

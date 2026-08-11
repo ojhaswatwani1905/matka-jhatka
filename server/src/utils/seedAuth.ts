@@ -30,7 +30,7 @@ export async function seedDemoAccounts() {
         password: demoPlayerPassword,
         phone: '+91 98765 43210',
         role: 'user',
-        balance: 10000,
+        balance: 0,
       },
     });
 

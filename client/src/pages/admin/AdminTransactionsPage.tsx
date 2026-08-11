@@ -31,7 +31,7 @@ export default function AdminTransactionsPage() {
     setTxns(updated);
     localStorage.setItem('playarena_all_transactions', JSON.stringify(updated));
     localStorage.setItem('wallet', JSON.stringify({
-      balance: JSON.parse(localStorage.getItem('wallet') || '{}').balance || 10000,
+      balance: JSON.parse(localStorage.getItem('wallet') || '{}').balance || 0,
       transactions: updated,
     }));
   };

@@ -78,7 +78,7 @@ export default function ColorPredictionPage() {
   // Fetch active round details from backend
   const fetchActiveRound = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/games/active-round/${gameType}`);
+      const res = await fetch(`/api/games/active-round/${gameType}`);
       const json = await res.json();
       if (json.success && json.data) {
         setPeriod(json.data.period);
@@ -97,7 +97,7 @@ export default function ColorPredictionPage() {
   // Fetch past game results
   const fetchResults = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/games/results/${gameType}`);
+      const res = await fetch(`/api/games/results/${gameType}`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setResults(json.data.map((r: any) => ({
@@ -187,7 +187,7 @@ export default function ColorPredictionPage() {
 
     // Call server endpoint
     try {
-      await fetch('http://localhost:3001/api/games/bet', {
+      await fetch('/api/games/bet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
