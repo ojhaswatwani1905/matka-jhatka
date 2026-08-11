@@ -43,7 +43,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email?: string, password?: string) => Promise<void>;
+  login: (email?: string, password?: string, rememberMe?: boolean) => Promise<void>;
   register: (data: Partial<User> & { password?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
@@ -73,11 +73,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       dispatch({ type: 'LOGOUT' });
     }
+
+    // Listen for force-logout custom event
+    const handleRevoked = () => {
+      localStorage.removeItem('playarena_user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('playarena_token');
+      dispatch({ type: 'LOGOUT' });
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login?reason=session_admin_revoked';
+      }
+    };
+
+    window.addEventListener('session:admin_revoked', handleRevoked);
+    return () => window.removeEventListener('session:admin_revoked', handleRevoked);
   }, []);
 
-  const login = useCallback(async (email?: string, password?: string) => {
+  const login = useCallback(async (email?: string, password?: string, rememberMe?: boolean) => {
     // Admin login shortcut
-    if (email === 'admin@playarena.com') {
+    if (email === 'admin@playarena.com' && (!password || password === 'adminpassword123')) {
       localStorage.setItem('playarena_user', JSON.stringify(ADMIN_USER));
       localStorage.setItem('token', 'admin-token-abc');
       localStorage.setItem('playarena_token', 'admin-token-abc');
@@ -91,37 +105,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, rememberMe }),
         });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const apiUser: User = {
-              id: json.data.user.id,
-              name: json.data.user.name,
-              email: json.data.user.email,
-              role: json.data.user.role === 'admin' ? 'admin' : 'user',
-              isAdmin: json.data.user.role === 'admin',
-              isActive: true,
-              balance: json.data.user.balance || 0,
-              createdAt: new Date().toISOString(),
-            };
-            localStorage.setItem('playarena_user', JSON.stringify(apiUser));
-            localStorage.setItem('token', json.data.token);
-            localStorage.setItem('playarena_token', json.data.token);
-            dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
-            return;
-          }
+        const json = await res.json();
+        if (res.ok && json.success && json.data) {
+          const apiUser: User = {
+            id: json.data.user.id,
+            name: json.data.user.name,
+            email: json.data.user.email,
+            role: json.data.user.role === 'admin' ? 'admin' : 'user',
+            isAdmin: json.data.user.role === 'admin',
+            isActive: true,
+            balance: json.data.user.balance || 0,
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem('playarena_user', JSON.stringify(apiUser));
+          localStorage.setItem('token', json.data.token);
+          localStorage.setItem('playarena_token', json.data.token);
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
+          return;
+        } else {
+          throw new Error(json.message || 'Invalid email or password');
         }
-      } catch {
+      } catch (err: any) {
+        if (err.message !== 'Failed to fetch' && err.name !== 'TypeError') {
+          throw err;
+        }
         // Fallback to local user store if backend server unreachable
       }
     }
 
     // Check multi-user local database
     const targetEmail = email || 'player@tirangagames.com';
+    const creds: Record<string, string> = JSON.parse(localStorage.getItem('playarena_creds') || '{}');
     const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
     const existing = users.find(u => u.email.toLowerCase() === targetEmail.toLowerCase());
+
+    if (existing && creds[targetEmail.toLowerCase()] && password && creds[targetEmail.toLowerCase()] !== password) {
+      throw new Error('Invalid email or password');
+    }
 
     const userToLogin: User = existing || {
       id: `usr_${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -143,6 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!existing) {
       localStorage.setItem('playarena_users', JSON.stringify([...users, userToLogin]));
     }
+    if (password) {
+      creds[targetEmail.toLowerCase()] = password;
+      localStorage.setItem('playarena_creds', JSON.stringify(creds));
+    }
 
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userToLogin, token } });
   }, []);
@@ -156,34 +182,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: data.name, email: data.email, password: data.password, phone: data.phone }),
         });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const apiUser: User = {
-              id: json.data.user.id,
-              name: json.data.user.name,
-              email: json.data.user.email,
-              phone: data.phone,
-              role: 'user',
-              isAdmin: false,
-              isActive: true,
-              balance: json.data.user.balance || 0,
-              createdAt: new Date().toISOString(),
-            };
-            localStorage.setItem('playarena_user', JSON.stringify(apiUser));
-            localStorage.setItem('token', json.data.token);
-            localStorage.setItem('playarena_token', json.data.token);
-            dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
-            return;
-          }
+        const json = await res.json();
+        if (res.ok && json.success && json.data) {
+          const apiUser: User = {
+            id: json.data.user.id,
+            name: json.data.user.name,
+            email: json.data.user.email,
+            phone: data.phone,
+            role: 'user',
+            isAdmin: false,
+            isActive: true,
+            balance: json.data.user.balance || 0,
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem('playarena_user', JSON.stringify(apiUser));
+          localStorage.setItem('token', json.data.token);
+          localStorage.setItem('playarena_token', json.data.token);
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
+          return;
+        } else {
+          throw new Error(json.message || 'Registration failed');
         }
-      } catch {
+      } catch (err: any) {
+        if (err.message !== 'Failed to fetch' && err.name !== 'TypeError') {
+          throw err;
+        }
         // Fallback to local storage if API server unreachable
       }
     }
 
     const regName = data.name || (data.email ? data.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'New Player');
     const regEmail = data.email || `player_${Date.now()}@playarena.com`;
+
+    const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+    if (users.find(u => u.email.toLowerCase() === regEmail.toLowerCase())) {
+      throw new Error('An account with this email already exists.');
+    }
 
     const newUser: User = {
       id: `usr_${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -197,16 +231,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-
     const token = `usr-token-${newUser.id}`;
     localStorage.setItem('playarena_user', JSON.stringify(newUser));
     localStorage.setItem('token', token);
     localStorage.setItem('playarena_token', token);
 
     // Sync to multi-user store
-    const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
-    if (!users.find(u => u.email.toLowerCase() === newUser.email.toLowerCase())) {
-      localStorage.setItem('playarena_users', JSON.stringify([...users, newUser]));
+    localStorage.setItem('playarena_users', JSON.stringify([...users, newUser]));
+    if (data.password) {
+      const creds: Record<string, string> = JSON.parse(localStorage.getItem('playarena_creds') || '{}');
+      creds[regEmail.toLowerCase()] = data.password;
+      localStorage.setItem('playarena_creds', JSON.stringify(creds));
     }
 
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user: newUser, token } });

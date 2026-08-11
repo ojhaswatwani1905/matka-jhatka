@@ -9,9 +9,12 @@ import { useAuthGate } from '../../hooks/useAuthGate';
 import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { formatCurrency, getRandomNumber, generateId } from '../../lib/utils';
+import { sounds } from '../../lib/sound';
 import confetti from 'canvas-confetti';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
 
 const TICKET_PRICE = 50;
 const JACKPOT = 500000;
@@ -64,6 +67,7 @@ export default function LotteryPage() {
     requireAuth(() => {
       if (selectedNumbers.length !== MAX_NUMBERS) return;
       if (!deductBalance(TICKET_PRICE, 'Lottery ticket')) return;
+      haptics.bet();
       setTickets(prev => [{
         id: generateId(),
         numbers: [...selectedNumbers].sort((a, b) => a - b),
@@ -76,6 +80,7 @@ export default function LotteryPage() {
   const drawLottery = () => {
     if (tickets.filter(t => t.matched === undefined).length === 0) return;
     setIsDrawing(true);
+    setDrawnNumbers([]);
 
     const drawn: number[] = [];
     while (drawn.length < MAX_NUMBERS) {
@@ -87,11 +92,13 @@ export default function LotteryPage() {
     drawn.forEach((num, i) => {
       setTimeout(() => {
         setDrawnNumbers(prev => [...prev, num]);
+        sounds.playChip();
       }, (i + 1) * 600);
     });
 
     // After all revealed, calculate results
     setTimeout(() => {
+      let totalPayout = 0;
       setTickets(prev => prev.map(t => {
         if (t.matched !== undefined) return t;
         const matched = t.numbers.filter(n => drawn.includes(n)).length;
@@ -101,17 +108,18 @@ export default function LotteryPage() {
         else if (matched === 4) payout = 1000;
         else if (matched === 3) payout = 100;
 
-        if (payout > 0) addBalance(payout, `Lottery win - ${matched} matched`);
+        if (payout > 0) {
+          totalPayout += payout;
+          addBalance(payout, `Lottery win - ${matched} matched`);
+        }
         return { ...t, matched, won: payout > 0, payout };
       }));
 
-      const anyBigWin = tickets.some(t => {
-        const m = t.numbers.filter(n => drawn.includes(n)).length;
-        return m >= 4;
-      });
-
-      if (anyBigWin) {
+      if (totalPayout > 0) {
+        triggerWinCelebration({ winAmount: totalPayout, multiplier: Math.round(totalPayout / TICKET_PRICE), gameName: 'Lottery 5D' });
         confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 }, colors: ['#FFD700', '#00FF88', '#8B5CF6', '#FF3B5C'] });
+      } else {
+        haptics.loss();
       }
 
       setIsDrawing(false);

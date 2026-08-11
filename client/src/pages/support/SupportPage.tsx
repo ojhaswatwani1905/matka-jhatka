@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, MessageCircle, Mail, ChevronDown, Send, ShieldCheck, Crown } from 'lucide-react';
 import Input from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
+import { SEOHead } from '../../components/shared/SEOHead';
 
 const faqs = [
   { q: 'How does the Provably Fair SHA-256 hash verification work?', a: 'Before every round starts, the server generates a secret 32-byte seed and publishes its SHA-256 hash commitment. After the round ends, the server seed is revealed. Anyone can enter the revealed seed into our Verification Tool to re-calculate the HMAC-SHA256 outcome and verify that the result was unmanipulated.' },
@@ -11,6 +12,19 @@ const faqs = [
   { q: 'How do I deposit or withdraw funds from my balance?', a: 'Navigate to the Wallet tab in the navigation bar. Select "Deposit" or "Withdraw", enter your desired amount and preferred payment method, and confirm your transaction.' },
   { q: 'Is my personal data and account balance secure?', a: 'Yes. PlayArena uses SSL 256-bit encryption, strict session token security, and compliant data protection standards across all services.' },
 ];
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: f.a,
+    },
+  })),
+};
 
 export default function SupportPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -28,6 +42,11 @@ export default function SupportPage() {
 
   return (
     <div className="space-y-6 pb-6">
+      <SEOHead
+        title="Support & Help Center — Provably Fair FAQs & 24/7 Desk"
+        description="Get instant 24/7 support assistance, read Provably Fair seed verification guides, and get answers to platform wallet & game FAQs."
+        jsonLd={faqJsonLd}
+      />
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">

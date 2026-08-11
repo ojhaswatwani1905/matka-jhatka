@@ -13,9 +13,11 @@
   },
   "dependencies": {
     "@prisma/client": "^6.10.0",
+    "@types/ioredis": "^4.28.10",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^9.0.5",
     "prisma": "^6.10.0",

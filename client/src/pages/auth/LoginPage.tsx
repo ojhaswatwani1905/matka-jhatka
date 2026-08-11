@@ -19,7 +19,7 @@ interface LoginForm {
 export default function LoginPage() {
   const { login } = useAuth();
   const { addToast } = useToast();
-  const { settings: rgSettings, isExcluded } = useRG();
+  const { isExcluded } = useRG();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') || '/';
@@ -29,15 +29,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  // 2FA state
-  const [show2FA, setShow2FA] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
-  const [pendingLogin, setPendingLogin] = useState<(() => Promise<void>) | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
-  const performLogin = async (identifier: string) => {
-    await login(identifier, '');
+  const performLogin = async (identifier: string, password: string, rememberMe?: boolean) => {
+    await login(identifier, password, rememberMe);
     addToast({ type: 'success', title: 'Welcome Back!', message: 'Successfully signed in to PlayArena.' });
     navigate(decodeURIComponent(returnTo));
   };
@@ -47,29 +43,11 @@ export default function LoginPage() {
     setServerError(null);
     try {
       const fullIdentifier = loginMethod === 'phone' ? `${selectedCountry.dialCode}${data.identifier}` : data.identifier;
-      if (rgSettings.twoFAEnabled) {
-        // Show 2FA step instead of logging in immediately
-        setPendingLogin(() => () => performLogin(fullIdentifier));
-        setShow2FA(true);
-        setIsLoading(false);
-        return;
-      }
-      await performLogin(fullIdentifier);
-    } catch {
-      setServerError('Invalid email/phone or password. Please try again.');
+      await performLogin(fullIdentifier, data.password, data.rememberMe);
+    } catch (err: any) {
+      setServerError(err?.message || 'Invalid email/phone or password. Please try again.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handle2FASubmit = async () => {
-    if (otpValue !== '123456') {
-      setServerError('Incorrect OTP. Demo code is 123456.');
-      return;
-    }
-    if (pendingLogin) {
-      setIsLoading(true);
-      try { await pendingLogin(); } catch { setServerError('Login failed.'); } finally { setIsLoading(false); }
     }
   };
 
@@ -102,34 +80,11 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* 2FA OTP modal overlay */}
-      {show2FA && (
-        <div className="rounded-2xl royal-panel p-5 space-y-4 mb-4">
-          <div className="text-center">
-            <div className="text-3xl mb-2">🔐</div>
-            <h3 className="text-sm font-black text-[#E8C97A]">Two-Factor Authentication</h3>
-            <p className="text-[10px] text-[rgba(212,175,55,0.5)] mt-1">Enter the 6-digit OTP sent to your device</p>
-            <div className="mt-2 p-2 rounded-lg bg-[rgba(46,204,113,0.08)] border border-[rgba(46,204,113,0.2)]">
-              <p className="text-xs font-black text-[#2ECC71]">🔔 Demo OTP: <span className="tracking-[0.3em] font-heading">123456</span></p>
-            </div>
-          </div>
-          <input
-            type="text" maxLength={6} value={otpValue}
-            onChange={e => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="_ _ _ _ _ _"
-            className="w-full text-center text-2xl font-black tracking-[0.5em] bg-[#061510] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-3 text-gold focus:outline-none focus:border-[rgba(212,175,55,0.5)]"
-          />
-          {serverError && <p className="text-xs text-[#FF4D6D] text-center">{serverError}</p>}
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => { setShow2FA(false); setOtpValue(''); setServerError(null); }}
-              className="py-2.5 rounded-xl text-xs font-black border border-[rgba(212,175,55,0.2)] text-[rgba(212,175,55,0.6)] cursor-pointer">
-              Back
-            </button>
-            <button onClick={handle2FASubmit} disabled={otpValue.length !== 6 || isLoading}
-              className="py-2.5 rounded-xl text-xs font-black btn-royal-gold cursor-pointer disabled:opacity-50">
-              {isLoading ? 'Verifying…' : 'Verify OTP'}
-            </button>
-          </div>
+      {/* Session admin revoked banner */}
+      {reason === 'session_admin_revoked' && (
+        <div className="rounded-xl bg-rose-500/15 border border-rose-500/40 px-4 py-3 flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-rose-400 shrink-0" />
+          <p className="text-xs text-rose-300 font-bold">Your session was ended by an administrator.</p>
         </div>
       )}
 

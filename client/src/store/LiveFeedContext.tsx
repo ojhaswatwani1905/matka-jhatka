@@ -118,6 +118,18 @@ export function LiveFeedProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Listen for real user bets dispatched from game engines or WalletContext
+  useEffect(() => {
+    const handleRealBet = (evt: Event) => {
+      const customEvt = evt as CustomEvent<Omit<LiveBetEntry, 'id' | 'timestamp'>>;
+      if (customEvt.detail) {
+        addEntry(customEvt.detail);
+      }
+    };
+    window.addEventListener('bet:placed', handleRealBet);
+    return () => window.removeEventListener('bet:placed', handleRealBet);
+  }, [addEntry]);
+
   return (
     <LiveFeedContext.Provider value={{ ...state, addEntry }}>
       {children}

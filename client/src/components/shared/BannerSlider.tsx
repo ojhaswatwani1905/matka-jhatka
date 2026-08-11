@@ -10,10 +10,12 @@ interface Slide {
   ribbonText: string;
   ctaText: string;
   ctaLink: string;
-  bgGradient: string;
+  bgGradient?: string;
+  bgImage?: string;
+  isActive?: boolean;
 }
 
-const slides: Slide[] = [
+const DEFAULT_SLIDES: Slide[] = [
   {
     id: '1',
     eyebrow: '🏆 NEW PLAYER EXCLUSIVE',
@@ -58,22 +60,58 @@ function FloatingCoin({ style }: { style: React.CSSProperties }) {
 }
 
 export default function BannerSlider() {
+  const [slides, setSlides] = useState<Slide[]>(() => {
+    try {
+      const saved = localStorage.getItem('playarena_promo_slides');
+      if (saved) {
+        const parsed: Slide[] = JSON.parse(saved);
+        const active = parsed.filter(s => s.isActive !== false);
+        if (active.length > 0) return active;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_SLIDES;
+  });
+
   const [current, setCurrent] = useState(0);
 
+  // Fetch live server slides
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/promo-slides');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setSlides(json.data.filter((s: any) => s.isActive !== false));
+        }
+      } catch {
+        // Continue with local storage fallback
+      }
+    })();
+  }, []);
+
   const next = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % slides.length);
+    setSlides(prev => {
+      if (prev.length === 0) return prev;
+      setCurrent(c => (c + 1) % prev.length);
+      return prev;
+    });
   }, []);
 
   const prev = useCallback(() => {
-    setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
+    setSlides(prev => {
+      if (prev.length === 0) return prev;
+      setCurrent(c => (c - 1 + prev.length) % prev.length);
+      return prev;
+    });
   }, []);
 
   useEffect(() => {
+    if (slides.length === 0) return;
     const timer = setInterval(next, 5500);
     return () => clearInterval(timer);
-  }, [next]);
+  }, [next, slides.length]);
 
-  const slide = slides[current];
+  const slide = slides[current] || DEFAULT_SLIDES[0];
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.35)] shadow-[0_0_40px_rgba(212,175,55,0.15)]"
@@ -81,13 +119,13 @@ export default function BannerSlider() {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={slide.id}
+          key={slide.id || current}
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -30 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
           className="relative min-h-[240px] sm:min-h-[270px] flex items-center"
-          style={{ background: slide.bgGradient }}
+          style={{ background: slide.bgImage ? `url(${slide.bgImage}) center/cover` : slide.bgGradient || 'linear-gradient(135deg, #061A10 0%, #0B2318 40%, #1A4A2C 100%)' }}
         >
           {/* Ornate gold border glow */}
           <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{

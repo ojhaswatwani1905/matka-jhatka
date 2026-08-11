@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Crosshair } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -10,6 +9,8 @@ import { useGameControl } from '../../store/GameControlContext';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import Modal from '../../components/ui/Modal';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
 
 /* ─── Fish Target Config ────────────────────────────────────────── */
 interface TargetFish {
@@ -84,6 +85,7 @@ export default function OceanHunterPage() {
       }
 
       deductBalance(bulletCost, `Ocean Hunter cannon shot`);
+      haptics.bet();
       setShotsFired(s => s + 1);
 
     // Apply 1 HP damage per shot
@@ -98,15 +100,12 @@ export default function OceanHunterPage() {
       // Captured fish target!
       const winAmt = Math.round(bulletCost * target.multiplier);
       addBalance(winAmt, `Ocean Hunter captured ${target.name} (${target.multiplier}x)`);
+      triggerWinCelebration({ winAmount: winAmt, multiplier: target.multiplier, gameName: 'Ocean Hunter' });
       addToast({
         type: 'success',
         title: `🎯 Captured ${target.name}!`,
         message: `Won ₹${winAmt} (${target.multiplier}x payout)`,
       });
-
-      if (target.multiplier >= 8) {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
-      }
 
       // Replace fish
       const nextTemplate = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];

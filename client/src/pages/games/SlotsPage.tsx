@@ -13,7 +13,21 @@ import { sounds } from '../../lib/sound';
 import { redisCache } from '../../lib/redisCache';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
 import Modal from '../../components/ui/Modal';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const slotsBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Slots', item: 'https://playarena.com/games/slots' },
+  ],
+};
 
 const CHIP_VALUES = [10, 50, 100, 500, 1000];
 
@@ -153,6 +167,7 @@ export default function SlotsPage() {
       setWinningIndexes([]);
       setReelStoppedState(Array(activeSlot.reels).fill(false));
       if (!soundMuted) sounds.playSpin();
+      haptics.bet();
 
       const isFirstBet = checkIsFirstBet();
       const symbolPool = activeSlot.symbols;
@@ -239,6 +254,7 @@ export default function SlotsPage() {
 
           // Credit wallet on win
           addBalance(payout, `Slots — ${activeSlot.name} win (${winMultiplier}×)`, 'win');
+          triggerWinCelebration({ winAmount: payout, multiplier: winMultiplier, gameName: activeSlot.name });
           if (!soundMuted) sounds.playWin();
 
           addToast({
@@ -271,6 +287,11 @@ export default function SlotsPage() {
 
   return (
     <div className="min-h-screen py-3 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-4 relative">
+      <SEOHead
+        title="Royal 777 Jackpot Slots — Multi-Line Vegas Video Slots"
+        description="Spin 6 exclusive 3-reel & 5-reel Vegas slot machines including Royal Gold 777, Dragon Fortune, Mega Fruit Party, and Golden Pharaoh with 777x jackpot multipliers."
+        jsonLd={slotsBreadcrumbLd}
+      />
       {/* Ambient Spotlight Background Layer */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
@@ -483,15 +504,19 @@ export default function SlotsPage() {
                   balance={balance}
                   disabled={spinning}
                   intervalMs={2500}
-                  onPlaceBet={async (amount) => {
-                    if (!isAuthenticated) return 0;
-                    if (balance < amount) return 0;
-                    deductBalance(amount, `Slots — ${activeSlot.name} spin`);
-                    const won = Math.random() > 0.6;
-                    const mult = won ? activeSlot.paytable.threeOfAKind : 0;
-                    const payout = won ? Math.round(amount * mult) : 0;
-                    if (won) addBalance(payout, `Slots — ${activeSlot.name} win (${mult}×)`, 'win');
-                    return won ? payout - amount : -amount;
+                  onPlaceBet={async (amt) => {
+                    if (!isAuthenticated || spinning || balance < amt) return 0;
+                    const prevBal = balance;
+                    spinReels();
+                    await new Promise<void>(resolve => {
+                      const timer = setInterval(() => {
+                        if (!spinning) {
+                          clearInterval(timer);
+                          resolve();
+                        }
+                      }, 200);
+                    });
+                    return balance - prevBal;
                   }}
                 />
 
@@ -593,6 +618,9 @@ export default function SlotsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="slots" />
     </div>
   );
 }

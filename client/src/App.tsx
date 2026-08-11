@@ -54,9 +54,12 @@ import AdminPromosPage from './pages/admin/AdminPromosPage';
 import AdminBroadcastsPage from './pages/admin/AdminBroadcastsPage';
 import AdminFraudPage from './pages/admin/AdminFraudPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminContentPage from './pages/admin/AdminContentPage';
 import VIPPage from './pages/vip/VIPPage';
 import ReferralPage from './pages/referral/ReferralPage';
 import KYCPage from './pages/kyc/KYCPage';
+
+import { WinCelebrationOverlay } from './components/ui/WinCelebrationOverlay';
 
 function PageLoader() {
   return (
@@ -142,6 +145,7 @@ export default function App() {
                     <WithdrawalAccountsProvider>
                       <KYCProvider>
                         <ToastProvider>
+                          <WinCelebrationOverlay />
                           <AppWithRG>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
@@ -156,6 +160,7 @@ export default function App() {
                           {/* Admin routes */}
                           <Route path="/admin" element={<AdminLayout />}>
                             <Route index element={<AdminDashboard />} />
+                            <Route path="homepage" element={<AdminContentPage />} />
                             <Route path="users" element={<AdminUsersPage />} />
                             <Route path="money" element={<AdminMoneyPage />} />
                             <Route path="kyc" element={<AdminKYCPage />} />

@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { History, TrendingUp, Volume2, VolumeX, ShieldCheck } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import Timer from '../../components/shared/Timer';
 import Modal from '../../components/ui/Modal';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
@@ -12,6 +11,20 @@ import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
 import { generateId } from '../../lib/utils';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const colorBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Color Prediction', item: 'https://playarena.com/games/color-prediction' },
+  ],
+};
 import type { ColorPredictionResult, ColorChoice } from '../../types';
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -159,6 +172,7 @@ export default function ColorPredictionPage() {
     }
 
     if (soundEnabled) sounds.playChip();
+    haptics.bet();
 
     const bet: BetRecord = {
       id: generateId(),
@@ -258,15 +272,10 @@ export default function ColorPredictionPage() {
       );
 
       if (totalWin > 0) {
-        addBalance(totalWin, `Won $${totalWin} in WinGo`);
-        addToast({ type: 'success', title: 'Round Won!', message: `Congratulations! You won $${totalWin}` });
+        addBalance(totalWin, `Won ₹${totalWin} in WinGo`);
+        triggerWinCelebration({ winAmount: totalWin, multiplier: 2, gameName: 'Color Prediction' });
+        addToast({ type: 'success', title: 'Round Won!', message: `Congratulations! You won ₹${totalWin}` });
         if (soundEnabled) sounds.playWin();
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#22C55E', '#EF4444', '#A855F7', '#F5B92C'],
-        });
       }
 
       setTimeout(() => {
@@ -279,6 +288,11 @@ export default function ColorPredictionPage() {
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
+      <SEOHead
+        title="WinGo Color Prediction — 1Min & 3Min Multiplier Draws"
+        description="Predict Green, Red, Violet, Big/Small, or single numbers 0-9 in WinGo Color Prediction. Instant fast-paced rounds paying up to 9x multipliers."
+        jsonLd={colorBreadcrumbLd}
+      />
       {/* Top Header Mode Tabs & Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 flex gap-1.5 bg-slate-900/80 rounded-xl p-1 border border-white/10">
@@ -554,6 +568,9 @@ export default function ColorPredictionPage() {
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="color" />
     </div>
   );
 }

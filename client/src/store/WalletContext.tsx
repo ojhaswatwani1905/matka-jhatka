@@ -240,11 +240,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     addTransaction({
       userId: 'demo',
-      type: type || 'bet',
+      type,
       amount,
       status: 'completed',
-      description: description || `Bet ₹${amount}`,
+      description: description || `Deducted ₹${amount}`,
     });
+
+    // Dispatch real bet event to live feed ticker
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
+      const userName = savedUser.name || 'You';
+      const gameName = description ? description.replace(/^Auto-Bet — |^Bet — |^Spin — /i, '') : 'Casino Game';
+      window.dispatchEvent(new CustomEvent('bet:placed', {
+        detail: {
+          user: userName,
+          game: gameName,
+          gameIcon: '🎮',
+          betAmount: amount,
+          result: 'pending',
+          timestamp: Date.now(),
+        }
+      }));
+    } catch { /* ignore */ }
 
     return true;
   }, [addTransaction]);

@@ -49,12 +49,16 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/api', globalRateLimiter);
 
 
+import slotRoutes from './modules/slots/slots.routes.js';
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/slots', slotRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', gameRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -80,6 +84,8 @@ if (fs.existsSync(clientDistPath)) {
   });
 }
 
+import { redisService } from './services/redisService.js';
+
 // Socket.io
 io.on('connection', (socket) => {
   socket.on('join-game', (gameType: string) => {
@@ -90,6 +96,21 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('send-chat-message', async (data: { room?: string; user: string; text: string }) => {
+    const rateCheck = await redisService.checkChatRateLimit(socket.id, 5, 10);
+    if (!rateCheck.allowed) {
+      socket.emit('chat-error', { message: 'Chat rate limit exceeded. Please wait a moment before sending more messages.' });
+      return;
+    }
+
+    const room = data.room ? `game:${data.room}` : 'global-chat';
+    io.to(room).emit('chat-message', {
+      user: data.user,
+      text: data.text,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   socket.on('disconnect', () => {
     // Graceful disconnect cleanup
   });
@@ -98,9 +119,12 @@ io.on('connection', (socket) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
+import { seedDemoAccounts } from './utils/seedAuth.js';
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.io ready & GameManager active`);
+  seedDemoAccounts().catch(() => {});
 
   // Render Self-Ping Keep-Alive service (prevents Render free tier from sleeping)
   const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes

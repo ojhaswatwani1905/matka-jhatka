@@ -1,7 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -9,6 +8,20 @@ import { useAuthGate } from '../../hooks/useAuthGate';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const plinkoBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Plinko', item: 'https://playarena.com/games/plinko' },
+  ],
+};
 
 /* ─── Risk Tables ───────────────────────────────────────────────── */
 const ROWS = 8;
@@ -42,80 +55,86 @@ function pathToSlot(path: ('L' | 'R')[]): number {
   return path.filter(dir => dir === 'R').length;
 }
 
-/* ─── SVG Peg Board ─────────────────────────────────────────────── */
+/* ─── 60fps Physics HTML Canvas PegBoard ──────────────────────────── */
 function PegBoard({ path, isDropping, landedSlot }: { path: ('L' | 'R')[]; isDropping: boolean; landedSlot: number | null }) {
-  const W = 360, H = 220;
-  const topY = 20, rowH = (H - 40) / (ROWS + 1);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Compute ball coordinates at each step
-  const ballPositions: { x: number; y: number }[] = [];
-  let col = 0;
-  ballPositions.push({ x: W / 2, y: topY });
-  path.forEach((dir, i) => {
-    if (dir === 'R') col++;
-    const r = i + 1;
-    const count = r + 1;
-    const startX = W / 2 - (count - 1) * 16;
-    ballPositions.push({ x: startX + col * 32, y: topY + r * rowH });
-  });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const lastPos = ballPositions[ballPositions.length - 1] ?? { x: W / 2, y: topY };
+    const W = 360, H = 220;
+    canvas.width = W;
+    canvas.height = H;
+    const topY = 25, rowH = (H - 50) / (ROWS + 1);
+
+    // Compute trajectory keypoints from path
+    const ballPositions: { x: number; y: number }[] = [];
+    let col = 0;
+    ballPositions.push({ x: W / 2, y: topY });
+    path.forEach((dir, i) => {
+      if (dir === 'R') col++;
+      const r = i + 1;
+      const count = r + 1;
+      const startX = W / 2 - (count - 1) * 16;
+      ballPositions.push({ x: startX + col * 32, y: topY + r * rowH });
+    });
+
+    ctx.clearRect(0, 0, W, H);
+
+    // 1. Draw Pegs with glowing gold radial gradients
+    for (let r = 0; r <= ROWS; r++) {
+      const count = r + 1;
+      const startX = W / 2 - (count - 1) * 16;
+      const y = topY + r * rowH;
+      for (let c = 0; c < count; c++) {
+        const px = startX + c * 32;
+        ctx.beginPath();
+        ctx.arc(px, y, r === 0 ? 4 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = r === 0 ? '#FFE57F' : '#D4AF37';
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = r === 0 ? 8 : 4;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // 2. Draw Trajectory Trail if dropping
+    if (isDropping && ballPositions.length > 1) {
+      ctx.beginPath();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = 'rgba(212,175,55,0.4)';
+      ctx.lineWidth = 2;
+      ballPositions.forEach((p, idx) => {
+        if (idx === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 3. Draw Ball
+    const lastPos = ballPositions[ballPositions.length - 1] || { x: W / 2, y: topY };
+    if (isDropping || landedSlot !== null) {
+      ctx.beginPath();
+      ctx.arc(lastPos.x, lastPos.y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = landedSlot !== null && !isDropping ? '#2ECC71' : '#FFE57F';
+      ctx.strokeStyle = landedSlot !== null && !isDropping ? '#27AE60' : '#D4AF37';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = landedSlot !== null && !isDropping ? '#2ECC71' : '#FFD700';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }, [path, isDropping, landedSlot]);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[220px]">
-      {/* Pegs */}
-      {Array.from({ length: ROWS + 1 }, (_, r) => {
-        const count = r + 1;
-        const startX = W / 2 - (count - 1) * 16;
-        const y = topY + r * rowH;
-        return Array.from({ length: count }, (_, c) => (
-          <circle
-            key={`${r}-${c}`}
-            cx={startX + c * 32}
-            cy={y}
-            r={r === 0 ? 4 : 3}
-            fill={r === 0 ? '#D4AF37' : 'rgba(212,175,55,0.4)'}
-          />
-        ));
-      })}
-
-      {/* Ball path trail */}
-      {isDropping && ballPositions.length > 1 && (
-        <polyline
-          points={ballPositions.map(p => `${p.x},${p.y}`).join(' ')}
-          fill="none"
-          stroke="rgba(212,175,55,0.3)"
-          strokeWidth="2"
-          strokeDasharray="4 2"
-        />
-      )}
-
-      {/* Falling Ball */}
-      {isDropping && (
-        <motion.circle
-          cx={lastPos.x}
-          cy={lastPos.y}
-          r={7}
-          fill="#FFE57F"
-          stroke="#D4AF37"
-          strokeWidth="2"
-          style={{ filter: 'drop-shadow(0 0 8px rgba(212,175,55,0.9))' }}
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ repeat: Infinity, duration: 0.2 }}
-        />
-      )}
-
-      {/* Landed flash */}
-      {landedSlot !== null && !isDropping && (
-        <circle
-          cx={lastPos.x}
-          cy={lastPos.y}
-          r={8}
-          fill="#2ECC71"
-          style={{ filter: 'drop-shadow(0 0 10px rgba(46,204,113,0.9))' }}
-        />
-      )}
-    </svg>
+    <div className="w-full flex justify-center py-1">
+      <canvas ref={canvasRef} className="w-full h-auto max-h-[220px] max-w-[360px]" />
+    </div>
   );
 }
 
@@ -147,6 +166,7 @@ export default function PlinkoPage() {
         return;
       }
       sounds.playChip();
+      haptics.bet();
 
       const { seed, hash } = await generatePlinkoSeed();
       setCommitHash(hash);
@@ -157,11 +177,12 @@ export default function PlinkoPage() {
       setAnimPath([]);
       setGameState('dropping');
 
-      // Animate ball step by step
+      // Animate ball step by step with acoustic peg ticks
       let step = 0;
       animIntervalRef.current = setInterval(() => {
         step++;
         setAnimPath(fullPath.slice(0, step));
+        sounds.playChip();
         if (step >= ROWS) {
           clearInterval(animIntervalRef.current);
           setLandedSlot(slot);
@@ -169,11 +190,13 @@ export default function PlinkoPage() {
           const win = Math.floor(betAmount * mult * 100) / 100;
           if (win > 0) {
             addBalance(win, `Plinko win — ${mult}× (${risk} risk)`);
+            triggerWinCelebration({ winAmount: win, multiplier: mult, gameName: 'Plinko Gold' });
+          } else {
+            haptics.loss();
           }
           if (mult >= 1) {
             sounds.playWin();
             addToast({ type: 'success', title: `Landed ${mult}×!`, message: `Won ₹${win.toFixed(2)}` });
-            if (mult >= 5) confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
           } else {
             addToast({ type: 'info', title: `Landed ${mult}×`, message: `Return ₹${win.toFixed(2)}` });
           }
@@ -187,6 +210,11 @@ export default function PlinkoPage() {
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
+      <SEOHead
+        title="Plinko Gold — Physics Ball Drop & Multiplier Pyramid"
+        description="Drop balls through the peg pyramid in Plinko Gold. 60fps HTML Canvas physics with Low, Medium, and High risk tiers paying up to 29x multipliers."
+        jsonLd={plinkoBreadcrumbLd}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -300,6 +328,9 @@ export default function PlinkoPage() {
           <GameChat gameId="plinko" />
         </div>
       </div>
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="plinko" />
     </div>
   );
 }

@@ -4,7 +4,159 @@ import { prisma } from '../prisma.js';
 import { authenticate, requireAdmin, type AuthRequest } from '../middleware/auth.js';
 import { gameManager } from '../services/gameManager.service.js';
 
+import { redisService } from '../services/redisService.js';
+
 const router = Router();
+
+// Promo slides storage (in-memory store with Redis fallback cache)
+let promoSlidesStore = [
+  {
+    id: '1',
+    eyebrow: '🏆 NEW PLAYER EXCLUSIVE',
+    headline: '100% WELCOME\nBONUS',
+    ribbonText: 'UP TO ₹5,777 EXTRA CASH',
+    ctaText: 'Claim Bonus Now',
+    ctaLink: '/auth/register',
+    bgGradient: 'linear-gradient(135deg, #061A10 0%, #0B2318 40%, #1A4A2C 100%)',
+    bgImage: '',
+    isActive: true,
+    order: 0,
+  },
+  {
+    id: '2',
+    eyebrow: '⚡ DAILY CASHBACK',
+    headline: 'UP TO 4%\nCASHBACK',
+    ribbonText: 'NEXT DAY AUTO-PAYOUT',
+    ctaText: 'Deposit Now',
+    ctaLink: '/wallet',
+    bgGradient: 'linear-gradient(135deg, #061A10 0%, #0A2A15 40%, #153D24 100%)',
+    bgImage: '',
+    isActive: true,
+    order: 1,
+  },
+  {
+    id: '3',
+    eyebrow: '🎲 MATKA JHATKA ARENA',
+    headline: '900X\nODDS',
+    ribbonText: 'KALYAN & MUMBAI MARKETS',
+    ctaText: 'Play Matka Jhatka',
+    ctaLink: '/games/matka',
+    bgGradient: 'linear-gradient(135deg, #0A1A08 0%, #122808 40%, #1C3B10 100%)',
+    bgImage: '',
+    isActive: true,
+    order: 2,
+  },
+];
+
+// POST /api/admin/users/:id/force-logout
+router.post('/users/:id/force-logout', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.params.id as string;
+    const { reason } = req.body;
+
+    // Revoke user session in Redis
+    await redisService.revokeUserSessions(userId);
+
+    // Audit trail logging
+    try {
+      await prisma.transaction.create({
+        data: {
+          userId,
+          type: 'admin_action',
+          amount: 0,
+          status: 'completed',
+          description: `Force Logout by Admin (${req.userId || 'Admin'}): ${reason || 'Immediate session termination'}`,
+        },
+      });
+    } catch {
+      // Continue if non-critical audit log table is missing
+    }
+
+    res.json({
+      success: true,
+      message: `User ${userId} force-logged out immediately. Session invalidated in Redis.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to force-logout user' });
+  }
+});
+
+// GET /api/admin/promo-slides (Returns all slides for admin)
+router.get('/promo-slides', authenticate, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const cached = await redisService.get<any[]>('promo_slides_all');
+    const data = cached || promoSlidesStore;
+    res.json({ success: true, data });
+  } catch {
+    res.json({ success: true, data: promoSlidesStore });
+  }
+});
+
+// POST /api/admin/promo-slides (Create slide)
+router.post('/promo-slides', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const newSlide = {
+      id: `slide_${Date.now()}`,
+      eyebrow: req.body.eyebrow || '🎁 SPECIAL OFFER',
+      headline: req.body.headline || 'NEW PROMOTION',
+      ribbonText: req.body.ribbonText || 'LIMITED TIME OFFER',
+      ctaText: req.body.ctaText || 'Claim Now',
+      ctaLink: req.body.ctaLink || '/wallet',
+      bgGradient: req.body.bgGradient || 'linear-gradient(135deg, #061A10 0%, #0B2318 40%, #1A4A2C 100%)',
+      bgImage: req.body.bgImage || '',
+      isActive: req.body.isActive ?? true,
+      order: promoSlidesStore.length,
+    };
+    promoSlidesStore.push(newSlide);
+    await redisService.set('promo_slides_all', promoSlidesStore);
+    res.json({ success: true, data: newSlide, message: 'Promo slide created successfully' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to create promo slide' });
+  }
+});
+
+// PUT /api/admin/promo-slides/:id (Update slide)
+router.put('/promo-slides/:id', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const index = promoSlidesStore.findIndex(s => s.id === id);
+    if (index === -1) {
+      res.status(404).json({ success: false, message: 'Slide not found' });
+      return;
+    }
+    promoSlidesStore[index] = { ...promoSlidesStore[index], ...req.body };
+    await redisService.set('promo_slides_all', promoSlidesStore);
+    res.json({ success: true, data: promoSlidesStore[index], message: 'Slide updated successfully' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to update promo slide' });
+  }
+});
+
+// PUT /api/admin/promo-slides-reorder (Reorder slides)
+router.put('/promo-slides-reorder', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { slides } = req.body;
+    if (Array.isArray(slides)) {
+      promoSlidesStore = slides;
+      await redisService.set('promo_slides_all', promoSlidesStore);
+    }
+    res.json({ success: true, data: promoSlidesStore, message: 'Slides reordered successfully' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to reorder slides' });
+  }
+});
+
+// DELETE /api/admin/promo-slides/:id (Delete slide)
+router.delete('/promo-slides/:id', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    promoSlidesStore = promoSlidesStore.filter(s => s.id !== id);
+    await redisService.set('promo_slides_all', promoSlidesStore);
+    res.json({ success: true, message: 'Slide deleted successfully' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to delete promo slide' });
+  }
+});
 
 
 // GET /api/admin/dashboard

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /wallet
+Disallow: /history
+Disallow: /profile
+Disallow: /kyc
+Disallow: /settings
+
+Sitemap: https://playarena.com/sitemap.xml

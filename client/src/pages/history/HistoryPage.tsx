@@ -166,17 +166,20 @@ export default function HistoryPage() {
     });
     const gameBreakdown = Object.entries(byGame).map(([name, d]) => ({ label: name, value: d.wins - d.bets }));
 
-    // Daily PnL
-    const dailyMap: Record<string, { bets: number; wins: number }> = {};
+    // Daily PnL with timestamp-sorted keys
+    const dailyMap: Record<string, { bets: number; wins: number; timestamp: number; dateStr: string }> = {};
     relevant.forEach(t => {
-      const day = new Date(t.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-      if (!dailyMap[day]) dailyMap[day] = { bets: 0, wins: 0 };
-      if (t.type === 'bet') dailyMap[day].bets += t.amount;
-      if (t.type === 'win') dailyMap[day].wins += t.amount;
+      const d = new Date(t.createdAt);
+      const isoDay = d.toISOString().slice(0, 10);
+      const dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      if (!dailyMap[isoDay]) dailyMap[isoDay] = { bets: 0, wins: 0, timestamp: d.getTime(), dateStr };
+      if (t.type === 'bet') dailyMap[isoDay].bets += t.amount;
+      if (t.type === 'win' || t.type === 'bonus') dailyMap[isoDay].wins += t.amount;
     });
-    const dailyPoints = Object.entries(dailyMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, d]) => ({ date, net: d.wins - d.bets }));
+
+    const dailyPoints = Object.values(dailyMap)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(d => ({ date: d.dateStr, net: d.wins - d.bets }));
 
     return { totalWagered, totalWon, netPL, gameBreakdown, dailyPoints };
   }, [transactions, reportRange]);

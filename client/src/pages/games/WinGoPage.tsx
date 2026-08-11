@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Wallet, History } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import Timer from '../../components/shared/Timer';
 import Button from '../../components/ui/Button';
 import AnimatedCounter from '../../components/ui/AnimatedCounter';
@@ -13,6 +12,8 @@ import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { useGameControl } from '../../store/GameControlContext';
 import { formatCurrency, getRandomNumber, generateId, generatePeriod } from '../../lib/utils';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 
@@ -80,7 +81,9 @@ export default function WinGoPage() {
 
       if (totalWin > 0) {
         addBalance(totalWin, `WinGo win - ₹${totalWin}`);
-        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#FFD700', '#00FF88', '#8B5CF6'] });
+        triggerWinCelebration({ winAmount: totalWin, multiplier: 9, gameName: 'Win Go' });
+      } else if (bets.length > 0) {
+        haptics.loss();
       }
 
       setShowResult(true);
@@ -99,6 +102,7 @@ export default function WinGoPage() {
     requireAuth(() => {
       if (selectedNumber === null || isLocked) return;
       if (!deductBalance(betAmount, `WinGo - Number ${selectedNumber}`)) return;
+      haptics.bet();
       setBets(prev => [{
         id: generateId(),
         period,

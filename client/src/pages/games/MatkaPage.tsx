@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Dice1, Clock, LockKeyhole, Unlock, Volume2, VolumeX, ShieldCheck, Check } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
@@ -12,6 +11,20 @@ import { sounds } from '../../lib/sound';
 import { getRandomNumber } from '../../lib/utils';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const matkaBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Matka Jhatka', item: 'https://playarena.com/games/matka' },
+  ],
+};
 
 import { useGameControl } from '../../store/GameControlContext';
 
@@ -120,15 +133,11 @@ export default function MatkaPage() {
 
     if (won) {
       addBalance(payout, `Matka Jhatka win - ${selectedMarket.name}`);
-      addToast({ type: 'success', title: 'JACKPOT WINNER!', message: `You won $${payout} in ${selectedMarket.name}` });
+      triggerWinCelebration({ winAmount: payout, multiplier: Math.round(payout / betAmount), gameName: 'Matka Jhatka' });
+      addToast({ type: 'success', title: 'JACKPOT WINNER!', message: `You won ₹${payout} in ${selectedMarket.name}` });
       if (soundEnabled) sounds.playWin();
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#22C55E', '#F5B92C', '#A855F7'],
-      });
     } else {
+      haptics.loss();
       addToast({ type: 'info', title: 'Bet Placed', message: `Draw Result was ${resultNumStr}. Good luck next time!` });
     }
 
@@ -145,6 +154,11 @@ export default function MatkaPage() {
 
   return (
     <div className="space-y-4 pb-4">
+      <SEOHead
+        title="Matka Jhatka Bazaars — Live Kalyan & Mumbai Draws"
+        description="Bet on live Matka Jhatka markets including Kalyan, Mumbai Main, and Rajdhani Express with Single, Jodi, and Patti combinations paying up to 900x."
+        jsonLd={matkaBreadcrumbLd}
+      />
       {/* Header Banner & Controls */}
       <div className="app-card border border-gold/30 rounded-2xl p-5 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -383,6 +397,9 @@ export default function MatkaPage() {
       <GameChat gameId="matka" />
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="matka" />
     </div>
   );
 }

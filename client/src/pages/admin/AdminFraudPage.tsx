@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldAlert, CheckCircle, Ban, Bell, Lock } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Ban, Bell, Lock, LogOut } from 'lucide-react';
 import { useNotifications } from '../../store/NotificationContext';
+import { useToast } from '../../components/ui/Toast';
 
 interface FraudFlag {
   id: string;
@@ -65,6 +66,7 @@ const INITIAL_FLAGS: FraudFlag[] = [
 
 export default function AdminFraudPage() {
   const { addNotification } = useNotifications();
+  const { addToast } = useToast();
   const [flags, setFlags] = useState<FraudFlag[]>(() => {
     try {
       const saved = localStorage.getItem('playarena_fraud_flags');
@@ -73,6 +75,28 @@ export default function AdminFraudPage() {
       return INITIAL_FLAGS;
     }
   });
+
+  const handleForceLogout = async (userId: string, userName: string) => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token') || 'admin-token-abc';
+      await fetch(`/api/admin/users/${userId}/force-logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: `Fraud Queue Security Intervention (${userName})` }),
+      });
+    } catch { /* ignore */ }
+
+    // Dispatch event if target matches active user
+    const currentActiveUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
+    if (currentActiveUser && (currentActiveUser.id === userId || currentActiveUser.email === userName)) {
+      window.dispatchEvent(new CustomEvent('session:admin_revoked'));
+    }
+
+    addToast({ type: 'warning', title: 'User Force-Logged Out', message: `${userName} session terminated.` });
+  };
 
   const handleAction = (id: string, action: 'dismissed' | 'warned' | 'restricted' | 'banned') => {
     setFlags(prev =>
@@ -214,6 +238,13 @@ export default function AdminFraudPage() {
                     className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Bell className="w-3.5 h-3.5" /> Warn User
+                  </button>
+                  <button
+                    onClick={() => handleForceLogout(flag.userId, flag.userName)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="Force Logout User Mid-Game"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Force Logout
                   </button>
                   <button
                     onClick={() => handleAction(flag.id, 'restricted')}

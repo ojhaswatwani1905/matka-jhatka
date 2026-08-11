@@ -31,10 +31,32 @@ export default function AdminAnalyticsPage() {
   const analyticsData = useMemo(() => {
     const scale = timeRange === 'today' ? 0.2 : timeRange === '7d' ? 1.0 : timeRange === '30d' ? 3.8 : 8.5;
 
+    // Read real user transaction logs from multi-user stores
+    const userRealTxns: any[] = [];
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('playarena_history_'));
+      keys.forEach(k => {
+        const txs = JSON.parse(localStorage.getItem(k) || '[]');
+        userRealTxns.push(...txs);
+      });
+    } catch {
+      // fallback
+    }
+
     // Aggregate simulated platform bets + real user wallet transactions
     const gameStats: GameRevenue[] = GAMES_LIST.map(g => {
-      const wagered = Math.round(g.baseBet * scale);
-      const payout = Math.round(g.basePayout * scale);
+      let realWagered = 0;
+      let realPayout = 0;
+      userRealTxns.forEach(tx => {
+        const desc = (tx.description || '').toLowerCase();
+        if (desc.includes(g.name.toLowerCase())) {
+          if (tx.type === 'bet') realWagered += tx.amount;
+          if (tx.type === 'win') realPayout += tx.amount;
+        }
+      });
+
+      const wagered = Math.round(g.baseBet * scale) + realWagered;
+      const payout = Math.round(g.basePayout * scale) + realPayout;
       const ggr = wagered - payout;
       const margin = wagered > 0 ? Number(((ggr / wagered) * 100).toFixed(1)) : 0;
       return {

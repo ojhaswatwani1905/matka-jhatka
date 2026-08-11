@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ArrowRight, LockKeyhole, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowRight, LockKeyhole, Eye, EyeOff, CheckCircle2, KeyRound } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
-import { OtpVerificationStep } from '../../components/auth/OtpVerificationStep';
 import { useToast } from '../../components/ui/Toast';
 
 interface ForgotForm {
@@ -14,42 +13,79 @@ interface ForgotForm {
 export default function ForgotPasswordPage() {
   const { addToast } = useToast();
   const navigate = useNavigate();
-  const [step, setStep] = useState<'request' | 'otp' | 'reset' | 'success'>('request');
+  const [step, setStep] = useState<'request' | 'reset' | 'success'>('request');
   const [targetEmail, setTargetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotForm>();
 
-  const onRequestSubmit = (data: ForgotForm) => {
+  const onRequestSubmit = async (data: ForgotForm) => {
+    setIsLoading(true);
     setTargetEmail(data.email);
-    addToast({ type: 'info', title: 'Code Sent', message: `Verification OTP code sent to ${data.email}` });
-    setStep('otp');
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        if (json.debugResetToken) {
+          setResetToken(json.debugResetToken);
+        }
+        addToast({ type: 'info', title: 'Reset Link Generated', message: json.message || `Demo reset token sent for ${data.email}` });
+        setStep('reset');
+      } else {
+        addToast({ type: 'error', title: 'Reset Failed', message: json.message || 'No account found with this email.' });
+      }
+    } catch {
+      // Fallback for local offline demo
+      const demoToken = `RESET-${Math.floor(100000 + Math.random() * 900000)}`;
+      setResetToken(demoToken);
+      addToast({ type: 'info', title: 'Demo Reset Token', message: `Token generated: ${demoToken}` });
+      setStep('reset');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleOtpVerified = () => {
-    setStep('reset');
-  };
-
-  const handlePasswordReset = (e: React.FormEvent) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
       addToast({ type: 'warning', title: 'Password Too Short', message: 'Password must be at least 6 characters.' });
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail, token: resetToken, newPassword }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStep('success');
+        addToast({ type: 'success', title: 'Password Updated!', message: 'Your password has been successfully reset.' });
+      } else {
+        addToast({ type: 'error', title: 'Reset Failed', message: json.message || 'Invalid token or email.' });
+      }
+    } catch {
+      // Local fallback reset
       setStep('success');
       addToast({ type: 'success', title: 'Password Reset', message: 'Your password has been successfully updated.' });
-    }, 600);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <AuthLayout
       title="Reset Your Password"
-      subtitle="Follow the step-by-step verification to recover account access"
+      subtitle="Follow the step-by-step password recovery process"
       activeMode="forgot"
     >
       <AnimatePresence mode="wait">
@@ -80,9 +116,10 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
+              disabled={isLoading}
               className="w-full py-3.5 rounded-xl font-bold text-black btn-gold-shimmer cursor-pointer shadow-lg text-xs uppercase tracking-wider flex items-center justify-center gap-2"
             >
-              <span>Send 6-Digit OTP</span>
+              <span>{isLoading ? 'Requesting Reset...' : 'Request Demo Reset Link'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -94,16 +131,6 @@ export default function ForgotPasswordPage() {
           </motion.form>
         )}
 
-        {step === 'otp' && (
-          <OtpVerificationStep
-            key="step-otp"
-            destination={targetEmail}
-            onVerified={handleOtpVerified}
-            onBack={() => setStep('request')}
-            onResend={() => addToast({ type: 'info', title: 'OTP Resent', message: 'Sent new 6-digit code.' })}
-          />
-        )}
-
         {step === 'reset' && (
           <motion.form
             key="step-reset"
@@ -113,6 +140,26 @@ export default function ForgotPasswordPage() {
             onSubmit={handlePasswordReset}
             className="space-y-4 text-xs"
           >
+            {/* Demo token banner */}
+            {resetToken && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                <p className="font-bold flex items-center gap-1.5"><KeyRound className="w-4 h-4" /> Demo Reset Token Generated:</p>
+                <code className="block mt-1 p-1 bg-black/40 rounded font-mono text-gold text-center">{resetToken}</code>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-300 mb-1 font-medium">Reset Token</label>
+              <input
+                type="text"
+                value={resetToken}
+                onChange={(e) => setResetToken(e.target.value)}
+                placeholder="Enter reset token"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-3 text-white text-xs outline-none focus:border-gold"
+                required
+              />
+            </div>
+
             <div>
               <label className="block text-slate-300 mb-1 font-medium">Create New Password</label>
               <div className="relative">
@@ -172,3 +219,4 @@ export default function ForgotPasswordPage() {
     </AuthLayout>
   );
 }
+

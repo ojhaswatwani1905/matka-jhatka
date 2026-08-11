@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plane, Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -11,6 +10,20 @@ import { generateId, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const aviatorBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Aviator', item: 'https://playarena.com/games/aviator' },
+  ],
+};
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
 
@@ -379,6 +392,7 @@ export default function AviatorPage() {
       if (!deductBalance(betAmount, `Aviator bet`)) { addToast({ type: 'error', title: 'Insufficient balance' }); return; }
       setMyBet({ amount: betAmount });
       if (soundOnRef.current) sounds.playChip();
+      haptics.bet();
       addToast({ type: 'info', title: `Bet placed: ₹${betAmount}`, message: 'Cash out before it crashes!' });
     });
   };
@@ -394,15 +408,20 @@ export default function AviatorPage() {
     setMyBet({ ...activeBet, cashedAt: m });
 
     addBalance(win, `Aviator cashout at ${m.toFixed(2)}×`);
+    triggerWinCelebration({ winAmount: win, multiplier: m, gameName: 'Aviator' });
     addToast({ type: 'success', title: `Cashed out! ₹${win.toFixed(2)}`, message: `${m.toFixed(2)}× multiplier` });
     if (soundOnRef.current) sounds.playWin();
-    confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
   }, [multiplier, addBalance, addToast]);
 
   const inputCls = 'w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-3 py-2.5 text-sm text-[#F5F1E6] focus:outline-none focus:border-[rgba(212,175,55,0.5)] transition-colors placeholder-[rgba(212,175,55,0.25)]';
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
+      <SEOHead
+        title="Play Aviator Crash Game — Real-Time Multipliers & Provably Fair"
+        description="Fly high and cash out before the plane flies away in PlayArena Aviator. Real-time crash multipliers up to 1000x with provably fair SHA-256 seed verification."
+        jsonLd={aviatorBreadcrumbLd}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -574,6 +593,9 @@ export default function AviatorPage() {
           <GameChat gameId="aviator" />
         </div>
       </div>
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="aviator" />
     </div>
   );
 }

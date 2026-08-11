@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, ShieldCheck, Ban, Plus, Minus } from 'lucide-react';
+import { Search, Users, ShieldCheck, Ban, Plus, Minus, LogOut } from 'lucide-react';
 import type { User } from '../../types';
 import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
@@ -40,6 +40,8 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<User[]>(() => loadUsers());
   const [showBalance, setShowBalance] = useState<User | null>(null);
+  const [showForceLogout, setShowForceLogout] = useState<User | null>(null);
+  const [logoutReason, setLogoutReason] = useState('');
   const [balanceAdj, setBalanceAdj] = useState('');
   const [adjReason, setAdjReason] = useState('');
   const [adjType, setAdjType] = useState<'add' | 'subtract'>('add');
@@ -61,6 +63,50 @@ export default function AdminUsersPage() {
     saveUsers(updated);
     const u = updated.find(u => u.id === userId);
     addToast({ type: u?.isActive ? 'success' : 'warning', title: u?.isActive ? 'User Unbanned' : 'User Banned', message: u?.email });
+  };
+
+  const confirmForceLogout = async () => {
+    if (!showForceLogout) return;
+    const target = showForceLogout;
+
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token') || 'admin-token-abc';
+      await fetch(`/api/admin/users/${target.id}/force-logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: logoutReason || 'Administrative termination' }),
+      });
+    } catch {
+      // Fallback local dispatch simulation
+    }
+
+    // Broadcast session:admin_revoked if target is local active session
+    const currentActiveUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
+    if (currentActiveUser && (currentActiveUser.id === target.id || currentActiveUser.email === target.email)) {
+      window.dispatchEvent(new CustomEvent('session:admin_revoked'));
+    }
+
+    // Log transaction / audit entry
+    try {
+      const allTxns = JSON.parse(localStorage.getItem('playarena_all_transactions') || '[]');
+      const newTx = {
+        id: `tx_admin_logout_${Date.now()}`,
+        userId: target.id,
+        type: 'admin_action',
+        amount: 0,
+        status: 'completed',
+        description: `Force Logout by Admin: ${logoutReason || 'Immediate session termination'}`,
+        createdAt: new Date().toISOString(),
+      };
+      localStorage.setItem('playarena_all_transactions', JSON.stringify([newTx, ...allTxns]));
+    } catch { /* ignore */ }
+
+    addToast({ type: 'warning', title: 'User Force-Logged Out', message: `${target.name} session terminated.` });
+    setShowForceLogout(null);
+    setLogoutReason('');
   };
 
   const applyBalanceAdj = async () => {
@@ -208,6 +254,13 @@ export default function AdminUsersPage() {
                           <ShieldCheck className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          onClick={() => setShowForceLogout(u)}
+                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-colors cursor-pointer"
+                          title="Force Logout User"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => toggleBan(u.id)}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${u.isActive !== false ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'}`}
                           title={u.isActive !== false ? 'Ban user' : 'Unban user'}
@@ -226,6 +279,28 @@ export default function AdminUsersPage() {
           )}
         </div>
       </div>
+
+      {/* Force Logout Modal */}
+      <Modal isOpen={!!showForceLogout} onClose={() => setShowForceLogout(null)} title={`Force Logout — ${showForceLogout?.name}`}>
+        <div className="space-y-4 text-xs">
+          <p className="text-[rgba(212,175,55,0.7)] leading-relaxed">
+            Immediately invalidate active session tokens for <strong className="text-gold">{showForceLogout?.email}</strong>.
+            The user will be logged out on their next request with message "Your session was ended by an administrator".
+          </p>
+          <div>
+            <label className="block text-[rgba(212,175,55,0.7)] mb-1.5 font-bold">Reason / Audit Note (Optional)</label>
+            <input
+              value={logoutReason}
+              onChange={e => setLogoutReason(e.target.value)}
+              placeholder="e.g. Fraud Investigation, Security Lock, Admin Request"
+              className="w-full bg-[#0d2419] border border-[rgba(212,175,55,0.2)] rounded-xl px-3.5 py-2.5 text-sm text-[#F5F1E6] placeholder-[rgba(212,175,55,0.25)] focus:outline-none focus:border-[rgba(212,175,55,0.5)] transition-colors"
+            />
+          </div>
+          <button onClick={confirmForceLogout} className="w-full py-3 rounded-xl font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30 cursor-pointer transition-colors flex items-center justify-center gap-2">
+            <LogOut className="w-4 h-4" /> Terminate Active Session
+          </button>
+        </div>
+      </Modal>
 
       {/* Balance Adjust Modal */}
       <Modal isOpen={!!showBalance} onClose={() => setShowBalance(null)} title={`Adjust Balance — ${showBalance?.name}`}>

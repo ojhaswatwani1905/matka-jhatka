@@ -10,6 +10,20 @@ import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const minesBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Mines', item: 'https://playarena.com/games/mines' },
+  ],
+};
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generateMineSeed(): Promise<{ seed: string; hash: string }> {
@@ -46,7 +60,7 @@ const GRID_OPTIONS = [
 const MINE_OPTIONS = [1, 3, 5, 10, 15];
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
 
-/* ─── Tile ──────────────────────────────────────────────────────── */
+/* ─── 3D Physical Flip-Pop Tile Component ────────────────────────────── */
 type TileState = 'hidden' | 'gem' | 'mine';
 
 function Tile({ state, onClick, disabled }: { state: TileState; onClick: () => void; disabled: boolean }) {
@@ -56,6 +70,9 @@ function Tile({ state, onClick, disabled }: { state: TileState; onClick: () => v
       disabled={disabled || state !== 'hidden'}
       whileHover={state === 'hidden' && !disabled ? { scale: 1.05 } : {}}
       whileTap={state === 'hidden' && !disabled ? { scale: 0.95 } : {}}
+      initial={state !== 'hidden' ? { scale: 0.8, rotateY: 90 } : false}
+      animate={state !== 'hidden' ? { scale: 1, rotateY: 0 } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 18 }}
       className={`aspect-square rounded-xl border text-xl cursor-pointer transition-all flex items-center justify-center disabled:cursor-not-allowed font-black ${
         state === 'hidden'
           ? 'bg-[#0d2419] border-[rgba(212,175,55,0.2)] hover:border-gold hover:bg-[rgba(212,175,55,0.1)]'
@@ -71,7 +88,7 @@ function Tile({ state, onClick, disabled }: { state: TileState; onClick: () => v
           </motion.span>
         )}
         {state === 'mine' && (
-          <motion.span key="mine" initial={{ scale: 0 }} animate={{ scale: 1, rotate: [0, 10, -10, 0] }}>
+          <motion.span key="mine" initial={{ scale: 0, rotate: 45 }} animate={{ scale: 1, rotate: 0 }}>
             💣
           </motion.span>
         )}
@@ -117,9 +134,27 @@ export default function MinesPage() {
       setCurrentBet(betAmount);
       setGameState('playing');
       sounds.playChip();
+      haptics.bet();
       addToast({ type: 'info', title: 'Game Started', message: 'Dodge mines & cash out anytime!' });
     });
   }, [betAmount, gridSize, mineCount, deductBalance, addToast, requireAuth]);
+
+  const cashOut = useCallback((revCount?: number) => {
+    const r = revCount ?? revealed;
+    if (r === 0) { addToast({ type: 'warning', title: 'Reveal at least one tile first' }); return; }
+    const m = calcMultiplier(r, gridSize, mineCount);
+    const win = Math.floor(currentBet * m * 100) / 100;
+    addBalance(win, `Mines cashout — ${r} gems found (${m.toFixed(2)}×)`);
+    triggerWinCelebration({ winAmount: win, multiplier: m, gameName: 'Mines' });
+    addToast({ type: 'success', title: `Won ₹${win.toFixed(2)}!`, message: `${r} gems × ${m.toFixed(2)}×` });
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#2ECC71', '#D4AF37'] });
+    setGameState('won');
+    setTiles(prev => {
+      const next = [...prev];
+      minePositions.forEach(m => { if (next[m] === 'hidden') next[m] = 'mine'; });
+      return next;
+    });
+  }, [revealed, gridSize, mineCount, currentBet, addBalance, addToast, minePositions]);
 
   const handleTileClick = useCallback((idx: number) => {
     if (gameState !== 'playing' || tiles[idx] !== 'hidden') return;
@@ -139,6 +174,7 @@ export default function MinesPage() {
     if (hitMine) {
       // BUSTED
       sounds.playLoss();
+      haptics.loss();
       setGameState('busted');
       setTiles(prev => {
         const next = [...prev];
@@ -148,6 +184,7 @@ export default function MinesPage() {
       addToast({ type: 'error', title: '💥 BOOM! Hit a mine', message: `Lost ₹${currentBet}` });
     } else {
       // SAFE GEM
+      haptics.winSmall();
       const newRevealed = revealed + 1;
       setRevealed(newRevealed);
       setTiles(prev => { const next = [...prev]; next[idx] = 'gem'; return next; });
@@ -158,28 +195,17 @@ export default function MinesPage() {
         cashOut(newRevealed);
       }
     }
-  }, [gameState, tiles, minePositions, revealed, currentBet, gridSize, mineCount]);
-
-  const cashOut = useCallback((revCount?: number) => {
-    const r = revCount ?? revealed;
-    if (r === 0) { addToast({ type: 'warning', title: 'Reveal at least one tile first' }); return; }
-    const m = calcMultiplier(r, gridSize, mineCount);
-    const win = Math.floor(currentBet * m * 100) / 100;
-    addBalance(win, `Mines cashout — ${r} gems found (${m.toFixed(2)}×)`);
-    addToast({ type: 'success', title: `Won ₹${win.toFixed(2)}!`, message: `${r} gems × ${m.toFixed(2)}×` });
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#2ECC71', '#D4AF37'] });
-    setGameState('won');
-    setTiles(prev => {
-      const next = [...prev];
-      minePositions.forEach(m => { if (next[m] === 'hidden') next[m] = 'mine'; });
-      return next;
-    });
-  }, [revealed, gridSize, mineCount, currentBet, addBalance, addToast, minePositions]);
+  }, [gameState, tiles, minePositions, revealed, currentBet, gridSize, mineCount, settings.mines.bombBias, checkIsFirstBet, consumeFirstBet, addToast, cashOut]);
 
   const cols = gridSize === 25 ? 5 : 4;
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
+      <SEOHead
+        title="Mines Strategy Game — Uncover Gems & Avoid Bombs"
+        description="Dodge hidden mines on a 5x5 grid in PlayArena Mines. Pick your bomb count and cash out multipliers up to 1000x with provably fair seed hashes."
+        jsonLd={minesBreadcrumbLd}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -297,6 +323,9 @@ export default function MinesPage() {
           <GameChat gameId="mines" />
         </div>
       </div>
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="mines" />
     </div>
   );
 }

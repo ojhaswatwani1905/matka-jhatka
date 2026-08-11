@@ -1,9 +1,10 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote } from 'lucide-react';
+import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote, LayoutTemplate } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 
 const sidebarItems = [
   { path: '/admin', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', exact: true },
+  { path: '/admin/homepage', icon: <LayoutTemplate className="w-5 h-5" />, label: 'Homepage Content' },
   { path: '/admin/money', icon: <Banknote className="w-5 h-5" />, label: 'Add Money' },
   { path: '/admin/users', icon: <Users className="w-5 h-5" />, label: 'Users' },
   { path: '/admin/kyc', icon: <ShieldCheck className="w-5 h-5" />, label: 'KYC Queue' },
@@ -32,9 +33,9 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex" style={{ background: '#061A10' }}>
+    <div className="min-h-screen w-screen overflow-hidden flex relative" style={{ background: '#061A10' }}>
       {/* Fixed Stationary Sidebar */}
-      <aside className="hidden lg:flex flex-col w-60 h-full bg-[#0d2419] border-r border-[rgba(212,175,55,0.15)] p-4 shrink-0 sticky top-0">
+      <aside className="hidden lg:flex flex-col w-60 h-screen bg-[#0d2419] border-r border-[rgba(212,175,55,0.15)] p-4 shrink-0 fixed left-0 top-0 bottom-0 z-40">
         <div className="flex items-center gap-2.5 mb-8 px-2 shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#8B6914] flex items-center justify-center">
             <Gamepad2 className="w-5 h-5 text-[#0B2318]" />
@@ -79,7 +80,7 @@ export default function AdminLayout() {
       </div>
 
       {/* Independently Scrolling Content Area */}
-      <main className="flex-1 h-full overflow-y-auto lg:pt-6 pt-18 pb-24 px-4 lg:p-6">
+      <main className="flex-1 h-screen overflow-y-auto lg:pl-64 lg:pt-6 pt-18 pb-24 px-4 lg:p-6 w-full">
         <Outlet />
       </main>
 

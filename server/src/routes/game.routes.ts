@@ -6,7 +6,58 @@ import { betRateLimiter } from '../middleware/rateLimiter.js';
 import { gameManager } from '../services/gameManager.service.js';
 import { ProvablyFairService } from '../services/provablyFair.service.js';
 
+import { redisService } from '../services/redisService.js';
+
 const router = Router();
+
+// GET /api/promo-slides (Public active slides for homepage carousel)
+router.get('/promo-slides', async (_req: Request, res: Response) => {
+  try {
+    const cached = await redisService.get<any[]>('promo_slides_all');
+    const defaultSlides = [
+      {
+        id: '1',
+        eyebrow: '🏆 NEW PLAYER EXCLUSIVE',
+        headline: '100% WELCOME\nBONUS',
+        ribbonText: 'UP TO ₹5,777 EXTRA CASH',
+        ctaText: 'Claim Bonus Now',
+        ctaLink: '/auth/register',
+        bgGradient: 'linear-gradient(135deg, #061A10 0%, #0B2318 40%, #1A4A2C 100%)',
+        bgImage: '',
+        isActive: true,
+        order: 0,
+      },
+      {
+        id: '2',
+        eyebrow: '⚡ DAILY CASHBACK',
+        headline: 'UP TO 4%\nCASHBACK',
+        ribbonText: 'NEXT DAY AUTO-PAYOUT',
+        ctaText: 'Deposit Now',
+        ctaLink: '/wallet',
+        bgGradient: 'linear-gradient(135deg, #061A10 0%, #0A2A15 40%, #153D24 100%)',
+        bgImage: '',
+        isActive: true,
+        order: 1,
+      },
+      {
+        id: '3',
+        eyebrow: '🎲 MATKA JHATKA ARENA',
+        headline: '900X\nODDS',
+        ribbonText: 'KALYAN & MUMBAI MARKETS',
+        ctaText: 'Play Matka Jhatka',
+        ctaLink: '/games/matka',
+        bgGradient: 'linear-gradient(135deg, #0A1A08 0%, #122808 40%, #1C3B10 100%)',
+        bgImage: '',
+        isActive: true,
+        order: 2,
+      },
+    ];
+    const slides = (cached || defaultSlides).filter(s => s.isActive !== false);
+    res.json({ success: true, data: slides });
+  } catch {
+    res.status(500).json({ success: false, message: 'Failed to fetch promo slides' });
+  }
+});
 
 
 // GET /api/games/active-round/:gameType

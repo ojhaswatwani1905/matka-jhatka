@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useGameControl } from '../../store/GameControlContext';
+import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
+import { haptics } from '../../lib/haptics';
 import { sounds } from '../../lib/sound';
 import { GameChat } from '../../components/ui/GameChat';
+import { SEOHead } from '../../components/shared/SEOHead';
+import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+
+const teenPattiBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games', item: 'https://playarena.com/games' },
+    { '@type': 'ListItem', position: 3, name: 'Teen Patti', item: 'https://playarena.com/games/teen-patti' },
+  ],
+};
 
 /* ─── Provably Fair ─────────────────────────────────────────────── */
 async function generateTeenPattiSeed(): Promise<{ seed: string; hash: string }> {
@@ -87,14 +100,14 @@ function rankHand(cards: Card[]): HandResult {
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
 
-/* ─── Card component ────────────────────────────────────────────── */
+/* ─── Card component with physical deal toss arc animation ───────────── */
 function PlayingCard({ card, faceDown = false, delay = 0 }: { card?: Card; faceDown?: boolean; delay?: number }) {
   const isRed = card && (card.suit === '♥' || card.suit === '♦');
   return (
     <motion.div
-      initial={{ rotateY: 180, scale: 0.8, opacity: 0 }}
-      animate={{ rotateY: faceDown ? 180 : 0, scale: 1, opacity: 1 }}
-      transition={{ delay, duration: 0.35, type: 'spring', stiffness: 200 }}
+      initial={{ y: -100, x: -40, rotateZ: -20, rotateY: 180, scale: 0.6, opacity: 0 }}
+      animate={{ y: 0, x: 0, rotateZ: 0, rotateY: faceDown ? 180 : 0, scale: 1, opacity: 1 }}
+      transition={{ delay, duration: 0.45, type: 'spring', stiffness: 180, damping: 14 }}
       className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.6)] relative select-none"
       style={{
         background: faceDown ? 'linear-gradient(135deg, #8B6914, #2A1D08)' : 'linear-gradient(135deg, #FFFFFF, #F5F1E6)',
@@ -192,14 +205,14 @@ export default function TeenPattiPage() {
         outcome = 'win';
         const win = currentBet * 3.8; // Ante + call + profit
         addBalance(win, `Teen Patti win — ${ph.rank}`);
+        triggerWinCelebration({ winAmount: win, multiplier: 3.8, gameName: 'Teen Patti' });
         addToast({ type: 'success', title: `You Win! ₹${win.toFixed(0)}`, message: ph.description });
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ['#D4AF37', '#2ECC71'] });
       } else if (ph.score < dealerScore) {
         outcome = 'lose';
+        haptics.loss();
         addToast({ type: 'error', title: `House Wins`, message: hh.description });
       } else {
         outcome = 'tie';
-        // Tie returns ante only
         addBalance(currentBet, `Teen Patti tie — ante returned`);
         addToast({ type: 'info', title: `Tie! Ante returned`, message: `${ph.description}` });
       }
@@ -221,6 +234,11 @@ export default function TeenPattiPage() {
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
+      <SEOHead
+        title="Teen Patti 3-Card Poker — Instant Hand Evaluation & Odds"
+        description="Play 3-card Indian Poker in PlayArena Teen Patti with 3D card deal physics, Trail / Pure Sequence payouts, and provably fair SHA-256 seed security."
+        jsonLd={teenPattiBreadcrumbLd}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -381,6 +399,9 @@ export default function TeenPattiPage() {
           <GameChat gameId="teen-patti" />
         </div>
       </div>
+
+      {/* Internal Cross-Linking */}
+      <RelatedGamesSection currentGameId="teenpatti" />
     </div>
   );
 }
