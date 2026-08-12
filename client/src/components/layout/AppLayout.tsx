@@ -6,6 +6,7 @@ import BottomNav from './BottomNav';
 import { Footer } from './Footer';
 import { AgeGateModal } from '../ui/AgeGateModal';
 import { SessionWarningBanner, RealityCheckPopup } from '../ui/SessionWidgets';
+import { useAuth } from '../../store/AuthContext';
 import { useRG } from '../../store/RGContext';
 import { Flame, Dice1, Palette, Ticket, History, MessageCircle, Medal, Users, Globe, ShieldAlert } from 'lucide-react';
 
@@ -23,12 +24,16 @@ const iconRailItems = [
 
 function IconRail() {
   const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || Boolean(user?.isAdmin);
+
+  const visibleRailItems = iconRailItems.filter(item => item.path !== '/admin' || isAdmin);
 
   return (
     <aside className="hidden lg:flex flex-col items-center w-16 fixed left-0 top-16 bottom-0 z-40 bg-[#0d2419] border-r border-[rgba(212,175,55,0.2)] shadow-xl overflow-y-auto scrollbar-none">
       {/* Rail Items */}
       <div className="flex flex-col items-center gap-1 py-4 flex-1 w-full">
-        {iconRailItems.map(({ icon: Icon, label, path, activeMatch, exact }) => {
+        {visibleRailItems.map(({ icon: Icon, label, path, activeMatch, exact }) => {
           const isActive = activeMatch
             ? exact
               ? location.pathname === activeMatch

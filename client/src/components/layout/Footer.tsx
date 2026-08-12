@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { ShieldCheck, HelpCircle, LockKeyhole, Crown, Globe } from 'lucide-react';
 import { ProvablyFairModal } from '../ui/ProvablyFairModal';
 import { useContent } from '../../content/useContent';
+import { useAuth } from '../../store/AuthContext';
 
 export const Footer: React.FC = () => {
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
   const { lang, setLanguage, t } = useContent();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || Boolean(user?.isAdmin);
 
   return (
     <footer className="w-full bg-[#061009] border-t border-[rgba(212,175,55,0.18)] py-10 px-4 md:px-8 text-[rgba(212,175,55,0.5)] text-xs mt-auto relative z-10">
@@ -84,7 +87,7 @@ export const Footer: React.FC = () => {
             <li><a href="/responsible-gaming" className="hover:text-gold transition-colors">Responsible Gaming</a></li>
             <li><a href="/leaderboard" className="hover:text-gold transition-colors">Live Leaderboard</a></li>
             <li><a href="/live" className="hover:text-gold transition-colors">Real-Time Bet Ticker</a></li>
-            <li><a href="/admin" className="hover:text-amber-300 text-amber-400 font-bold transition-colors">🛡️ Admin Portal</a></li>
+            {isAdmin && <li><a href="/admin" className="hover:text-amber-300 text-amber-400 font-bold transition-colors">🛡️ Admin Portal</a></li>}
             <li><a href="/support" className="hover:text-gold transition-colors">Customer Support FAQ</a></li>
           </ul>
         </div>

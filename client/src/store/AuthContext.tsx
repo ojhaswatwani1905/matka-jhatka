@@ -145,13 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Invalid email or password');
     }
 
+    const isAdminEmail = targetEmail.toLowerCase() === 'admin@playarena.com';
     const userToLogin: User = existing || {
-      id: `usr_${Math.floor(10000000 + Math.random() * 90000000)}`,
-      name: targetEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      id: isAdminEmail ? 'usr_admin_001' : `usr_${Math.floor(10000000 + Math.random() * 90000000)}`,
+      name: isAdminEmail ? 'Admin' : targetEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
       email: targetEmail,
-      phone: '+91 98765 43210',
-      role: 'user',
-      isAdmin: false,
+      phone: isAdminEmail ? '+91 99999 00000' : '+91 98765 43210',
+      role: isAdminEmail ? 'admin' : 'user',
+      isAdmin: isAdminEmail,
       isActive: true,
       balance: 0,
       createdAt: new Date().toISOString(),

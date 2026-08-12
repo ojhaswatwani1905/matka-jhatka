@@ -22,14 +22,20 @@ export default function AdminLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
+  const isAdmin = user?.role === 'admin' || Boolean(user?.isAdmin);
+
   if (isLoading) {
     return <div className="min-h-dvh bg-[#061A10] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin" />
     </div>;
   }
 
-  if (!isAuthenticated || !user?.isAdmin) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth/login?returnTo=%2Fadmin&reason=admin_required" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   return (
