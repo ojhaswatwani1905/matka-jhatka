@@ -201,14 +201,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('playarena_token', json.data.token);
           dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
           return;
-        } else {
-          throw new Error(json.message || 'Registration failed');
+        } else if (res.status === 400) {
+          throw new Error(json.message || 'An account with this email already exists.');
         }
       } catch (err: any) {
-        if (err.message !== 'Failed to fetch' && err.name !== 'TypeError') {
+        if (err.message === 'An account with this email already exists.' || err.message === 'Email already registered') {
           throw err;
         }
-        // Fallback to local storage if API server unreachable
+        // Fallback to local storage if API server unreachable or DB offline
       }
     }
 
