@@ -30,7 +30,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>();
 
   const performLogin = async (identifier: string, password: string, rememberMe?: boolean) => {
     await login(identifier, password, rememberMe);
@@ -230,6 +230,21 @@ export default function LoginPage() {
             </>
           )}
         </button>
+
+        {/* Admin Quick Fill Helper */}
+        <div className="flex justify-center pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setValue('identifier', 'admin@playarena.com');
+              setValue('password', 'adminpassword123');
+            }}
+            className="text-[11px] font-bold text-amber-400/80 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Fill Admin Credentials</span>
+          </button>
+        </div>
 
         {/* Footer Link & Trust Row */}
         <div className="pt-3 mt-4 border-t border-[rgba(212,175,55,0.15)] space-y-2">
