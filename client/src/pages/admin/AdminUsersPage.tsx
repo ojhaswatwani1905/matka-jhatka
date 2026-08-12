@@ -10,7 +10,7 @@ function loadUsers(): User[] {
   if (users.length === 0) {
     // Seed demo users if none
     return [
-      { id: 'usr_84920194', name: 'Demo Player', email: 'player@tirangagames.com', phone: '+91 98765 43210', role: 'user', balance: 10000, isActive: true, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
+      { id: 'usr_84920194', name: 'Demo Player', email: 'player@tirangagames.com', phone: '+91 98765 43210', role: 'user', balance: 0, isActive: true, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
       { id: 'usr_admin_001', name: 'Admin', email: 'admin@playarena.com', phone: '+91 99999 00000', role: 'admin', isAdmin: true, balance: 0, isActive: true, createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
     ];
   }
@@ -159,10 +159,12 @@ export default function AdminUsersPage() {
       };
       localStorage.setItem('playarena_all_transactions', JSON.stringify([newTx, ...allTxns]));
 
-      const wallet = JSON.parse(localStorage.getItem('wallet') || '{}');
-      const curBal = wallet.balance ?? 0;
+      const targetId = showBalance.id;
+      const key = `wallet_${targetId}`;
+      const wallet = JSON.parse(localStorage.getItem(key) || '{}');
+      const curBal = showBalance.balance ?? 0;
       const nxtBal = adjType === 'add' ? curBal + amt : Math.max(0, curBal - amt);
-      localStorage.setItem('wallet', JSON.stringify({
+      localStorage.setItem(key, JSON.stringify({
         ...wallet,
         balance: nxtBal,
         transactions: [newTx, ...(wallet.transactions || [])],

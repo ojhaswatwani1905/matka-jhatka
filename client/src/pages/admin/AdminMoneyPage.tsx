@@ -153,14 +153,16 @@ export default function AdminMoneyPage() {
 
     localStorage.setItem('playarena_users', JSON.stringify(updatedUsers));
 
-    // Update logged-in user session if modifying currently active user
+    // Update user wallet storage
+    const key = `wallet_${selectedUser.id}`;
+    const wallet = JSON.parse(localStorage.getItem(key) || '{}');
+    wallet.balance = newBal;
+    localStorage.setItem(key, JSON.stringify(wallet));
+
     const activeUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
     if (activeUser && (activeUser.id === selectedUser.id || activeUser.email === selectedUser.email)) {
       activeUser.balance = newBal;
       localStorage.setItem('playarena_user', JSON.stringify(activeUser));
-      const wallet = JSON.parse(localStorage.getItem('wallet') || '{}');
-      wallet.balance = newBal;
-      localStorage.setItem('wallet', JSON.stringify(wallet));
     }
 
     // Add to transfer log

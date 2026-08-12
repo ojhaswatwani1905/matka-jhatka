@@ -30,10 +30,6 @@ export default function AdminTransactionsPage() {
   const saveTxns = (updated: Transaction[]) => {
     setTxns(updated);
     localStorage.setItem('playarena_all_transactions', JSON.stringify(updated));
-    localStorage.setItem('wallet', JSON.stringify({
-      balance: JSON.parse(localStorage.getItem('wallet') || '{}').balance || 0,
-      transactions: updated,
-    }));
   };
 
   const approveWithdrawal = (txId: string) => {
@@ -55,11 +51,12 @@ export default function AdminTransactionsPage() {
     );
     saveTxns(updated);
 
-    // Refund to wallet
-    if (tx) {
-      const wallet = JSON.parse(localStorage.getItem('wallet') || '{}');
+    // Refund to user wallet
+    if (tx?.userId) {
+      const key = `wallet_${tx.userId}`;
+      const wallet = JSON.parse(localStorage.getItem(key) || '{}');
       wallet.balance = (wallet.balance || 0) + tx.amount;
-      localStorage.setItem('wallet', JSON.stringify(wallet));
+      localStorage.setItem(key, JSON.stringify(wallet));
     }
 
     addToast({ type: 'warning', title: 'Withdrawal Rejected', message: 'Funds refunded.' });

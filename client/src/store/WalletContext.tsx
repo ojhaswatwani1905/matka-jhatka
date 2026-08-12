@@ -93,11 +93,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Load balance & transactions for active logged in user
   useEffect(() => {
     const syncUserWallet = () => {
+      // Remove legacy non-user-prefixed wallet key
+      localStorage.removeItem('wallet');
+
       const savedUserStr = localStorage.getItem('playarena_user');
       if (savedUserStr) {
         try {
           const u = JSON.parse(savedUserStr);
-          const savedWallet = localStorage.getItem(`wallet_${u.id}`) || localStorage.getItem('wallet');
+          const savedWallet = localStorage.getItem(`wallet_${u.id}`);
           let userBal = typeof u.balance === 'number' ? u.balance : 0;
           let userTxns: Transaction[] = [];
 
@@ -113,6 +116,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         } catch {
           dispatch({ type: 'SET_BALANCE', payload: 0 });
         }
+      } else {
+        dispatch({ type: 'SET_BALANCE', payload: 0 });
+        dispatch({ type: 'SET_TRANSACTIONS', payload: [] });
       }
     };
 
