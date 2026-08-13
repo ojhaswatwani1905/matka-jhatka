@@ -199,6 +199,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('playarena_user', JSON.stringify(apiUser));
           localStorage.setItem('token', json.data.token);
           localStorage.setItem('playarena_token', json.data.token);
+
+          // Sync to playarena_users list for Admin Panel visibility
+          const allUsers: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+          const idx = allUsers.findIndex(u => u.id === apiUser.id || u.email.toLowerCase() === apiUser.email.toLowerCase());
+          if (idx >= 0) {
+            allUsers[idx] = { ...allUsers[idx], ...apiUser };
+          } else {
+            allUsers.push(apiUser);
+          }
+          localStorage.setItem('playarena_users', JSON.stringify(allUsers));
+
           dispatch({ type: 'LOGIN_SUCCESS', payload: { user: apiUser, token: json.data.token } });
           return;
         } else if (res.status === 400) {

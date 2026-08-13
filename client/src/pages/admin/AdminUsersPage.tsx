@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Users, ShieldCheck, Ban, Plus, Minus, LogOut } from 'lucide-react';
 import type { User } from '../../types';
@@ -7,14 +7,32 @@ import Modal from '../../components/ui/Modal';
 
 function loadUsers(): User[] {
   const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
-  if (users.length === 0) {
-    // Seed demo users if none
-    return [
-      { id: 'usr_84920194', name: 'Demo Player', email: 'player@tirangagames.com', phone: '+91 98765 43210', role: 'user', balance: 0, isActive: true, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
-      { id: 'usr_admin_001', name: 'Admin', email: 'admin@playarena.com', phone: '+91 99999 00000', role: 'admin', isAdmin: true, balance: 0, isActive: true, createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
-    ];
+  const activeUserStr = localStorage.getItem('playarena_user');
+  let activeUser: User | null = null;
+  try {
+    if (activeUserStr) activeUser = JSON.parse(activeUserStr);
+  } catch { /* ignore */ }
+
+  const map = new Map<string, User>();
+  users.forEach(u => {
+    if (u && (u.id || u.email)) map.set((u.email || u.id).toLowerCase(), u);
+  });
+
+  if (activeUser && activeUser.email) {
+    const key = activeUser.email.toLowerCase();
+    if (!map.has(key)) map.set(key, activeUser);
   }
-  return users;
+
+  if (!map.has('player@tirangagames.com')) {
+    map.set('player@tirangagames.com', { id: 'usr_84920194', name: 'Demo Player', email: 'player@tirangagames.com', phone: '+91 98765 43210', role: 'user', balance: 0, isActive: true, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() });
+  }
+  if (!map.has('admin@playarena.com')) {
+    map.set('admin@playarena.com', { id: 'usr_admin_001', name: 'Admin', email: 'admin@playarena.com', phone: '+91 99999 00000', role: 'admin', isAdmin: true, balance: 0, isActive: true, createdAt: new Date(Date.now() - 30 * 86400000).toISOString() });
+  }
+
+  const result = Array.from(map.values());
+  localStorage.setItem('playarena_users', JSON.stringify(result));
+  return result;
 }
 
 function getKYCStatus(userId: string): string {
@@ -45,6 +63,46 @@ export default function AdminUsersPage() {
   const [balanceAdj, setBalanceAdj] = useState('');
   const [adjReason, setAdjReason] = useState('');
   const [adjType, setAdjType] = useState<'add' | 'subtract'>('add');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token') || 'admin-token-abc';
+      try {
+        const res = await fetch('/api/admin/users?limit=100', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          let apiList: User[] = [];
+          if (json.success && Array.isArray(json.data?.users)) {
+            apiList = json.data.users;
+          } else if (json.success && Array.isArray(json.data)) {
+            apiList = json.data;
+          }
+
+          if (apiList.length > 0) {
+            const localList = loadUsers();
+            const map = new Map<string, User>();
+            localList.forEach(u => map.set((u.email || u.id).toLowerCase(), u));
+            apiList.forEach(u => {
+              const key = (u.email || u.id).toLowerCase();
+              if (map.has(key)) {
+                map.set(key, { ...map.get(key)!, ...u });
+              } else {
+                map.set(key, u);
+              }
+            });
+
+            const merged = Array.from(map.values());
+            localStorage.setItem('playarena_users', JSON.stringify(merged));
+            setUsers(merged);
+          }
+        }
+      } catch { /* graceful local fallback */ }
+    };
+
+    fetchUsers();
+  }, []);
 
   const filtered = useMemo(() =>
     users.filter(u =>
