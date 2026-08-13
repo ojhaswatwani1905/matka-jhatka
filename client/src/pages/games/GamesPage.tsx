@@ -22,7 +22,7 @@ const TOP_GAMES: Game[] = [
     id: 'slots',
     name: 'Slot Machines',
     sub: 'Royal 777 & Custom Slots',
-    img: '/games/slots.png',
+    img: '/games/slots-hero.png',
     path: '/games/slots',
     badge: '🎰 NEW',
     badgeColor: 'bg-amber-500',
