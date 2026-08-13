@@ -7,6 +7,14 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 }
 
 export function formatCurrency(amount: number): string {
+  if (amount === null || amount === undefined || isNaN(amount) || !isFinite(amount)) return '0';
+  const abs = Math.abs(amount);
+  if (abs >= 1000000000) {
+    return `${(amount / 1000000000).toFixed(2)}B`;
+  }
+  if (abs >= 10000000) {
+    return `${(amount / 10000000).toFixed(2)}Cr`;
+  }
   return new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,

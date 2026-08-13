@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Banknote, Search, Plus, Minus, CheckCircle, Wallet, User, ArrowUpRight, ArrowDownRight, RefreshCw, Sparkles } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import { formatCurrency } from '../../lib/utils';
 
 
 interface UserItem {
@@ -25,6 +26,7 @@ interface TransferLog {
 }
 
 const PRESET_AMOUNTS = [500, 1000, 2000, 5000, 10000, 50000, 100000];
+const MAX_SINGLE_TRANSFER = 100000000; // 10 Crores max limit
 
 export default function AdminMoneyPage() {
   const { addToast } = useToast();
@@ -49,8 +51,10 @@ export default function AdminMoneyPage() {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data.users)) {
+        if (json.success && Array.isArray(json.data?.users)) {
           apiUsers = json.data.users;
+        } else if (json.success && Array.isArray(json.data)) {
+          apiUsers = json.data;
         }
       }
     } catch {
@@ -78,15 +82,7 @@ export default function AdminMoneyPage() {
     const finalUsersList = Array.from(userMap.values());
     setUsers(finalUsersList);
 
-    // Update active selected user reference
-    if (selectedUser) {
-      const matched = finalUsersList.find(u => u.id === selectedUser.id || u.email.toLowerCase() === selectedUser.email.toLowerCase());
-      if (matched) {
-        setSelectedUser(matched);
-      } else if (finalUsersList.length > 0) {
-        setSelectedUser(finalUsersList[0]);
-      }
-    } else if (finalUsersList.length > 0) {
+    if (finalUsersList.length > 0 && !selectedUser) {
       setSelectedUser(finalUsersList[0]);
     }
 
@@ -123,6 +119,11 @@ export default function AdminMoneyPage() {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       addToast({ type: 'warning', title: 'Invalid Amount', message: 'Please enter a valid amount greater than 0.' });
+      return;
+    }
+
+    if (numAmount > MAX_SINGLE_TRANSFER) {
+      addToast({ type: 'warning', title: 'Amount Limit Exceeded', message: 'Single balance adjustment is capped at ₹10,00,00,000 (10 Crores).' });
       return;
     }
 
@@ -183,93 +184,101 @@ export default function AdminMoneyPage() {
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     };
 
-    const updatedLogs = [newLog, ...logs].slice(0, 50);
+    const updatedLogs = [newLog, ...logs];
     setLogs(updatedLogs);
-    localStorage.setItem('playarena_admin_money_logs', JSON.stringify(updatedLogs));
+    localStorage.setItem('playarena_admin_money_logs', JSON.stringify(updatedLogs.slice(0, 100)));
 
     addToast({
       type: 'success',
-      title: actionType === 'add' ? 'Money Added Successfully!' : 'Money Deducted Successfully!',
-      message: `${actionType === 'add' ? '+' : '-'}₹${numAmount.toLocaleString('en-IN')} credited to ${selectedUser.name}. New Balance: ₹${newBal.toLocaleString('en-IN')}`,
+      title: actionType === 'add' ? 'Money Credited!' : 'Money Deducted!',
+      message: `${actionType === 'add' ? '+' : '-'}₹${formatCurrency(numAmount)} applied to ${selectedUser.name}. New balance: ₹${formatCurrency(newBal)}`,
     });
 
     setLoading(false);
   };
 
   return (
-    <div className="space-y-6 max-w-6xl pt-2">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0d2419] p-5 rounded-2xl border border-[rgba(212,175,55,0.2)] shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-[#8B6914] flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.4)]">
-            <Banknote className="w-6 h-6 text-[#0B2318]" />
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 rounded-2xl bg-gradient-to-r from-[#0d2419] via-[#061A10] to-[#0d2419] border border-[rgba(212,175,55,0.3)] shadow-[0_0_30px_rgba(212,175,55,0.1)] gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gold/20 border border-gold/40 flex items-center justify-center text-gold shadow-lg">
+            <Banknote className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-[#E8C97A] font-heading flex items-center gap-2">
-              Add Money to User Account
-              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-[#E8C97A] font-heading">Add Money to User Account</h1>
+              <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+            </div>
             <p className="text-xs text-[rgba(212,175,55,0.6)]">Instantly deposit or adjust money balance for any registered player</p>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={() => loadUsers(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[rgba(212,175,55,0.1)] hover:bg-[rgba(212,175,55,0.2)] text-[#E8C97A] text-xs font-bold transition-all border border-[rgba(212,175,55,0.2)] cursor-pointer"
+          disabled={loading}
+          className="px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-gold text-xs font-bold hover:bg-amber-500/25 transition-all flex items-center gap-2 cursor-pointer shrink-0"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Users
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Users
         </button>
-
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: User Selection Panel */}
+        {/* Left Column: Player Selector & Search */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-[#0d2419] p-4 rounded-2xl border border-[rgba(212,175,55,0.15)] space-y-3">
-            <h2 className="text-sm font-black text-[#E8C97A] font-heading flex items-center gap-2">
-              <User className="w-4 h-4 text-gold" /> Select Player
-            </h2>
+          <div className="bg-[#0d2419] p-5 rounded-2xl border border-[rgba(212,175,55,0.2)] space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-[#E8C97A] font-heading flex items-center gap-2">
+                <User className="w-4 h-4 text-gold" /> Select Player
+              </h2>
+              <span className="text-[10px] font-bold text-gold bg-[rgba(212,175,55,0.1)] px-2 py-0.5 rounded-full border border-[rgba(212,175,55,0.2)]">
+                {users.length} Registered
+              </span>
+            </div>
 
-            {/* Search input */}
+            {/* Search Input */}
             <div className="relative">
-              <Search className="w-4 h-4 text-[rgba(212,175,55,0.4)] absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-[rgba(212,175,55,0.4)] absolute left-3.5 top-3" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, email, or phone..."
-                className="w-full bg-[#061A10] border border-[rgba(212,175,55,0.2)] rounded-xl pl-9 pr-3 py-2 text-xs text-[#F5F1E6] placeholder-[rgba(212,175,55,0.3)] focus:outline-none focus:border-gold transition-all"
+                className="w-full bg-[#061A10] border border-[rgba(212,175,55,0.2)] rounded-xl pl-9 pr-3.5 py-2 text-xs text-[#F5F1E6] placeholder-[rgba(212,175,55,0.3)] focus:outline-none focus:border-gold transition-all"
               />
             </div>
 
-            {/* User List */}
-            <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+            {/* Player List Container */}
+            <div className="space-y-2 max-h-[360px] overflow-y-auto scrollbar-thin pr-1">
               {filteredUsers.map(u => {
                 const isSelected = selectedUser?.id === u.id;
                 return (
                   <button
                     key={u.id}
+                    type="button"
                     onClick={() => setSelectedUser(u)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                    className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                       isSelected
-                        ? 'bg-[rgba(212,175,55,0.18)] border-gold shadow-[0_0_15px_rgba(212,175,55,0.2)]'
-                        : 'bg-[#061A10]/70 border-[rgba(212,175,55,0.1)] hover:border-[rgba(212,175,55,0.3)] hover:bg-[#061A10]'
+                        ? 'bg-[rgba(212,175,55,0.15)] border-gold shadow-[0_0_15px_rgba(212,175,55,0.2)]'
+                        : 'bg-[#061A10] border-[rgba(212,175,55,0.1)] hover:border-[rgba(212,175,55,0.3)] hover:bg-[#092215]'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
-                        isSelected ? 'bg-gold text-[#0B2318]' : 'bg-[rgba(212,175,55,0.15)] text-gold'
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        isSelected ? 'bg-gold text-[#0B2318]' : 'bg-[rgba(212,175,55,0.1)] text-gold'
                       }`}>
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#F5F1E6] truncate">{u.name}</p>
+                        <p className="text-xs font-black text-[#F5F1E6] truncate">{u.name || 'Unnamed Player'}</p>
                         <p className="text-[10px] text-[rgba(212,175,55,0.5)] truncate">{u.email}</p>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="block text-xs font-black text-gold">₹{(u.balance || 0).toLocaleString('en-IN')}</span>
+                    <div className="text-right shrink-0 ml-2">
+                      <span className="block text-xs font-black text-gold truncate max-w-[110px]">₹{formatCurrency(u.balance || 0)}</span>
                       <span className="text-[9px] text-[rgba(212,175,55,0.4)]">Balance</span>
                     </div>
                   </button>
@@ -291,18 +300,18 @@ export default function AdminMoneyPage() {
             <div className="bg-[#0d2419] p-5 rounded-2xl border border-[rgba(212,175,55,0.2)] space-y-5 shadow-xl">
               {/* Selected User Header Card */}
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-[rgba(212,175,55,0.15)] to-transparent border border-[rgba(212,175,55,0.25)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center text-sm font-black text-[#0B2318]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center text-sm font-black text-[#0B2318] shrink-0">
                     {selectedUser.name ? selectedUser.name.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-[#E8C97A]">{selectedUser.name}</h3>
-                    <p className="text-[11px] text-[rgba(212,175,55,0.6)]">{selectedUser.email}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-[#E8C97A] truncate">{selectedUser.name}</h3>
+                    <p className="text-[11px] text-[rgba(212,175,55,0.6)] truncate">{selectedUser.email}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0 ml-2">
                   <span className="text-[10px] uppercase tracking-wider text-[rgba(212,175,55,0.5)] font-bold block">Current Balance</span>
-                  <span className="text-lg font-black text-gold">₹{(selectedUser.balance || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-base sm:text-lg font-black text-gold truncate max-w-[180px] block">₹{formatCurrency(selectedUser.balance || 0)}</span>
                 </div>
               </div>
 
@@ -332,8 +341,8 @@ export default function AdminMoneyPage() {
                 </button>
               </div>
 
-              {/* Quick Preset Amount Buttons */}
-              <div className="space-y-1.5">
+              {/* Amount Quick Presets */}
+              <div className="space-y-2">
                 <label className="block text-xs font-bold text-[rgba(212,175,55,0.8)]">Quick Amount Presets (₹)</label>
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {PRESET_AMOUNTS.map(preset => (
@@ -361,7 +370,8 @@ export default function AdminMoneyPage() {
                   <input
                     type="number"
                     value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    onChange={e => setAmount(e.target.value.slice(0, 9))}
+                    maxLength={9}
                     placeholder="Enter amount to add..."
                     className="w-full bg-[#061A10] border border-[rgba(212,175,55,0.3)] rounded-xl pl-8 pr-4 py-2.5 text-base font-black text-gold placeholder-[rgba(212,175,55,0.3)] focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all"
                   />
@@ -385,83 +395,80 @@ export default function AdminMoneyPage() {
                 type="button"
                 onClick={handleTransfer}
                 disabled={loading}
-                className={`w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer ${
+                className={`w-full py-3.5 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer truncate ${
                   actionType === 'add'
                     ? 'bg-gradient-to-r from-[#F5D576] via-[#D4AF37] to-[#B8860B] text-[#0B2318] hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] active:scale-[0.99]'
                     : 'bg-gradient-to-r from-rose-600 to-rose-700 text-white hover:shadow-[0_0_25px_rgba(244,63,94,0.5)] active:scale-[0.99]'
                 }`}
               >
                 {actionType === 'add' ? (
-                  <>
-                    <Plus className="w-5 h-5" /> ⚡ Add ₹{parseFloat(amount || '0').toLocaleString('en-IN')} To {selectedUser.name}'s Account
-                  </>
+                  <span className="truncate">
+                    <Plus className="w-4 h-4 inline mr-1" /> ⚡ Add ₹{formatCurrency(parseFloat(amount || '0'))} To {selectedUser.name}'s Account
+                  </span>
                 ) : (
-                  <>
-                    <Minus className="w-5 h-5" /> Deduct ₹{parseFloat(amount || '0').toLocaleString('en-IN')} From {selectedUser.name}'s Account
-                  </>
+                  <span className="truncate">
+                    <Minus className="w-4 h-4 inline mr-1" /> Deduct ₹{formatCurrency(parseFloat(amount || '0'))} From {selectedUser.name}'s Account
+                  </span>
                 )}
               </button>
             </div>
           ) : (
-            <div className="bg-[#0d2419] p-12 rounded-2xl border border-[rgba(212,175,55,0.15)] text-center space-y-3">
-              <Wallet className="w-12 h-12 text-[rgba(212,175,55,0.3)] mx-auto" />
-              <p className="text-sm font-bold text-[rgba(212,175,55,0.6)]">Select a user on the left to add money</p>
+            <div className="bg-[#0d2419] p-8 rounded-2xl border border-[rgba(212,175,55,0.2)] text-center space-y-3">
+              <Wallet className="w-10 h-10 text-[rgba(212,175,55,0.4)] mx-auto" />
+              <p className="text-sm font-black text-[#E8C97A]">No Player Selected</p>
+              <p className="text-xs text-[rgba(212,175,55,0.6)]">Choose a player from the list on the left to add or deduct money.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Transfer History Log Table */}
-      <div className="bg-[#0d2419] p-5 rounded-2xl border border-[rgba(212,175,55,0.15)] space-y-4">
-        <h2 className="text-sm font-black text-[#E8C97A] font-heading flex items-center justify-between">
-          <span className="flex items-center gap-2">
+      {/* Transfer History Table */}
+      <div className="bg-[#0d2419] p-5 rounded-2xl border border-[rgba(212,175,55,0.2)] space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black text-[#E8C97A] font-heading flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-400" /> Recent Money Transfer Log
-          </span>
-          <span className="text-xs font-normal text-[rgba(212,175,55,0.5)]">Showing last {logs.length} transfers</span>
-        </h2>
+          </h2>
+          <span className="text-[10px] text-[rgba(212,175,55,0.5)] font-mono">Showing last {logs.length} transfers</span>
+        </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.6)] font-bold">
-                <th className="pb-3 pl-2">Time</th>
-                <th className="pb-3">User</th>
-                <th className="pb-3">Action</th>
-                <th className="pb-3">Amount</th>
-                <th className="pb-3">New Balance</th>
-                <th className="pb-3">Note</th>
+              <tr className="border-b border-[rgba(212,175,55,0.15)] text-[10px] text-[rgba(212,175,55,0.5)] uppercase font-bold tracking-wider">
+                <th className="py-2.5 px-3">Time</th>
+                <th className="py-2.5 px-3">User</th>
+                <th className="py-2.5 px-3">Action</th>
+                <th className="py-2.5 px-3">Amount</th>
+                <th className="py-2.5 px-3">New Balance</th>
+                <th className="py-2.5 px-3">Note</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[rgba(212,175,55,0.06)]">
-              {logs.map((log) => (
+            <tbody className="divide-y divide-[rgba(212,175,55,0.08)] text-xs font-medium">
+              {logs.map(log => (
                 <tr key={log.id} className="hover:bg-[rgba(212,175,55,0.03)] transition-colors">
-                  <td className="py-2.5 pl-2 text-[rgba(212,175,55,0.5)]">{log.timestamp}</td>
-                  <td className="py-2.5">
-                    <span className="font-bold text-[#F5F1E6] block">{log.userName}</span>
-                    <span className="text-[10px] text-[rgba(212,175,55,0.4)]">{log.userEmail}</span>
+                  <td className="py-3 px-3 font-mono text-[11px] text-[rgba(212,175,55,0.6)]">{log.timestamp}</td>
+                  <td className="py-3 px-3 font-black text-[#F5F1E6] truncate max-w-[140px]">{log.userName}</td>
+                  <td className="py-3 px-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                      log.type === 'add'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {log.type === 'add' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                      {log.type === 'add' ? 'Credited' : 'Deducted'}
+                    </span>
                   </td>
-                  <td className="py-2.5">
-                    {log.type === 'add' ? (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-bold text-[10px] inline-flex items-center gap-1">
-                        <ArrowUpRight className="w-3 h-3" /> Credited
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 font-bold text-[10px] inline-flex items-center gap-1">
-                        <ArrowDownRight className="w-3 h-3" /> Deducted
-                      </span>
-                    )}
+                  <td className={`py-3 px-3 font-black font-mono truncate max-w-[120px] ${log.type === 'add' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {log.type === 'add' ? '+' : '-'}₹{formatCurrency(log.amount)}
                   </td>
-                  <td className={`py-2.5 font-black ${log.type === 'add' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {log.type === 'add' ? '+' : '-'}₹{log.amount.toLocaleString('en-IN')}
-                  </td>
-                  <td className="py-2.5 font-bold text-gold">₹{log.newBalance.toLocaleString('en-IN')}</td>
-                  <td className="py-2.5 text-[rgba(212,175,55,0.6)]">{log.reason}</td>
+                  <td className="py-3 px-3 font-black text-gold font-mono truncate max-w-[120px]">₹{formatCurrency(log.newBalance)}</td>
+                  <td className="py-3 px-3 text-[rgba(212,175,55,0.5)] truncate max-w-[180px]">{log.reason}</td>
                 </tr>
               ))}
 
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-[rgba(212,175,55,0.4)]">
+                  <td colSpan={6} className="py-8 text-center text-xs text-[rgba(212,175,55,0.4)]">
                     No manual money transfers recorded yet. Select a user above to add funds.
                   </td>
                 </tr>
