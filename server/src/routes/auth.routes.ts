@@ -8,6 +8,8 @@ import { redisService } from '../services/redisService.js';
 
 const router = Router();
 
+import { addInMemoryUser } from '../utils/inMemoryStore.js';
+
 // POST /api/auth/register
 router.post('/register', authRateLimiter, async (req: Request, res: Response) => {
   try {
@@ -31,6 +33,8 @@ router.post('/register', authRateLimiter, async (req: Request, res: Response) =>
           data: { name, email, password: hashedPassword, phone, balance: 0 },
         });
 
+        addInMemoryUser({ id: user.id, name: user.name, email: user.email, phone: user.phone || undefined, role: user.role, balance: user.balance });
+
         const token = generateToken(user.id, user.role, true);
 
         res.status(201).json({
@@ -48,12 +52,13 @@ router.post('/register', authRateLimiter, async (req: Request, res: Response) =>
 
     // Decoupled / In-Memory Registration Fallback when DATABASE_URL is missing
     const mockUserId = `usr_${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const token = generateToken(mockUserId, 'user', true);
+    const savedUser = addInMemoryUser({ id: mockUserId, name, email, phone, role: 'user', balance: 0 });
+    const token = generateToken(savedUser.id, 'user', true);
 
     res.status(201).json({
       success: true,
       data: {
-        user: { id: mockUserId, name, email, role: 'user', balance: 0 },
+        user: { id: savedUser.id, name: savedUser.name, email: savedUser.email, role: savedUser.role, balance: savedUser.balance },
         token,
       },
     });
