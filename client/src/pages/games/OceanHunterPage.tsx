@@ -79,12 +79,10 @@ export default function OceanHunterPage() {
 
   const shootFish = (fishId: string) => {
     requireAuth(() => {
-      if (balance < bulletCost) {
-        addToast({ type: 'error', title: 'Insufficient balance', message: `Each shot costs ₹${bulletCost}` });
+      if (!deductBalance(bulletCost, `Ocean Hunter cannon shot`)) {
+        addToast({ type: 'error', title: 'Insufficient balance', message: `Each shot costs ₹${bulletCost}. Please add funds to your wallet.` });
         return;
       }
-
-      deductBalance(bulletCost, `Ocean Hunter cannon shot`);
       haptics.bet();
       setShotsFired(s => s + 1);
 

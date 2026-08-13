@@ -300,14 +300,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     if (mainBal + bonusBal < amount) return false;
 
+    let newMain = mainBal;
+    let newBonus = bonusBal;
+
     // Deduct main balance first, remainder from bonus balance if needed
     if (mainBal >= amount) {
-      dispatch({ type: 'SET_BALANCE', payload: mainBal - amount });
+      newMain = mainBal - amount;
+      dispatch({ type: 'SET_BALANCE', payload: newMain });
     } else {
       const mainUsed = mainBal;
       const bonusUsed = amount - mainUsed;
+      newMain = 0;
+      newBonus = bonusBal - bonusUsed;
       dispatch({ type: 'SET_BALANCE', payload: 0 });
-      dispatch({ type: 'SET_BONUS_BALANCE', payload: bonusBal - bonusUsed });
+      dispatch({ type: 'SET_BONUS_BALANCE', payload: newBonus });
     }
 
     // Track wagering progress
@@ -317,7 +323,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Check if bonus wagering requirement is unlocked!
     if (req > 0 && newProg >= req && bonusBalanceRef.current > 0) {
       const unlockedBonus = bonusBalanceRef.current;
-      dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + unlockedBonus });
+      newMain += unlockedBonus;
+      newBonus = 0;
+      dispatch({ type: 'SET_BALANCE', payload: newMain });
       dispatch({ type: 'SET_BONUS_BALANCE', payload: 0 });
       dispatch({ type: 'SET_WAGER_REQUIREMENT', payload: { required: 0, progress: 0 } });
 
@@ -340,6 +348,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       description: description || `Deducted ₹${amount}`,
     });
 
+    // Real-time sync to local storage & Admin Panel
+    const savedUserStr = localStorage.getItem('playarena_user');
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        u.balance = newMain;
+        localStorage.setItem('playarena_user', JSON.stringify(u));
+        localStorage.setItem(`wallet_${u.id}`, JSON.stringify({
+          balance: newMain,
+          bonusBalance: newBonus,
+          transactions: state.transactions.slice(0, 200),
+        }));
+
+        const usersList = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+        const idx = usersList.findIndex((usr: any) => usr.id === u.id || usr.email.toLowerCase() === u.email.toLowerCase());
+        if (idx >= 0) {
+          usersList[idx].balance = newMain;
+        } else {
+          usersList.push(u);
+        }
+        localStorage.setItem('playarena_users', JSON.stringify(usersList));
+
+        // Dispatch real-time wallet update event across application & socket
+        window.dispatchEvent(new CustomEvent('wallet:updated', {
+          detail: { userId: u.id, balance: newMain }
+        }));
+      } catch { /* ignore */ }
+    }
+
     // Dispatch real bet event to live feed ticker
     try {
       const savedUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
@@ -358,7 +395,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
 
     return true;
-  }, [addTransaction]);
+  }, [addTransaction, state.transactions]);
 
   const deposit = useCallback((amount: number) => {
     dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
