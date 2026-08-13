@@ -77,7 +77,7 @@ export default function WalletPage() {
     if (!promoInput.trim()) return;
     const res = redeemCode(promoInput, user?.id || 'usr_demo', user?.name || 'Player');
     if (res.success && res.amount) {
-      addBalance(res.amount, `Promo Code — ${promoInput.toUpperCase().trim()}`, 'bonus');
+      addBalance(res.amount, `Promo Code — ${promoInput.toUpperCase().trim()}`, 'deposit');
       addToast({ type: 'success', title: 'Bonus Credited!', message: res.message });
       setPromoInput('');
     } else {

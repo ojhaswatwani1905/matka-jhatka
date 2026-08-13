@@ -43,14 +43,14 @@ export default function ProfilePage() {
 
   const handleClaimBonus = () => {
     if (claimedToday) return;
-    addBalance(500, 'Daily Login Reward - ₹500', 'bonus');
+    addBalance(500, 'Daily Login Reward - ₹500', 'deposit');
     addNotification({ type: 'bonus', title: 'Daily Login Reward', message: 'You claimed ₹500 free demo coins.' });
     setClaimedToday(true);
     confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors: ['#D4AF37', '#2ECC71', '#F5D576'] });
   };
 
   const handleSpinWin = (reward: number) => {
-    addBalance(reward, `Daily Spin Reward — ₹${reward}`, 'bonus');
+    addBalance(reward, `Daily Spin Reward — ₹${reward}`, 'deposit');
     localStorage.setItem(SPIN_KEY, Date.now().toString());
     addNotification({ type: 'spin', title: '🎰 Spin Reward!', message: `You won ₹${reward} from the Daily Spin!` });
     confetti({ particleCount: 150, spread: 80, origin: { y: 0.4 }, colors: ['#D4AF37', '#2ECC71', '#FF4D6D'] });

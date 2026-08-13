@@ -239,11 +239,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [addTransaction]);
 
   const addBalance = useCallback((amount: number, description?: string, type: 'deposit' | 'win' | 'bonus' = 'deposit') => {
-    if (type === 'bonus') {
-      addBonusBalance(amount, description);
-      return;
-    }
-    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
+    const newBal = balanceRef.current + amount;
+    dispatch({ type: 'SET_BALANCE', payload: newBal });
+
     const isWin = description?.toLowerCase().includes('won') || description?.toLowerCase().includes('win');
     addTransaction({
       userId: 'demo',
@@ -252,7 +250,49 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       status: 'completed',
       description: description || `Added ₹${amount}`,
     });
-  }, [addBonusBalance, addTransaction]);
+
+    // Instant multi-user & Admin panel sync
+    const savedUserStr = localStorage.getItem('playarena_user');
+    if (savedUserStr) {
+      try {
+        const u = JSON.parse(savedUserStr);
+        u.balance = newBal;
+        localStorage.setItem('playarena_user', JSON.stringify(u));
+        localStorage.setItem(`wallet_${u.id}`, JSON.stringify({
+          balance: newBal,
+          bonusBalance: bonusBalanceRef.current,
+          transactions: state.transactions.slice(0, 200),
+        }));
+
+        const usersList = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+        const idx = usersList.findIndex((usr: any) => usr.id === u.id || usr.email.toLowerCase() === u.email.toLowerCase());
+        if (idx >= 0) {
+          usersList[idx].balance = newBal;
+        } else {
+          usersList.push(u);
+        }
+        localStorage.setItem('playarena_users', JSON.stringify(usersList));
+
+        // Dispatch live real-time wallet update event across application
+        window.dispatchEvent(new CustomEvent('wallet:updated', {
+          detail: { userId: u.id, balance: newBal }
+        }));
+
+        // Server API background sync
+        const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
+        if (token) {
+          fetch('/api/wallet/deposit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ amount, description }),
+          }).catch(() => {});
+        }
+      } catch { /* ignore */ }
+    }
+  }, [addTransaction, state.transactions]);
 
   const deductBalance = useCallback((amount: number, description?: string, type: Transaction['type'] = 'bet'): boolean => {
     const mainBal = balanceRef.current;
