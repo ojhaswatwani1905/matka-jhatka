@@ -269,6 +269,16 @@ router.post('/users/:id/balance', authenticate, requireAdmin, async (req: AuthRe
       }),
     ]);
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('wallet:updated', {
+        userId: updatedUser.id,
+        balance: updatedUser.balance,
+        type,
+        amount: numAmount,
+      });
+    }
+
     res.json({ success: true, data: updatedUser, message: `Updated ${updatedUser.name}'s balance to ₹${updatedUser.balance}` });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || 'Failed to adjust user balance' });

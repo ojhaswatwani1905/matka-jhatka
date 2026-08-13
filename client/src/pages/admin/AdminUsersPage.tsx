@@ -169,6 +169,16 @@ export default function AdminUsersPage() {
         balance: nxtBal,
         transactions: [newTx, ...(wallet.transactions || [])],
       }));
+
+      const activeUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
+      if (activeUser && (activeUser.id === targetId || activeUser.email === showBalance.email)) {
+        activeUser.balance = nxtBal;
+        localStorage.setItem('playarena_user', JSON.stringify(activeUser));
+      }
+
+      window.dispatchEvent(new CustomEvent('wallet:updated', {
+        detail: { userId: targetId, balance: nxtBal }
+      }));
     } catch { /* ignore */ }
 
     addToast({ type: 'success', title: 'Balance Adjusted', message: `${adjType === 'add' ? '+' : '-'}₹${amt} — ${reason}` });

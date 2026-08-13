@@ -165,6 +165,11 @@ export default function AdminMoneyPage() {
       localStorage.setItem('playarena_user', JSON.stringify(activeUser));
     }
 
+    // Trigger instant real-time live wallet update event across app
+    window.dispatchEvent(new CustomEvent('wallet:updated', {
+      detail: { userId: selectedUser.id, balance: newBal }
+    }));
+
     // Add to transfer log
     const newLog: TransferLog = {
       id: `mny_${Date.now()}`,

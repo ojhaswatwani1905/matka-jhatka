@@ -92,9 +92,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Load balance & transactions for active logged in user
   useEffect(() => {
-    const syncUserWallet = () => {
+    const syncUserWallet = (evt?: Event) => {
       // Remove legacy non-user-prefixed wallet key
       localStorage.removeItem('wallet');
+
+      // Check if custom event passed a direct balance update
+      if (evt && 'detail' in evt) {
+        const detail = (evt as CustomEvent).detail;
+        const savedUserStr = localStorage.getItem('playarena_user');
+        if (savedUserStr && detail) {
+          try {
+            const u = JSON.parse(savedUserStr);
+            if (detail.userId === u.id && typeof detail.balance === 'number') {
+              dispatch({ type: 'SET_BALANCE', payload: detail.balance });
+              u.balance = detail.balance;
+              localStorage.setItem('playarena_user', JSON.stringify(u));
+              return;
+            }
+          } catch { /* ignore */ }
+        }
+      }
 
       const savedUserStr = localStorage.getItem('playarena_user');
       if (savedUserStr) {
@@ -122,9 +139,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const fetchLatestServerBalance = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/wallet/balance', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && typeof json.data?.balance === 'number') {
+            dispatch({ type: 'SET_BALANCE', payload: json.data.balance });
+            const savedUserStr = localStorage.getItem('playarena_user');
+            if (savedUserStr) {
+              const u = JSON.parse(savedUserStr);
+              if (u.balance !== json.data.balance) {
+                u.balance = json.data.balance;
+                localStorage.setItem('playarena_user', JSON.stringify(u));
+              }
+            }
+          }
+        }
+      } catch { /* offline fallback */ }
+    };
+
     syncUserWallet();
     window.addEventListener('storage', syncUserWallet);
-    return () => window.removeEventListener('storage', syncUserWallet);
+    window.addEventListener('wallet:updated', syncUserWallet);
+    window.addEventListener('focus', fetchLatestServerBalance);
+
+    const pollInterval = setInterval(() => {
+      syncUserWallet();
+      fetchLatestServerBalance();
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('storage', syncUserWallet);
+      window.removeEventListener('wallet:updated', syncUserWallet);
+      window.removeEventListener('focus', fetchLatestServerBalance);
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Persist balance & transactions to user storage
