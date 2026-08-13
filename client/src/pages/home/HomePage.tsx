@@ -96,8 +96,8 @@ const LIVE_CRASH_GAMES: Game[] = [
   { id: 'aviator-live', name: 'Aviator', sub: 'Real-Time Flight Crash', img: '/games/aviator.png', path: '/games/aviator', badge: '🚀 100x', badgeColor: 'bg-rose-600', players: 6120 },
   { id: 'plinko-live', name: 'Plinko Gold', sub: 'Physics Pegboard', img: '/games/plinko.png', path: '/games/plinko', badge: '🪙 29x', badgeColor: 'bg-amber-500', players: 4190 },
   { id: 'mines-live', name: 'Mines', sub: 'Grid Tile Reveal', img: '/games/mines.png', path: '/games/mines', badge: '💣 1000x', badgeColor: 'bg-emerald-600', players: 3880 },
-  { id: 'teen-patti-live', name: 'Teen Patti 3Card', sub: 'Royal Indian Card Poker', img: '/games/teenpatti.png', path: '/games/teen-patti', badge: '👑 3.8x', badgeColor: 'bg-amber-600', players: 4760 },
-  { id: 'ocean-hunter-live', name: 'Ocean Hunter Arcade', sub: 'Multiplier Target Shooter', img: '/games/oceanhunter.png', path: '/games/ocean-hunter', badge: '🌊 25x', badgeColor: 'bg-blue-600', players: 2950 },
+  { id: 'teen-patti-live', name: 'Teen Patti 3Card', sub: 'Royal Indian Card Poker', img: '/games/teen_patti.png', path: '/games/teen-patti', badge: '👑 3.8x', badgeColor: 'bg-amber-600', players: 4760 },
+  { id: 'ocean-hunter-live', name: 'Ocean Hunter Arcade', sub: 'Multiplier Target Shooter', img: '/games/fishing.png', path: '/games/ocean-hunter', badge: '🌊 25x', badgeColor: 'bg-blue-600', players: 2950 },
 ];
 
 const MATKA_VARIANTS: MatkaVariant[] = [
