@@ -9,6 +9,9 @@ export interface SlotGame {
   emoji: string;
   reels: 3 | 5;
   symbols: string[];
+  banner_image?: string;
+  slot_image?: string;
+  symbolColors?: Record<string, string>;
   paytable: {
     threeOfAKind: number;
     jackpot777: number;
@@ -24,6 +27,37 @@ export interface SlotGame {
 }
 
 const DEFAULT_SLOTS: SlotGame[] = [
+  {
+    id: 'mega-4x4-slots',
+    name: 'Mega 4x4 Slots',
+    subtitle: 'Dynamic Avalanche 5-Reel Slot',
+    emoji: '🎰',
+    reels: 5,
+    banner_image: '/slots/back.png',
+    slot_image: '/slots/k.png',
+    symbols: ['/slots/k.png', '/slots/lag.png', '/slots/lam.png', '/slots/neck.png', '/slots/download.png', '/slots/back.png', '/slots/boobs.png'],
+    symbolColors: {
+      '/slots/k.png': '#ffd700',
+      '/slots/lag.png': '#ff0000',
+      '/slots/lam.png': '#0000ff',
+      '/slots/neck.png': '#ffffff',
+      '/slots/download.png': '#00ff00',
+      '/slots/back.png': '#999999',
+      '/slots/boobs.png': '#ff66cc',
+    },
+    paytable: {
+      jackpot777: 200,
+      threeOfAKind: 20,
+      twoOfAKind: 2,
+    },
+    minBet: 10,
+    maxBet: 2000,
+    targetRtp: 94,
+    enabled: true,
+    totalWagered: 320000,
+    totalPaidOut: 300800,
+    createdAt: new Date().toISOString(),
+  },
   {
     id: 'royal-gold-777',
     name: 'Royal Gold 777',

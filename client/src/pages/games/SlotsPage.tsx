@@ -4,16 +4,17 @@ import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, Volume2, VolumeX } f
 import confetti from 'canvas-confetti';
 import { useSlots } from '../../store/SlotContext';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useNotifications } from '../../store/NotificationContext';
 import { useAuthGate } from '../../hooks/useAuthGate';
-import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
 import { redisCache } from '../../lib/redisCache';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
 import { haptics } from '../../lib/haptics';
+import { evaluateAdaptiveSpinOutcome, recordSlotPayoutToProfile } from '../../lib/slotBetEngine';
 import Modal from '../../components/ui/Modal';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
@@ -55,6 +56,15 @@ interface SymbolPayoutRule {
 }
 
 const VARIANT_PAYTABLES: Record<string, SymbolPayoutRule[]> = {
+  'mega-4x4-slots': [
+    { symbol: '/slots/k.png', name: 'Gold Crown Trophy', threeMatch: 25, fiveMatch: 200, twoMatch: 3, color: '#FFD700' },
+    { symbol: '/slots/lag.png', name: 'Ruby Dragon Gem', threeMatch: 18, fiveMatch: 120, twoMatch: 2.5, color: '#FF0000' },
+    { symbol: '/slots/lam.png', name: 'Sapphire Crystal', threeMatch: 12, fiveMatch: 75, twoMatch: 2, color: '#0000FF' },
+    { symbol: '/slots/neck.png', name: 'Diamond Relic', threeMatch: 8, fiveMatch: 40, twoMatch: 1.5, color: '#FFFFFF' },
+    { symbol: '/slots/download.png', name: 'Emerald Amulet', threeMatch: 5, fiveMatch: 25, twoMatch: 1.2, color: '#00FF00' },
+    { symbol: '/slots/boobs.png', name: 'Pink Star Jewel', threeMatch: 4, fiveMatch: 15, twoMatch: 1.0, color: '#FF66CC' },
+    { symbol: '/slots/back.png', name: 'Silver Shield', threeMatch: 3, fiveMatch: 10, twoMatch: 1.0, color: '#999999' },
+  ],
   'royal-gold-777': [
     { symbol: '7️⃣', name: 'Lucky 7 Jackpot', threeMatch: 100, fiveMatch: 500, twoMatch: 5, color: '#FFD700' },
     { symbol: '👑', name: 'Royal Crown', threeMatch: 50, fiveMatch: 250, twoMatch: 3, color: '#E8C97A' },
@@ -124,6 +134,13 @@ const DEFAULT_SYMBOL_COLORS: Record<string, string> = {
   '🦁': '#FF9800',
   '🐘': '#90A4AE',
   '𓀾': '#FFD700',
+  '/slots/k.png': '#FFD700',
+  '/slots/lag.png': '#FF0000',
+  '/slots/lam.png': '#0000FF',
+  '/slots/neck.png': '#FFFFFF',
+  '/slots/download.png': '#00FF00',
+  '/slots/back.png': '#999999',
+  '/slots/boobs.png': '#FF66CC',
 };
 
 // --- GRID CONFIGURATION ---
@@ -140,10 +157,10 @@ interface CellCoord {
 export default function SlotsPage() {
   const { slots, activeSlot, setActiveSlotId, recordWagerAndPayout } = useSlots();
   const { balance, deductBalance, addBalance } = useWallet();
+  const { user } = useAuth();
   const { addToast } = useToast();
   const { addNotification } = useNotifications();
   const { requireAuth } = useAuthGate();
-  const { checkIsFirstBet, consumeFirstBet } = useGameControl();
 
   const [betAmount, setBetAmount] = useState(100);
   const [spinning, setSpinning] = useState(false);
@@ -161,7 +178,7 @@ export default function SlotsPage() {
     });
   }, []);
 
-  // Multi-column reels state (Array of symbol arrays)
+  // Multi-column reels state
   const [reels, setReels] = useState<string[][]>(() =>
     Array.from({ length: 5 }, () => Array.from({ length: REEL_LENGTH }, () => activeSlot.symbols[0]))
   );
@@ -177,9 +194,10 @@ export default function SlotsPage() {
   // Responsive symbol size calculation
   const [symbolSize, setSymbolSize] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      if (window.innerWidth <= 480) return 60;
-      if (window.innerWidth <= 768) return 76;
-      return 92;
+      if (window.innerWidth <= 380) return 52;
+      if (window.innerWidth <= 480) return 62;
+      if (window.innerWidth <= 768) return 78;
+      return 94;
     }
     return 80;
   });
@@ -213,7 +231,6 @@ export default function SlotsPage() {
 
   useEffect(() => {
     initSeed();
-    // Initialize reels with active slot symbols
     setReels(Array.from({ length: activeSlot.reels }, () => createReelStrip(activeSlot.symbols)));
     setStopIndex(activeSlot.reels - 1);
     setWinningCells([]);
@@ -223,9 +240,9 @@ export default function SlotsPage() {
     setLastWin(null);
   }, [activeSlot.id, activeSlot.reels, activeSlot.symbols, createReelStrip, initSeed]);
 
-  const currentPaytableRules = VARIANT_PAYTABLES[activeSlot.id] || VARIANT_PAYTABLES['royal-gold-777'];
+  const currentPaytableRules = VARIANT_PAYTABLES[activeSlot.id] || VARIANT_PAYTABLES['mega-4x4-slots'] || VARIANT_PAYTABLES['royal-gold-777'];
 
-  // Helper to evaluate winning lines and cells across the visible board
+  // Evaluate winning lines and cells across the visible board
   const evaluateWins = useCallback((reelsData: string[][], cols: number, bet: number) => {
     let winCells: CellCoord[] = [];
     let winningRows: number[] = [];
@@ -308,8 +325,9 @@ export default function SlotsPage() {
         if (!soundMuted) sounds.playWin();
         haptics.winMedium();
 
-        // Credit combo payout
+        // Credit combo payout to wallet & adaptive profile
         addBalance(comboBoost, `Slots — ${activeSlot.name} Cascade ×${currentCombo}`, 'win');
+        recordSlotPayoutToProfile(user?.id || 'usr_guest', comboBoost);
         setLastWin(prev => (prev || 0) + comboBoost);
 
         // Particle blast explosion
@@ -329,9 +347,9 @@ export default function SlotsPage() {
         }, 1200);
       }
     }, 600);
-  }, [applyCascade, columnsCount, activeSlot.symbols, activeSlot.name, evaluateWins, soundMuted, addBalance]);
+  }, [applyCascade, columnsCount, activeSlot.symbols, activeSlot.name, evaluateWins, soundMuted, addBalance, user?.id]);
 
-  // Main Spin Action
+  // Main Spin Action with Adaptive Bet Logic
   const spinReels = useCallback(() => {
     requireAuth(async () => {
       if (spinning) return;
@@ -357,25 +375,41 @@ export default function SlotsPage() {
       if (!soundMuted) sounds.playSpin();
       haptics.bet();
 
-      const isFirstBet = checkIsFirstBet();
       const symbolPool = activeSlot.symbols;
 
-      // 2. Generate Outcome & Reel Strips
-      let forceWin = isFirstBet || Math.random() > 0.55;
-      let winSym = symbolPool[Math.floor(Math.random() * symbolPool.length)];
-      let winRow = Math.floor(Math.random() * VISIBLE_COUNT);
-
-      if (isFirstBet) {
-        consumeFirstBet();
-        forceWin = true;
-        winSym = symbolPool[0]; // Jackpot 777
-        winRow = 1; // Center row
-        addToast({ type: 'success', title: '🎉 Beginner Luck!', message: 'Jackpot hit on your 1st bet!' });
-      }
-
-      const newReels = Array.from({ length: columnsCount }, () =>
-        createReelStrip(symbolPool, forceWin ? winSym : null, forceWin ? winRow : -1)
+      // 2. Evaluate Outcome using Adaptive Bet Engine
+      const { decision } = evaluateAdaptiveSpinOutcome(
+        user?.id || 'usr_guest',
+        betAmount,
+        symbolPool,
+        VISIBLE_COUNT,
+        activeSlot.targetRtp || 94
       );
+
+      let newReels: string[][] = [];
+
+      if (decision.isWin) {
+        const winSym = decision.forcedWinSymbol || symbolPool[0];
+        const winRow = decision.forcedWinRow >= 0 ? decision.forcedWinRow : 1;
+        newReels = Array.from({ length: columnsCount }, () =>
+          createReelStrip(symbolPool, winSym, winRow)
+        );
+      } else if (decision.isNearMiss && columnsCount >= 4) {
+        // Exciting Near Miss: Columns 0 to 3 match, last column differs
+        const nearSym = decision.nearMissSymbol || symbolPool[0];
+        const diffSym = symbolPool.find(s => s !== nearSym) || symbolPool[1];
+        const rowPos = decision.nearMissRow >= 0 ? decision.nearMissRow : 1;
+
+        newReels = Array.from({ length: columnsCount }, (_, colIdx) => {
+          if (colIdx < columnsCount - 1) {
+            return createReelStrip(symbolPool, nearSym, rowPos);
+          }
+          return createReelStrip(symbolPool, diffSym, rowPos);
+        });
+      } else {
+        // Standard clean random loss
+        newReels = Array.from({ length: columnsCount }, () => createReelStrip(symbolPool));
+      }
 
       setReels(newReels);
 
@@ -403,6 +437,7 @@ export default function SlotsPage() {
                 setWinMsg(`🎉 BIG WIN +₹${totalPayout.toLocaleString('en-IN')}`);
 
                 addBalance(totalPayout, `Slots — ${activeSlot.name} win (${maxMultiplier}×)`, 'win');
+                recordSlotPayoutToProfile(user?.id || 'usr_guest', totalPayout);
                 triggerWinCelebration({ winAmount: totalPayout, multiplier: maxMultiplier, gameName: activeSlot.name });
 
                 if (!soundMuted) sounds.playWin();
@@ -454,8 +489,6 @@ export default function SlotsPage() {
     addToast,
     requireAuth,
     soundMuted,
-    checkIsFirstBet,
-    consumeFirstBet,
     columnsCount,
     createReelStrip,
     initSeed,
@@ -464,13 +497,14 @@ export default function SlotsPage() {
     addBalance,
     addNotification,
     runCascadeLoop,
+    user?.id,
   ]);
 
   return (
     <div className="min-h-screen py-3 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-4 relative">
       <SEOHead
         title="Royal 777 Jackpot Slots — Multi-Line Vegas Video Slots"
-        description="Spin 6 exclusive 3-reel & 5-reel Vegas slot machines including Royal Gold 777, Dragon Fortune, Mega Fruit Party, and Golden Pharaoh with 777x jackpot multipliers and cascading wins."
+        description="Spin 7 exclusive 3-reel & 5-reel Vegas slot machines including Mega 4x4 Slots, Royal Gold 777, Dragon Fortune, and Golden Pharaoh with 777x jackpot multipliers and cascading avalanche wins."
         jsonLd={slotsBreadcrumbLd}
       />
 
@@ -492,7 +526,7 @@ export default function SlotsPage() {
               onClick={() => {
                 setActiveSlotId(slot.id);
               }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-md ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-md cursor-pointer ${
                 activeSlot.id === slot.id
                   ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.02]'
                   : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
@@ -534,7 +568,7 @@ export default function SlotsPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSoundMuted(!soundMuted)}
-                      className="p-1.5 rounded-lg bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.25)] text-gold hover:bg-[rgba(212,175,55,0.2)] transition-all"
+                      className="p-1.5 rounded-lg bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.25)] text-gold hover:bg-[rgba(212,175,55,0.2)] transition-all cursor-pointer"
                       title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
                     >
                       {soundMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-gold" />}
@@ -649,7 +683,8 @@ export default function SlotsPage() {
                               const rowPos = VISIBLE_ROWS.indexOf(i);
                               const isDestroying = destroyingCells.some(c => c.row === rowPos && c.col === colIndex);
                               const isWinning = winningCells.some(c => c.row === rowPos && c.col === colIndex);
-                              const symColor = DEFAULT_SYMBOL_COLORS[sym] || '#FFD700';
+                              const symColor = activeSlot.symbolColors?.[sym] || DEFAULT_SYMBOL_COLORS[sym] || '#FFD700';
+                              const isImageSymbol = sym.startsWith('/') || sym.startsWith('http');
 
                               return (
                                 <div
@@ -673,12 +708,20 @@ export default function SlotsPage() {
                                           : { scale: 1, filter: 'none' }
                                       }
                                       transition={{ repeat: isWinning ? Infinity : 0, duration: 0.6 }}
-                                      className="flex items-center justify-center select-none"
+                                      className="flex items-center justify-center select-none w-full h-full p-1"
                                       style={{
                                         fontSize: symbolSize > 70 ? '2.4rem' : symbolSize > 55 ? '1.8rem' : '1.4rem',
                                       }}
                                     >
-                                      {sym}
+                                      {isImageSymbol ? (
+                                        <img
+                                          src={sym}
+                                          alt="slot symbol"
+                                          className="w-[85%] h-[85%] object-contain select-none pointer-events-none"
+                                        />
+                                      ) : (
+                                        sym
+                                      )}
                                     </motion.div>
                                   )}
 
@@ -815,7 +858,11 @@ export default function SlotsPage() {
                 className="flex items-center justify-between p-2.5 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.15)]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{rule.symbol}</span>
+                  {rule.symbol.startsWith('/') || rule.symbol.startsWith('http') ? (
+                    <img src={rule.symbol} alt={rule.name} className="w-8 h-8 object-contain" />
+                  ) : (
+                    <span className="text-2xl">{rule.symbol}</span>
+                  )}
                   <div>
                     <p className="font-bold text-[#F5F1E6]">{rule.name}</p>
                     <p className="text-[10px] text-[rgba(212,175,55,0.5)]">Cascading Explosion Trigger</p>
