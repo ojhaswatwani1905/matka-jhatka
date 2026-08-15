@@ -529,26 +529,28 @@ export default function SlotsPage() {
       <div className="relative z-10 space-y-4">
         
         {/* Top Slot Theme Selector Carousel */}
-        <div className="w-full flex items-center justify-start sm:justify-center gap-2 overflow-x-auto px-1 py-1.5 no-scrollbar scroll-smooth">
-          {slots.filter(s => s.enabled).map(slot => (
-            <button
-              key={slot.id}
-              onClick={() => setActiveSlotId(slot.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-lg cursor-pointer shrink-0 ${
-                activeSlot.id === slot.id
-                  ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.03]'
-                  : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold hover:bg-[#071710]'
-              }`}
-            >
-              <span className="text-base drop-shadow">{slot.emoji}</span>
-              <span className="tracking-wide uppercase font-heading">{slot.name}</span>
-              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold ${
-                activeSlot.id === slot.id ? 'bg-black/30 text-[#061510]' : 'bg-gold/10 text-gold border border-gold/20'
-              }`}>
-                {slot.reels}R × 4
-              </span>
-            </button>
-          ))}
+        <div className="w-full overflow-x-auto no-scrollbar py-1.5 px-2">
+          <div className="flex items-center justify-start xl:justify-center gap-2.5 min-w-max">
+            {slots.filter(s => s.enabled).map(slot => (
+              <button
+                key={slot.id}
+                onClick={() => setActiveSlotId(slot.id)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-lg cursor-pointer shrink-0 ${
+                  activeSlot.id === slot.id
+                    ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.03]'
+                    : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold hover:bg-[#071710]'
+                }`}
+              >
+                <span className="text-base drop-shadow">{slot.emoji}</span>
+                <span className="tracking-wide uppercase font-heading">{slot.name}</span>
+                <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                  activeSlot.id === slot.id ? 'bg-black/30 text-[#061510]' : 'bg-gold/10 text-gold border border-gold/20'
+                }`}>
+                  {slot.reels}R × 4
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Master Center-Stage Grid */}
