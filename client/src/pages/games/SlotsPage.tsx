@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, Volume2, VolumeX } from 'lucide-react';
+import { Play, HelpCircle, Sparkles, Trophy, Flame, Shield, Volume2, VolumeX, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useSlots } from '../../store/SlotContext';
 import { useWallet } from '../../store/WalletContext';
@@ -191,15 +191,17 @@ export default function SlotsPage() {
   const [winMsg, setWinMsg] = useState<string>('');
   const [lastWin, setLastWin] = useState<number | null>(null);
 
-  // Responsive symbol size calculation
-  const [symbolSize, setSymbolSize] = useState<number>(() => {
+  // Responsive dynamic symbol size calculation based on columns count (3 vs 5 reels)
+  const [symbolDimensions, setSymbolDimensions] = useState<{ width: number; height: number }>(() => {
+    const is3Reel = columnsCount === 3;
     if (typeof window !== 'undefined') {
-      if (window.innerWidth <= 380) return 52;
-      if (window.innerWidth <= 480) return 62;
-      if (window.innerWidth <= 768) return 78;
-      return 94;
+      const w = window.innerWidth;
+      if (w <= 380) return { width: is3Reel ? 80 : 54, height: is3Reel ? 68 : 54 };
+      if (w <= 480) return { width: is3Reel ? 96 : 64, height: is3Reel ? 76 : 62 };
+      if (w <= 768) return { width: is3Reel ? 120 : 78, height: is3Reel ? 92 : 74 };
+      return { width: is3Reel ? 148 : 96, height: is3Reel ? 104 : 84 };
     }
-    return 80;
+    return { width: is3Reel ? 130 : 90, height: is3Reel ? 96 : 80 };
   });
 
   const [showPaytable, setShowPaytable] = useState(false);
@@ -209,18 +211,25 @@ export default function SlotsPage() {
   // Provably Fair State
   const [commitHash, setCommitHash] = useState<string>('');
 
-  // Track symbol sizing on window resize
+  // Update symbol dimensions on resize or variant change
   useEffect(() => {
-    const calcSize = () => {
-      if (window.innerWidth <= 380) setSymbolSize(52);
-      else if (window.innerWidth <= 480) setSymbolSize(62);
-      else if (window.innerWidth <= 768) setSymbolSize(78);
-      else setSymbolSize(94);
+    const calcDimensions = () => {
+      const is3Reel = activeSlot.reels === 3;
+      const w = window.innerWidth;
+      if (w <= 380) {
+        setSymbolDimensions({ width: is3Reel ? 84 : 54, height: is3Reel ? 68 : 54 });
+      } else if (w <= 480) {
+        setSymbolDimensions({ width: is3Reel ? 100 : 64, height: is3Reel ? 78 : 62 });
+      } else if (w <= 768) {
+        setSymbolDimensions({ width: is3Reel ? 124 : 80, height: is3Reel ? 94 : 76 });
+      } else {
+        setSymbolDimensions({ width: is3Reel ? 152 : 98, height: is3Reel ? 106 : 86 });
+      }
     };
-    calcSize();
-    window.addEventListener('resize', calcSize);
-    return () => window.removeEventListener('resize', calcSize);
-  }, []);
+    calcDimensions();
+    window.addEventListener('resize', calcDimensions);
+    return () => window.removeEventListener('resize', calcDimensions);
+  }, [activeSlot.reels]);
 
   // Prepare seed hash on mount & activeSlot change
   const initSeed = useCallback(async () => {
@@ -501,7 +510,7 @@ export default function SlotsPage() {
   ]);
 
   return (
-    <div className="min-h-screen py-3 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-4 relative">
+    <div className="min-h-screen py-2 px-2 sm:px-4 w-full max-w-7xl mx-auto space-y-4 relative">
       <SEOHead
         title="Royal 777 Jackpot Slots — Multi-Line Vegas Video Slots"
         description="Spin 7 exclusive 3-reel & 5-reel Vegas slot machines including Mega 4x4 Slots, Royal Gold 777, Dragon Fortune, and Golden Pharaoh with 777x jackpot multipliers and cascading avalanche wins."
@@ -512,29 +521,30 @@ export default function SlotsPage() {
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
-          background: 'radial-gradient(circle at 50% 20%, rgba(212,175,55,0.14), rgba(3,12,8,0.98) 75%)',
+          background: 'radial-gradient(circle at 50% 15%, rgba(212,175,55,0.18), rgba(2,9,6,0.99) 70%)',
         }}
       />
 
       {/* Main Content */}
       <div className="relative z-10 space-y-4">
-        {/* Top Slot Theme Selector Pills */}
-        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
+        
+        {/* Top Slot Theme Selector Carousel */}
+        <div className="w-full flex items-center justify-start sm:justify-center gap-2 overflow-x-auto px-1 py-1.5 no-scrollbar scroll-smooth">
           {slots.filter(s => s.enabled).map(slot => (
             <button
               key={slot.id}
-              onClick={() => {
-                setActiveSlotId(slot.id);
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-md cursor-pointer ${
+              onClick={() => setActiveSlotId(slot.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 border shadow-lg cursor-pointer shrink-0 ${
                 activeSlot.id === slot.id
-                  ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.02]'
-                  : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold'
+                  ? 'bg-gradient-to-r from-[#FFD700] via-[#F5D576] to-[#8B6914] text-[#061510] border-[#FFF8DC] shadow-[0_0_20px_rgba(212,175,55,0.6)] scale-[1.03]'
+                  : 'bg-[#040E0A]/90 text-[rgba(212,175,55,0.75)] border-[rgba(212,175,55,0.2)] hover:border-gold hover:text-gold hover:bg-[#071710]'
               }`}
             >
-              <span className="text-lg drop-shadow">{slot.emoji}</span>
+              <span className="text-base drop-shadow">{slot.emoji}</span>
               <span className="tracking-wide uppercase font-heading">{slot.name}</span>
-              <span className="text-[9px] opacity-80 font-mono bg-black/40 px-1.5 py-0.5 rounded-full font-bold">
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold ${
+                activeSlot.id === slot.id ? 'bg-black/30 text-[#061510]' : 'bg-gold/10 text-gold border border-gold/20'
+              }`}>
                 {slot.reels}R × 4
               </span>
             </button>
@@ -543,24 +553,49 @@ export default function SlotsPage() {
 
         {/* Master Center-Stage Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left/Center Column: Casino Cabinet & Slot Engine (lg:col-span-8) */}
+          {/* Casino Cabinet & Slot Engine (lg:col-span-8) */}
           <div className="lg:col-span-8 w-full space-y-4">
-            <div className="rounded-3xl p-1 bg-gradient-to-b from-[#FFD700] via-[#3A290B] via-[#0D261A] to-[#FFD700] shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_30px_rgba(212,175,55,0.25)] border border-[#FFD700] relative">
-              <div className="rounded-[22px] p-3 sm:p-5 space-y-3 sm:space-y-4 bg-gradient-to-b from-[#0B2A1E] via-[#030E09] to-[#0B2A1E] relative overflow-hidden shadow-inner">
+            
+            {/* Vegas Gold Arcade Cabinet Chassis */}
+            <div className="rounded-[28px] p-1.5 bg-gradient-to-b from-[#FFD700] via-[#8B6914] via-[#2A1E06] to-[#FFD700] shadow-[0_15px_45px_rgba(0,0,0,0.9),0_0_40px_rgba(212,175,55,0.35)] border border-[#FFD700]/80 relative overflow-hidden">
+              
+              {/* Illuminated Arcade Canopy Top Header */}
+              <div className="bg-gradient-to-r from-[#1A0E03] via-[#3A2207] via-[#1A0E03] to-[#3A2207] px-4 py-2.5 border-b border-[#FFD700]/30 flex items-center justify-between relative">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#FFD700]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_8px_#2ECC71]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00E5FF]" />
+                  </div>
+                  <span className="text-[10px] font-black tracking-widest text-[#FFD700] uppercase font-mono pl-1">
+                    PLAYARENA LUXURY CASINO
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-black font-mono text-gold flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded-full border border-gold/20">
+                    <Award className="w-3.5 h-3.5 text-gold" />
+                    RTP {activeSlot.targetRtp}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Cabinet Inner Body */}
+              <div className="p-3 sm:p-5 space-y-3 sm:space-y-4 bg-gradient-to-b from-[#0B251B] via-[#020B07] to-[#0B251B] relative">
                 
-                {/* Header & Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(212,175,55,0.2)] pb-3">
+                {/* Title & Info Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-[rgba(212,175,55,0.2)] pb-2.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] p-0.5 shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center justify-center shrink-0">
-                      <span className="text-2xl drop-shadow">{activeSlot.emoji}</span>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFD700] via-[#F5D576] to-[#8B6914] p-0.5 shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center justify-center shrink-0">
+                      <span className="text-xl drop-shadow">{activeSlot.emoji}</span>
                     </div>
                     <div>
-                      <h1 className="text-lg font-black text-[#E8C97A] font-heading tracking-wide flex items-center gap-1.5">
+                      <h1 className="text-base sm:text-lg font-black text-[#E8C97A] font-heading tracking-wide flex items-center gap-1.5 leading-none">
                         {activeSlot.name}
-                        <Sparkles className="w-4 h-4 text-gold animate-bounce" />
+                        <Sparkles className="w-3.5 h-3.5 text-gold animate-bounce" />
                       </h1>
-                      <p className="text-[10px] text-[rgba(212,175,55,0.65)] font-mono">
-                        Cascading Avalanche • {activeSlot.reels} Reels × 4 Rows
+                      <p className="text-[10px] text-[rgba(212,175,55,0.65)] font-mono mt-1">
+                        {activeSlot.reels} Reels × 4 Rows • Multi-Line Avalanche
                       </p>
                     </div>
                   </div>
@@ -595,20 +630,20 @@ export default function SlotsPage() {
                       <Shield className="w-3 h-3 text-gold" />
                       Provably Fair Seed:
                     </span>
-                    <span className="text-gold truncate max-w-[180px] sm:max-w-[260px]">{commitHash}</span>
+                    <span className="text-gold truncate max-w-[180px] sm:max-w-[280px]">{commitHash}</span>
                   </div>
                 )}
 
                 {/* Win / Cascade Animated Banner */}
-                <div className="h-8 flex items-center justify-center">
+                <div className="h-7 flex items-center justify-center">
                   <AnimatePresence>
                     {winMsg && (
                       <motion.div
                         initial={{ scale: 0.7, opacity: 0 }}
-                        animate={{ scale: [1, 1.1, 1], opacity: 1 }}
+                        animate={{ scale: [1, 1.08, 1], opacity: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ repeat: Infinity, duration: 0.8 }}
-                        className="text-center font-black font-heading tracking-wide text-sm sm:text-base text-gold drop-shadow-[0_0_12px_rgba(255,215,0,0.8)]"
+                        className="text-center font-black font-heading tracking-wide text-xs sm:text-sm text-gold drop-shadow-[0_0_12px_rgba(255,215,0,0.85)]"
                       >
                         {winMsg}
                       </motion.div>
@@ -617,10 +652,32 @@ export default function SlotsPage() {
                 </div>
 
                 {/* ========================================================= */}
-                {/* 🎰 REEL STAGE WINDOW (Full Animated Mechanism from sl1) */}
+                {/* 🎰 REEL STAGE WINDOW WITH SIDE PAYLINE INDICATORS */}
                 {/* ========================================================= */}
-                <div className="relative flex justify-center bg-[#050E09] p-2 sm:p-3.5 rounded-2xl border-2 border-[#8B6914] shadow-[inset_0_0_35px_rgba(0,0,0,0.98),0_0_20px_rgba(212,175,55,0.2)] overflow-hidden mx-auto">
+                <div className="relative flex items-center justify-center bg-[#030906] p-2 sm:p-3 rounded-2xl border-2 border-[#8B6914] shadow-[inset_0_0_40px_rgba(0,0,0,0.98),0_0_25px_rgba(212,175,55,0.25)] overflow-hidden mx-auto">
                   
+                  {/* Left Payline Number Indicators */}
+                  <div
+                    className="flex flex-col justify-around pr-1.5 sm:pr-2 select-none"
+                    style={{ height: symbolDimensions.height * VISIBLE_COUNT }}
+                  >
+                    {[0, 1, 2, 3].map(rowIdx => {
+                      const isRowWinning = activeWinLines.includes(rowIdx);
+                      return (
+                        <div
+                          key={rowIdx}
+                          className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-mono font-black transition-all ${
+                            isRowWinning
+                              ? 'bg-gold text-black shadow-[0_0_10px_#FFD700] scale-110'
+                              : 'bg-black/60 text-gold/40 border border-gold/20'
+                          }`}
+                        >
+                          {rowIdx + 1}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {/* Glowing Laser Win Lines across winning rows */}
                   {activeWinLines.map(rowPos => (
                     <motion.div
@@ -629,9 +686,9 @@ export default function SlotsPage() {
                       animate={{ scaleX: 1 }}
                       style={{
                         position: 'absolute',
-                        top: 10 + rowPos * symbolSize + symbolSize / 2 - 3,
-                        left: 10,
-                        width: 'calc(100% - 20px)',
+                        top: 8 + rowPos * symbolDimensions.height + symbolDimensions.height / 2 - 3,
+                        left: 20,
+                        width: 'calc(100% - 40px)',
                         height: '6px',
                         background: 'linear-gradient(90deg, transparent, #FFD700, #FFF, #FFD700, transparent)',
                         boxShadow: '0 0 20px #FFD700, 0 0 10px #FF8C00',
@@ -656,19 +713,19 @@ export default function SlotsPage() {
                         <div
                           key={colIndex}
                           style={{
-                            width: symbolSize,
-                            height: symbolSize * VISIBLE_COUNT,
+                            width: symbolDimensions.width,
+                            height: symbolDimensions.height * VISIBLE_COUNT,
                             overflow: 'hidden',
-                            background: '#040C08',
-                            border: '1px solid rgba(212,175,55,0.2)',
+                            background: 'linear-gradient(180deg, #040E0A 0%, #071912 50%, #040E0A 100%)',
+                            border: '1px solid rgba(212,175,55,0.25)',
                             borderRadius: '12px',
                             position: 'relative',
-                            boxShadow: 'inset 0 0 15px rgba(0,0,0,0.9)',
+                            boxShadow: 'inset 0 12px 20px rgba(0,0,0,0.85), inset 0 -12px 20px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.5)',
                           }}
                         >
                           <motion.div
                             animate={{
-                              y: isStopped ? -8 * symbolSize : -(symbolSize * 22),
+                              y: isStopped ? -8 * symbolDimensions.height : -(symbolDimensions.height * 22),
                             }}
                             transition={{
                               duration: isStopped ? 0.45 : 0.09,
@@ -690,14 +747,14 @@ export default function SlotsPage() {
                                 <div
                                   key={i}
                                   style={{
-                                    width: symbolSize,
-                                    height: symbolSize,
+                                    width: symbolDimensions.width,
+                                    height: symbolDimensions.height,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     position: 'relative',
                                     boxSizing: 'border-box',
-                                    borderBottom: '1px solid rgba(212,175,55,0.06)',
+                                    borderBottom: '1px solid rgba(212,175,55,0.08)',
                                   }}
                                 >
                                   {!isDestroying && (
@@ -710,7 +767,7 @@ export default function SlotsPage() {
                                       transition={{ repeat: isWinning ? Infinity : 0, duration: 0.6 }}
                                       className="flex items-center justify-center select-none w-full h-full p-1"
                                       style={{
-                                        fontSize: symbolSize > 70 ? '2.4rem' : symbolSize > 55 ? '1.8rem' : '1.4rem',
+                                        fontSize: symbolDimensions.width > 110 ? '2.8rem' : symbolDimensions.width > 80 ? '2.1rem' : '1.5rem',
                                       }}
                                     >
                                       {isImageSymbol ? (
@@ -730,7 +787,7 @@ export default function SlotsPage() {
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                       {Array.from({ length: PARTICLE_COUNT }).map((_, pi) => {
                                         const angle = (pi / PARTICLE_COUNT) * Math.PI * 2;
-                                        const dist = (symbolSize * 0.35) + Math.random() * (symbolSize * 0.45);
+                                        const dist = (symbolDimensions.width * 0.35) + Math.random() * (symbolDimensions.width * 0.45);
                                         return (
                                           <motion.div
                                             key={pi}
@@ -744,8 +801,8 @@ export default function SlotsPage() {
                                             transition={{ duration: 0.4, ease: 'easeOut' }}
                                             style={{
                                               position: 'absolute',
-                                              width: symbolSize > 60 ? 10 : 7,
-                                              height: symbolSize > 60 ? 10 : 7,
+                                              width: symbolDimensions.width > 80 ? 10 : 7,
+                                              height: symbolDimensions.width > 80 ? 10 : 7,
                                               borderRadius: '50%',
                                               background: symColor,
                                               boxShadow: `0 0 10px ${symColor}`,
@@ -763,6 +820,28 @@ export default function SlotsPage() {
                       );
                     })}
                   </div>
+
+                  {/* Right Payline Number Indicators */}
+                  <div
+                    className="flex flex-col justify-around pl-1.5 sm:pr-2 select-none"
+                    style={{ height: symbolDimensions.height * VISIBLE_COUNT }}
+                  >
+                    {[0, 1, 2, 3].map(rowIdx => {
+                      const isRowWinning = activeWinLines.includes(rowIdx);
+                      return (
+                        <div
+                          key={rowIdx}
+                          className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-mono font-black transition-all ${
+                            isRowWinning
+                              ? 'bg-gold text-black shadow-[0_0_10px_#FFD700] scale-110'
+                              : 'bg-black/60 text-gold/40 border border-gold/20'
+                          }`}
+                        >
+                          {rowIdx + 1}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Payout Notification Banner */}
@@ -770,15 +849,15 @@ export default function SlotsPage() {
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="text-center py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600/40 via-emerald-500/50 to-emerald-600/40 border border-emerald-400 text-emerald-200 font-black text-base sm:text-lg shadow-[0_0_25px_rgba(46,204,113,0.4)] flex items-center justify-center gap-2 uppercase tracking-wide"
+                    className="text-center py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600/40 via-emerald-500/50 to-emerald-600/40 border border-emerald-400 text-emerald-200 font-black text-sm sm:text-base shadow-[0_0_25px_rgba(46,204,113,0.4)] flex items-center justify-center gap-2 uppercase tracking-wide"
                   >
-                    <Trophy className="w-5 h-5 text-gold animate-bounce" />
+                    <Trophy className="w-4 h-4 text-gold animate-bounce" />
                     TOTAL PAYOUT: +₹{lastWin.toLocaleString('en-IN')}
                   </motion.div>
                 )}
 
                 {/* Chip Selector & Controls */}
-                <div className="space-y-3 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-[rgba(212,175,55,0.8)] font-black uppercase tracking-wider flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-gold" />
@@ -789,7 +868,7 @@ export default function SlotsPage() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                     {CHIP_VALUES.map(val => (
                       <button
                         key={val}
@@ -835,7 +914,7 @@ export default function SlotsPage() {
             />
           </div>
 
-          {/* Right Column: Live Chat & Related Games (lg:col-span-4) */}
+          {/* Right Column: Live Chat & Assistant (lg:col-span-4) */}
           <div className="lg:col-span-4 w-full space-y-4">
             <GameChat gameId="slots" />
           </div>
