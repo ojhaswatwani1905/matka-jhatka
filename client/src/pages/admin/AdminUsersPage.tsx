@@ -272,7 +272,7 @@ export default function AdminUsersPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[rgba(212,175,55,0.1)]">
-                {['User', 'Balance', 'KYC', 'Reg Date', 'Status', 'Actions'].map(h => (
+                {['User', 'Main Balance', 'Bonus Balance', 'KYC', 'Reg Date', 'Status', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[rgba(212,175,55,0.5)] font-bold uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -281,6 +281,7 @@ export default function AdminUsersPage() {
               {filtered.map((u, i) => {
                 const kycStatus = getKYCStatus(u.id);
                 const badge = KYC_BADGE[kycStatus] || KYC_BADGE.not_started;
+                const bonusAmt = (u as any).bonusBalance ?? (JSON.parse(localStorage.getItem(`playarena_bonus_${u.id}`) || '0')) ?? 0;
                 return (
                   <motion.tr
                     key={u.id}
@@ -301,6 +302,11 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 font-black text-gold">₹{(u.balance || 0).toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-amber-400">
+                      <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20">
+                        ₹{Number(bonusAmt).toLocaleString('en-IN')}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${badge.cls}`}>
                         {badge.label}

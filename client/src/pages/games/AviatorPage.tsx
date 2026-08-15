@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
+import { Users, Shield, Volume2, VolumeX, History } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -67,6 +67,127 @@ function getMultiplierChipClass(mult: number): string {
   } else {
     return 'bg-fuchsia-950/90 text-fuchsia-300 border border-fuchsia-500/60 font-black shadow-[0_0_14px_rgba(236,72,153,0.35)] animate-pulse';
   }
+}
+
+/* ─── Red Supersonic Jet Vector Canvas & SVG Asset ────────────── */
+export function RedPlaneIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M44 24L6 6L14 24L6 42L44 24Z" fill="url(#redJetGrad)" filter="drop-shadow(0 0 6px rgba(255,30,66,0.6))" />
+      <path d="M44 24L20 18L14 24L20 30L44 24Z" fill="#FF1744" />
+      <path d="M26 21L34 24L26 27L22 24L26 21Z" fill="#00E5FF" />
+      <path d="M14 24L6 22L4 24L6 26L14 24Z" fill="#FFA000" />
+      <defs>
+        <linearGradient id="redJetGrad" x1="6" y1="6" x2="44" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FF4D6D" />
+          <stop offset="0.5" stopColor="#E60039" />
+          <stop offset="1" stopColor="#8A0012" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function drawRedSupersonicJet(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  // 1. Afterburner Thrust Flame
+  const flameLength = 16 + Math.random() * 9;
+  const flameGrad = ctx.createLinearGradient(-32 - flameLength, 0, -24, 0);
+  flameGrad.addColorStop(0, 'rgba(255, 120, 0, 0)');
+  flameGrad.addColorStop(0.5, '#FF9100');
+  flameGrad.addColorStop(1, '#FFEA00');
+
+  ctx.beginPath();
+  ctx.moveTo(-24, -3);
+  ctx.lineTo(-24 - flameLength, 0);
+  ctx.lineTo(-24, 3);
+  ctx.closePath();
+  ctx.fillStyle = flameGrad;
+  ctx.shadowColor = '#FF6D00';
+  ctx.shadowBlur = 10;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 2. Main Red Jet Fuselage
+  ctx.beginPath();
+  ctx.moveTo(30, 0);
+  ctx.quadraticCurveTo(12, -7, -24, -5);
+  ctx.lineTo(-26, 0);
+  ctx.lineTo(-24, 5);
+  ctx.quadraticCurveTo(12, 7, 30, 0);
+  ctx.closePath();
+
+  const bodyGrad = ctx.createLinearGradient(0, -7, 0, 7);
+  bodyGrad.addColorStop(0, '#FF4D6D');
+  bodyGrad.addColorStop(0.4, '#E60039');
+  bodyGrad.addColorStop(1, '#990022');
+  ctx.fillStyle = bodyGrad;
+  ctx.shadowColor = 'rgba(255, 30, 66, 0.7)';
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 3. Swept Wings
+  ctx.beginPath();
+  ctx.moveTo(8, -2);
+  ctx.lineTo(-14, -26);
+  ctx.lineTo(-18, -24);
+  ctx.lineTo(-8, -2);
+  ctx.closePath();
+  ctx.fillStyle = '#CC0029';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(8, 2);
+  ctx.lineTo(-14, 26);
+  ctx.lineTo(-18, 24);
+  ctx.lineTo(-8, 2);
+  ctx.closePath();
+  ctx.fillStyle = '#990022';
+  ctx.fill();
+
+  // 4. Gold Trim on Wings
+  ctx.beginPath();
+  ctx.moveTo(8, -2);
+  ctx.lineTo(-14, -26);
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(8, 2);
+  ctx.lineTo(-14, 26);
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 5. Tail Fin
+  ctx.beginPath();
+  ctx.moveTo(-12, 0);
+  ctx.lineTo(-26, -14);
+  ctx.lineTo(-28, -12);
+  ctx.lineTo(-20, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#FF1744';
+  ctx.fill();
+
+  // 6. Cockpit Canopy Glass
+  ctx.beginPath();
+  ctx.ellipse(8, -1, 9, 3.5, 0, 0, Math.PI * 2);
+  const canopyGrad = ctx.createLinearGradient(0, -4, 0, 2);
+  canopyGrad.addColorStop(0, '#E0F7FA');
+  canopyGrad.addColorStop(0.5, '#00E5FF');
+  canopyGrad.addColorStop(1, '#006064');
+  ctx.fillStyle = canopyGrad;
+  ctx.shadowColor = '#00E5FF';
+  ctx.shadowBlur = 6;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
 }
 
 /* ─── Crash Chart ──────────────────────────────────────────────── */
@@ -167,23 +288,12 @@ function CrashChart({ multiplier, crashed, phase, liveBets = [] }: { multiplier:
     ctx.strokeStyle = crashed ? '#FF4D6D' : '#FFE57F';
     ctx.lineWidth = 4.5;
     ctx.lineCap = 'round';
-    ctx.moveTo(originX, originY);
-    ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
-    ctx.stroke();
-
-    // 4. Plane icon rotated to match exact tangent slope angle at current point
+    // 4. Custom Sleek Red Jet rendered with afterburner flame and dynamic slope angle
     if (phase === 'flying') {
       const tangentDx = targetX - controlX;
       const tangentDy = targetY - controlY;
       const angle = Math.atan2(tangentDy, tangentDx);
-
-      ctx.save();
-      ctx.translate(targetX, targetY);
-      ctx.rotate(angle);
-      ctx.fillStyle = '#FFE57F';
-      ctx.font = 'bold 28px sans-serif';
-      ctx.fillText('✈', -8, 8);
-      ctx.restore();
+      drawRedSupersonicJet(ctx, targetX, targetY, angle);
     }
   }, [multiplier, crashed, phase]);
 
@@ -425,8 +535,8 @@ export default function AviatorPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] flex items-center justify-center">
-            <Plane className="w-5 h-5 text-gold" />
+          <div className="w-10 h-10 rounded-xl bg-[rgba(255,77,109,0.12)] border border-[rgba(255,77,109,0.35)] flex items-center justify-center shadow-[0_0_15px_rgba(255,77,109,0.2)]">
+            <RedPlaneIcon className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-lg font-black text-[#E8C97A] font-heading">Aviator</h1>

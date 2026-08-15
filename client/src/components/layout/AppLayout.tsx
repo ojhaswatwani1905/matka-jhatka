@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -79,15 +79,19 @@ function IconRail() {
 export default function AppLayout() {
   const { startSession } = useRG();
   const location = useLocation();
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
   // Start session timer when layout mounts (user navigated into app)
   useEffect(() => { startSession(); }, [startSession]);
 
-  // Scroll window to top whenever route changes so every page & game opens at the top
+  // Scroll window AND inner content container to top whenever route changes so every page & game opens at the top
   useEffect(() => {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
+    if (contentContainerRef.current) {
+      contentContainerRef.current.scrollTop = 0;
+    }
   }, [location.pathname]);
 
   return (
@@ -113,7 +117,7 @@ export default function AppLayout() {
       <IconRail />
 
       {/* Independently Scrolling Content Container */}
-      <div className="flex-1 h-full w-full overflow-y-auto pt-16 lg:pl-16 relative z-10">
+      <div ref={contentContainerRef} className="flex-1 h-full w-full overflow-y-auto pt-16 lg:pl-16 relative z-10">
         <main className="w-full pb-16 pt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <Outlet />

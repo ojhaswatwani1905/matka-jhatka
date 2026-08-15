@@ -42,6 +42,9 @@ interface Market {
 }
 
 const markets: Market[] = [
+  { id: 'satka-1m', name: '⚡ Matka Satka 1-Min', openTime: 'LIVE (1m)', closeTime: 'Continuous', status: 'open', lastResult: '428', commitHash: '9a8b7c...4f2e' },
+  { id: 'satka-5m', name: '⏳ Matka Satka 5-Min', openTime: 'LIVE (5m)', closeTime: 'Continuous', status: 'open', lastResult: '719', commitHash: '2e4d6f...8a1c' },
+  { id: 'satka-30m', name: '🕒 Matka Satka 30-Min', openTime: 'LIVE (30m)', closeTime: 'Continuous', status: 'open', lastResult: '835', commitHash: '5c1b9a...3f7d' },
   { id: '1', name: 'Mumbai Jhatka', openTime: '09:00', closeTime: '10:30', status: 'open', lastResult: '256', commitHash: '7a8b9c...d1e2' },
   { id: '2', name: 'Kalyan Jhatka', openTime: '11:00', closeTime: '12:30', status: 'open', lastResult: '189', commitHash: '3f4e5d...6c7b' },
   { id: '3', name: 'Rajdhani Express', openTime: '14:00', closeTime: '15:30', status: 'open', lastResult: '347', commitHash: '1a2b3c...4d5e' },

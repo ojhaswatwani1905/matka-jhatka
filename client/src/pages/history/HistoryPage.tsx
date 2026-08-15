@@ -13,11 +13,14 @@ const GAME_LABELS = [
   { key: 'aviator', label: 'Aviator' },
   { key: 'mines', label: 'Mines' },
   { key: 'plinko', label: 'Plinko' },
+  { key: 'slots', label: 'Slots' },
+  { key: 'slot', label: 'Slots' },
   { key: 'teen patti', label: 'Teen Patti' },
   { key: 'wingo', label: 'WinGo' },
   { key: 'matka', label: 'Matka' },
   { key: 'color', label: 'Color Prediction' },
   { key: 'lottery', label: 'Lottery 5D' },
+  { key: 'ocean', label: 'Ocean Hunter' },
 ];
 
 function detectGame(tx: Transaction): string {

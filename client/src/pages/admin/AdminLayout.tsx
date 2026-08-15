@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote, LayoutTemplate, ArrowDownLeft } from 'lucide-react';
+import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote, LayoutTemplate, ArrowDownLeft, Ticket } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { usePaymentRequests } from '../../store/PaymentRequestsContext';
 
@@ -17,6 +17,7 @@ const sidebarItems = [
   { path: '/admin/analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Revenue Analytics' },
   { path: '/admin/games', icon: <Settings className="w-5 h-5" />, label: 'Game Control' },
   { path: '/admin/slots', icon: <Gamepad2 className="w-5 h-5" />, label: 'Slot Creator' },
+  { path: '/admin/lottery5d', icon: <Ticket className="w-5 h-5" />, label: 'Lottery 5D' },
 ];
 
 

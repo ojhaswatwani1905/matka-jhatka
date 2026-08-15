@@ -51,6 +51,7 @@ import AdminRequestsPage from './pages/admin/AdminRequestsPage';
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
 import AdminGamesPage from './pages/admin/AdminGamesPage';
 import AdminSlotsPage from './pages/admin/AdminSlotsPage';
+import AdminLottery5DPage from './pages/admin/AdminLottery5DPage';
 import AdminPromosPage from './pages/admin/AdminPromosPage';
 import AdminBroadcastsPage from './pages/admin/AdminBroadcastsPage';
 import AdminFraudPage from './pages/admin/AdminFraudPage';
@@ -174,6 +175,7 @@ export default function App() {
                             <Route path="analytics" element={<AdminAnalyticsPage />} />
                             <Route path="games" element={<AdminGamesPage />} />
                             <Route path="slots" element={<AdminSlotsPage />} />
+                            <Route path="lottery5d" element={<AdminLottery5DPage />} />
                           </Route>
 
 

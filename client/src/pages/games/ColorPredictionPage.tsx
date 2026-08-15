@@ -68,12 +68,20 @@ export default function ColorPredictionPage() {
   const [lastResult, setLastResult] = useState<ColorPredictionResult | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [showBetPanel, setShowBetPanel] = useState(false);
-  const [timerMode, setTimerMode] = useState<'1min' | '3min' | '5min'>('1min');
+  const [timerMode, setTimerMode] = useState<'30s' | '1min' | '3min' | '5min' | '10min'>('1min');
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
   const [roundKey, setRoundKey] = useState(0);
 
   const totalBetAmount = baseAmount * multiplier;
-  const gameType = timerMode === '1min' ? 'wingo-1m' : timerMode === '3min' ? 'wingo-3m' : 'wingo-5m';
+  const gameType = timerMode === '30s'
+    ? 'wingo-30s'
+    : timerMode === '1min'
+    ? 'wingo-1m'
+    : timerMode === '3min'
+    ? 'wingo-3m'
+    : timerMode === '5min'
+    ? 'wingo-5m'
+    : 'wingo-10m';
 
   // Fetch active round details from backend
   const fetchActiveRound = useCallback(async () => {
@@ -295,16 +303,19 @@ export default function ColorPredictionPage() {
       />
       {/* Top Header Mode Tabs & Controls */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 flex gap-1.5 bg-slate-900/80 rounded-xl p-1 border border-white/10">
+        {/* Timer Mode Selector */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-white/10 overflow-x-auto no-scrollbar">
           {[
+            { id: '30s', label: 'WinGo 30s' },
             { id: '1min', label: 'WinGo 1Min' },
             { id: '3min', label: 'WinGo 3Min' },
             { id: '5min', label: 'WinGo 5Min' },
+            { id: '10min', label: 'WinGo 10Min' },
           ].map(mode => (
             <button
               key={mode.id}
               onClick={() => setTimerMode(mode.id as any)}
-              className={`flex-1 py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`px-3 py-2 rounded-lg text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
                 timerMode === mode.id
                   ? 'bg-gold/20 text-gold border border-gold/50 shadow-[0_0_12px_rgba(245,185,44,0.25)] font-heading'
                   : 'text-slate-400 hover:text-white border border-transparent'

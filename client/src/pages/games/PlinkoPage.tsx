@@ -26,9 +26,9 @@ const plinkoBreadcrumbLd = {
 /* ─── Risk Tables ───────────────────────────────────────────────── */
 const ROWS = 8;
 const MULTIPLIERS = {
-  low:    [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6],
-  medium: [13,  3.0, 1.3, 0.7, 0.4, 0.7, 1.3, 3.0, 13],
-  high:   [29,  4.0, 1.5, 0.3, 0.2, 0.3, 1.5, 4.0, 29],
+  low:    [5.6, 2.0, 1.1, 0.6, 0.2, 0.6, 1.1, 2.0, 5.6],
+  medium: [13,  3.0, 1.2, 0.4, 0.0, 0.4, 1.2, 3.0, 13],
+  high:   [29,  4.0, 0.2, 0.0, 0.0, 0.0, 0.2, 4.0, 29],
 };
 
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -190,16 +190,28 @@ export default function PlinkoPage() {
           const win = Math.floor(betAmount * mult * 100) / 100;
           if (win > 0) {
             addBalance(win, `Plinko win — ${mult}× (${risk} risk)`);
-            triggerWinCelebration({ winAmount: win, multiplier: mult, gameName: 'Plinko Gold' });
-          } else {
-            haptics.loss();
+            if (mult > 1.0) {
+              triggerWinCelebration({ winAmount: win, multiplier: mult, gameName: 'Plinko Gold' });
+            }
           }
-          if (mult >= 1) {
+
+          if (mult > 1.0) {
             sounds.playWin();
-            addToast({ type: 'success', title: `Landed ${mult}×!`, message: `Won ₹${win.toFixed(2)}` });
+            haptics.winSmall();
+            addToast({ type: 'success', title: `🎉 Win ${mult}×!`, message: `Won ₹${win.toFixed(2)}` });
+          } else if (mult === 1.0) {
+            haptics.winSmall();
+            addToast({ type: 'info', title: `Landed 1.0×`, message: `Stake returned: ₹${win.toFixed(2)}` });
+          } else if (mult > 0) {
+            sounds.playLoss();
+            haptics.loss();
+            addToast({ type: 'warning', title: `Landed ${mult}×`, message: `Partial Return: ₹${win.toFixed(2)} (Loss ₹${(betAmount - win).toFixed(2)})` });
           } else {
-            addToast({ type: 'info', title: `Landed ${mult}×`, message: `Return ₹${win.toFixed(2)}` });
+            sounds.playLoss();
+            haptics.loss();
+            addToast({ type: 'error', title: `💥 Landed 0× (Loss)`, message: `Lost ₹${betAmount}` });
           }
+
           setLastResult({ multiplier: mult, win, slot });
           setHistory(prev => [{ slot, multiplier: mult, win }, ...prev].slice(0, 15));
           setGameState('result');
