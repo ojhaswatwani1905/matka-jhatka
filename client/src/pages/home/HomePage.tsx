@@ -8,7 +8,6 @@ import WalletCard from '../../components/shared/WalletCard';
 import WelcomeBonusPopup from '../../components/ui/WelcomeBonusPopup';
 import { LiveFeedPanel } from '../../components/ui/GlobalLiveFeed';
 import { useAuth } from '../../store/AuthContext';
-import { useContent } from '../../content/useContent';
 import { SEOHead } from '../../components/shared/SEOHead';
 
 const homeJsonLd = [
@@ -74,6 +73,21 @@ interface MatkaVariant {
 }
 
 /* ─── Game Datasets ─────────────────────────────────────────────────── */
+const ALL_GAMES: Game[] = [
+  { id: 'aviator', name: 'Aviator', sub: 'Crash Multiplier', img: '/games/aviator.png', path: '/games/aviator', badge: '🚀 HOT', badgeColor: 'bg-rose-600', players: 6120 },
+  { id: 'slots', name: 'Royal 777 Slots', sub: 'Multi-Line Jackpot', img: '/games/slots-hero.png', path: '/games/slots', badge: '💎 777x', badgeColor: 'bg-amber-500', players: 7420 },
+  { id: 'color', name: 'Color Prediction', sub: 'Win Go 1Min / 3Min', img: '/games/color.png', path: '/games/color-prediction', badge: '⚡ Live', badgeColor: 'bg-emerald-600', players: 5284 },
+  { id: 'wingo', name: 'Win Go 3Min', sub: 'Number Draw', img: '/games/wingo.png', path: '/games/wingo', badge: 'NEW', badgeColor: 'bg-blue-600', players: 3127 },
+  { id: 'plinko', name: 'Plinko Gold', sub: 'Physics Ball Drop', img: '/games/plinko.png', path: '/games/plinko', badge: '🪙 29x', badgeColor: 'bg-amber-600', players: 4190 },
+  { id: 'mines', name: 'Mines', sub: 'Dodge Bombs Strategy', img: '/games/mines.png', path: '/games/mines', badge: '💣 Win 100x', badgeColor: 'bg-rose-500', players: 3880 },
+  { id: 'matka', name: 'Matka Jhatka', sub: 'Kalyan & Mumbai Bazaar', img: '/games/matka.png', path: '/games/matka', badge: '🎲 900x', badgeColor: 'bg-rose-600', players: 4892 },
+  { id: 'teen-patti', name: 'Teen Patti 3Card', sub: 'Royal Indian Card Poker', img: '/games/teen_patti.png', path: '/games/teen-patti', badge: '👑 3.8x', badgeColor: 'bg-amber-600', players: 4760 },
+  { id: 'ocean-hunter', name: 'Ocean Hunter Arcade', sub: 'Multiplier Target Shooter', img: '/games/fishing.png', path: '/games/ocean-hunter', badge: '🌊 25x', badgeColor: 'bg-blue-600', players: 2950 },
+  { id: 'dragon-fortune-5x', name: 'Dragon Fortune', sub: '5-Reel Mythic Video Slot', img: '/games/slots-hero.png', path: '/games/slots', badge: '🐉 250x', badgeColor: 'bg-rose-600', players: 4120 },
+  { id: 'golden-pharaoh', name: 'Golden Pharaoh', sub: '5-Reel Egyptian Legend', img: '/games/slots-hero.png', path: '/games/slots', badge: '𓀾 500x', badgeColor: 'bg-[#8B6914]', players: 6890 },
+  { id: 'lottery-5d', name: 'Lottery 5D', sub: '5D & K3 Draw', img: '/games/lottery.png', path: '/games/lottery', badge: '💰 Jackpot', badgeColor: 'bg-amber-600', players: 2341 },
+];
+
 const TOP_GAMES: Game[] = [
   { id: 'aviator', name: 'Aviator', sub: 'Crash Multiplier', img: '/games/aviator.png', path: '/games/aviator', badge: '🚀 HOT', badgeColor: 'bg-rose-600', players: 6120 },
   { id: 'slots', name: 'Royal 777 Slots', sub: 'Multi-Line Jackpot', img: '/games/slots-hero.png', path: '/games/slots', badge: '💎 777x', badgeColor: 'bg-amber-500', players: 7420 },
@@ -186,12 +200,10 @@ function GameRowSection({ title, icon, games, viewAllLink }: { title: string; ic
       </div>
       <div className="gold-divider opacity-50" />
 
-      {/* Horizontal Scroll Snap Container: 2 per view on mobile, 4-5 on desktop */}
-      <div className="flex overflow-x-auto gap-3.5 snap-x snap-mandatory scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Grid Container */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 pt-1">
         {games.map((game) => (
-          <div key={game.id} className="w-[calc(50%-7px)] sm:w-48 lg:w-52 shrink-0 snap-start">
-            <CompactGameCard game={game} />
-          </div>
+          <CompactGameCard key={game.id} game={game} />
         ))}
       </div>
     </motion.div>
@@ -200,7 +212,6 @@ function GameRowSection({ title, icon, games, viewAllLink }: { title: string; ic
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
-  const { t } = useContent();
   const [activeCategory, setActiveCategory] = useState('all');
 
   return (
@@ -232,7 +243,12 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* 2. Category Pills */}
+        {/* 2. Recent Winners Banner */}
+        <motion.div variants={item}>
+          <RecentWinners />
+        </motion.div>
+
+        {/* 3. Category Pills */}
         <motion.div variants={item}>
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
             {CATS.map((cat) => (
@@ -247,16 +263,20 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* 3. Recent Winners Banner */}
-        <motion.div variants={item}>
-          <RecentWinners />
-        </motion.div>
-
         {/* 4. Filtered Game Sections */}
-        {(activeCategory === 'all' || activeCategory === 'top') && (
+        {activeCategory === 'all' && (
           <GameRowSection
-            title={t('categories.all', 'Top Games')}
+            title="All Games"
             icon={<Flame className="w-5 h-5 text-rose-500" />}
+            games={ALL_GAMES}
+            viewAllLink="/games"
+          />
+        )}
+
+        {activeCategory === 'top' && (
+          <GameRowSection
+            title="Top Trending Games"
+            icon={<Flame className="w-5 h-5 text-amber-500" />}
             games={TOP_GAMES}
             viewAllLink="/games"
           />
@@ -335,14 +355,14 @@ export default function HomePage() {
             </div>
             <div className="gold-divider opacity-50" />
 
-            {/* Matka Variants Horizontal Scroll Container */}
-            <div className="flex overflow-x-auto gap-3.5 snap-x snap-mandatory scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {/* Matka Variants Grid Container */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
               {MATKA_VARIANTS.map((m) => (
                 <motion.div
                   key={m.id}
                   whileHover={{ y: -4, scale: 1.02 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="w-[calc(85%-10px)] sm:w-64 shrink-0 snap-start royal-panel rounded-2xl p-4 border border-[rgba(212,175,55,0.25)] flex flex-col justify-between hover:border-gold hover:shadow-[0_8px_30px_rgba(212,175,55,0.18)] transition-all"
+                  className="w-full royal-panel rounded-2xl p-4 border border-[rgba(212,175,55,0.25)] flex flex-col justify-between hover:border-gold hover:shadow-[0_8px_30px_rgba(212,175,55,0.18)] transition-all"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">

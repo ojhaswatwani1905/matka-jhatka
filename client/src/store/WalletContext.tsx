@@ -23,13 +23,46 @@ type WalletAction =
 
 
 
-const initialState: ExtendedWalletState = {
-  balance: 0,
-  bonusBalance: 0,
-  bonusWagerRequired: 0,
-  bonusWagerProgress: 0,
-  transactions: [],
-  isLoading: false,
+const getInitialWalletState = (): ExtendedWalletState => {
+  let userBal = 0;
+  let userTxns: Transaction[] = [];
+
+  if (typeof window !== 'undefined') {
+    try {
+      const savedUserStr = localStorage.getItem('playarena_user');
+      if (savedUserStr) {
+        const u = JSON.parse(savedUserStr);
+        const usersList: any[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+        const matchedInUsers = usersList.find(usr => usr.id === u.id || (usr.email && u.email && usr.email.toLowerCase() === u.email.toLowerCase()));
+
+        if (matchedInUsers && typeof matchedInUsers.balance === 'number') {
+          userBal = matchedInUsers.balance;
+        } else if (typeof u.balance === 'number') {
+          userBal = u.balance;
+        }
+
+        const savedWallet = localStorage.getItem(`wallet_${u.id}`);
+        if (savedWallet) {
+          const parsed = JSON.parse(savedWallet);
+          if (typeof parsed.balance === 'number' && parsed.balance > userBal) {
+            userBal = parsed.balance;
+          }
+          if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
+            userTxns = parsed.transactions;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  return {
+    balance: userBal,
+    bonusBalance: 0,
+    bonusWagerRequired: 0,
+    bonusWagerProgress: 0,
+    transactions: userTxns,
+    isLoading: false,
+  };
 };
 
 function walletReducer(state: ExtendedWalletState, action: WalletAction): ExtendedWalletState {
@@ -82,7 +115,7 @@ export function useWallet() {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(walletReducer, initialState);
+  const [state, dispatch] = useReducer(walletReducer, null, getInitialWalletState);
   const balanceRef = useRef(state.balance);
   balanceRef.current = state.balance;
   const bonusBalanceRef = useRef(state.bonusBalance);
@@ -103,7 +136,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (savedUserStr && detail) {
           try {
             const u = JSON.parse(savedUserStr);
-            if (detail.userId === u.id && typeof detail.balance === 'number') {
+            const isMatch = (detail.userId && u.id && detail.userId === u.id) ||
+                            (detail.email && u.email && detail.email.toLowerCase() === u.email.toLowerCase());
+            if (isMatch && typeof detail.balance === 'number') {
               dispatch({ type: 'SET_BALANCE', payload: detail.balance });
               u.balance = detail.balance;
               localStorage.setItem('playarena_user', JSON.stringify(u));
@@ -117,13 +152,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (savedUserStr) {
         try {
           const u = JSON.parse(savedUserStr);
-          const savedWallet = localStorage.getItem(`wallet_${u.id}`);
+          const usersList: any[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+          const matchedInUsers = usersList.find(usr => usr.id === u.id || (usr.email && u.email && usr.email.toLowerCase() === u.email.toLowerCase()));
+
           let userBal = typeof u.balance === 'number' ? u.balance : 0;
+          if (matchedInUsers && typeof matchedInUsers.balance === 'number') {
+            userBal = matchedInUsers.balance;
+          }
+
+          const savedWallet = localStorage.getItem(`wallet_${u.id}`);
           let userTxns: Transaction[] = [];
 
           if (savedWallet) {
             const parsed = JSON.parse(savedWallet);
-            if (typeof parsed.balance === 'number') userBal = parsed.balance;
+            if (typeof parsed.balance === 'number' && parsed.balance > userBal) {
+              userBal = parsed.balance;
+            }
             if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
               userTxns = parsed.transactions;
             }
@@ -148,7 +192,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && typeof json.data?.balance === 'number') {
+          if (json.success && typeof json.data?.balance === 'number' && json.data.balance > 0) {
             dispatch({ type: 'SET_BALANCE', payload: json.data.balance });
             const savedUserStr = localStorage.getItem('playarena_user');
             if (savedUserStr) {

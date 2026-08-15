@@ -9,6 +9,7 @@ import { RGProvider } from './store/RGContext';
 import { LiveFeedProvider } from './store/LiveFeedContext';
 import { PromoProvider } from './store/PromoContext';
 import { WithdrawalAccountsProvider } from './store/WithdrawalAccountsContext';
+import { PaymentRequestsProvider } from './store/PaymentRequestsContext';
 import { GameControlProvider } from './store/GameControlContext';
 import { SlotProvider } from './store/SlotContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -46,7 +47,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminMoneyPage from './pages/admin/AdminMoneyPage';
 import AdminKYCPage from './pages/admin/AdminKYCPage';
-
+import AdminRequestsPage from './pages/admin/AdminRequestsPage';
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage';
 import AdminGamesPage from './pages/admin/AdminGamesPage';
 import AdminSlotsPage from './pages/admin/AdminSlotsPage';
@@ -143,10 +144,11 @@ export default function App() {
                 <AchievementProvider>
                   <PromoProvider>
                     <WithdrawalAccountsProvider>
-                      <KYCProvider>
-                        <ToastProvider>
-                          <WinCelebrationOverlay />
-                          <AppWithRG>
+                      <PaymentRequestsProvider>
+                        <KYCProvider>
+                          <ToastProvider>
+                            <WinCelebrationOverlay />
+                            <AppWithRG>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           {/* Auth routes (no layout) */}
@@ -160,6 +162,7 @@ export default function App() {
                           {/* Admin routes */}
                           <Route path="/admin" element={<AdminLayout />}>
                             <Route index element={<AdminDashboard />} />
+                            <Route path="requests" element={<AdminRequestsPage />} />
                             <Route path="homepage" element={<AdminContentPage />} />
                             <Route path="users" element={<AdminUsersPage />} />
                             <Route path="money" element={<AdminMoneyPage />} />
@@ -214,8 +217,9 @@ export default function App() {
                     </AppWithRG>
                   </ToastProvider>
                 </KYCProvider>
-              </WithdrawalAccountsProvider>
-            </PromoProvider>
+              </PaymentRequestsProvider>
+            </WithdrawalAccountsProvider>
+          </PromoProvider>
           </AchievementProvider>
           </NotificationProvider>
             </LiveFeedProvider>

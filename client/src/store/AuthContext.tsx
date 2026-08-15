@@ -19,11 +19,37 @@ const ADMIN_USER: User = {
   createdAt: new Date().toISOString(),
 };
 
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: true,
+const getAdminUser = (): User => {
+  try {
+    const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+    const existing = users.find(u => u.email.toLowerCase() === 'admin@playarena.com');
+    if (existing && typeof existing.balance === 'number') {
+      return { ...ADMIN_USER, balance: existing.balance };
+    }
+  } catch { /* ignore */ }
+  return ADMIN_USER;
+};
+
+const getInitialAuthState = (): AuthState => {
+  if (typeof window === 'undefined') {
+    return { user: null, token: null, isAuthenticated: false, isLoading: true };
+  }
+  try {
+    const savedUserStr = localStorage.getItem('playarena_user');
+    const savedToken = localStorage.getItem('token') || localStorage.getItem('playarena_token');
+    if (savedUserStr) {
+      const parsed = JSON.parse(savedUserStr);
+      const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+      const existingInUsers = users.find(u => u.id === parsed.id || (u.email && parsed.email && u.email.toLowerCase() === parsed.email.toLowerCase()));
+      if (existingInUsers && typeof existingInUsers.balance === 'number') {
+        parsed.balance = existingInUsers.balance;
+        localStorage.setItem('playarena_user', JSON.stringify(parsed));
+      }
+      const token = savedToken || (parsed.role === 'admin' ? 'admin-token-abc' : `usr-token-${parsed.id}`);
+      return { user: parsed, token, isAuthenticated: true, isLoading: false };
+    }
+  } catch { /* ignore */ }
+  return { user: null, token: null, isAuthenticated: false, isLoading: false };
 };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -52,7 +78,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [state, dispatch] = useReducer(authReducer, null, getInitialAuthState);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('playarena_user');
@@ -60,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
+        const users: User[] = JSON.parse(localStorage.getItem('playarena_users') || '[]');
+        const existingInUsers = users.find(u => u.id === parsed.id || (u.email && parsed.email && u.email.toLowerCase() === parsed.email.toLowerCase()));
+        if (existingInUsers && typeof existingInUsers.balance === 'number') {
+          parsed.balance = existingInUsers.balance;
+          localStorage.setItem('playarena_user', JSON.stringify(parsed));
+        }
+
         const token = savedToken || (parsed.role === 'admin' ? 'admin-token-abc' : `usr-token-${parsed.id}`);
         localStorage.setItem('token', token);
         localStorage.setItem('playarena_token', token);
@@ -85,17 +118,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const handleWalletUpdated = (evt: Event) => {
+      if ('detail' in evt) {
+        const detail = (evt as CustomEvent).detail;
+        const savedUserStr = localStorage.getItem('playarena_user');
+        if (savedUserStr && detail) {
+          try {
+            const u = JSON.parse(savedUserStr);
+            const isMatch = (detail.userId && u.id && detail.userId === u.id) ||
+                            (detail.email && u.email && detail.email.toLowerCase() === u.email.toLowerCase());
+            if (isMatch && typeof detail.balance === 'number') {
+              u.balance = detail.balance;
+              localStorage.setItem('playarena_user', JSON.stringify(u));
+              dispatch({ type: 'UPDATE_USER', payload: { balance: detail.balance } });
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    };
+
     window.addEventListener('session:admin_revoked', handleRevoked);
-    return () => window.removeEventListener('session:admin_revoked', handleRevoked);
+    window.addEventListener('wallet:updated', handleWalletUpdated);
+    return () => {
+      window.removeEventListener('session:admin_revoked', handleRevoked);
+      window.removeEventListener('wallet:updated', handleWalletUpdated);
+    };
   }, []);
 
   const login = useCallback(async (email?: string, password?: string, rememberMe?: boolean) => {
     // Admin login shortcut
     if (email === 'admin@playarena.com' && (!password || password === 'adminpassword123')) {
-      localStorage.setItem('playarena_user', JSON.stringify(ADMIN_USER));
+      const adminUser = getAdminUser();
+      localStorage.setItem('playarena_user', JSON.stringify(adminUser));
       localStorage.setItem('token', 'admin-token-abc');
       localStorage.setItem('playarena_token', 'admin-token-abc');
-      dispatch({ type: 'LOGIN_SUCCESS', payload: { user: ADMIN_USER, token: 'admin-token-abc' } });
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user: adminUser, token: 'admin-token-abc' } });
       return;
     }
 

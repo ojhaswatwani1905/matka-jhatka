@@ -6,11 +6,28 @@ import { authenticate, type AuthRequest } from '../middleware/auth.js';
 const router = Router();
 
 
+import { inMemoryUsersStore } from '../utils/inMemoryStore.js';
+
 // GET /api/wallet/balance
 router.get('/balance', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { balance: true } });
-    res.json({ success: true, data: { balance: user?.balance ?? 0 } });
+    if (process.env.DATABASE_URL) {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { balance: true } });
+        if (user) {
+          res.json({ success: true, data: { balance: user.balance } });
+          return;
+        }
+      } catch {
+        // Fallback to in-memory store if DB query fails
+      }
+    }
+    const memUser = inMemoryUsersStore.find(u => u.id === req.userId || u.email.toLowerCase() === req.userId?.toLowerCase());
+    if (memUser && typeof memUser.balance === 'number' && memUser.balance > 0) {
+      res.json({ success: true, data: { balance: memUser.balance } });
+      return;
+    }
+    res.json({ success: true, data: { balance: null } });
   } catch { res.status(500).json({ success: false, message: 'Failed to fetch balance' }); }
 });
 

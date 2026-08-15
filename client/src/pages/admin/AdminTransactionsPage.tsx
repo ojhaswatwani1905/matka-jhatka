@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Check, X, Filter } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CreditCard, Check, X, Filter, ArrowDownLeft } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
 import type { Transaction } from '../../types';
@@ -81,11 +82,19 @@ export default function AdminTransactionsPage() {
 
   return (
     <div className="space-y-5 max-w-5xl pt-4">
-      <div>
-        <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
-          <CreditCard className="w-6 h-6" /> Transaction Management
-        </h1>
-        <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">{txns.length} total transactions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-black text-[#E8C97A] font-heading flex items-center gap-2.5">
+            <CreditCard className="w-6 h-6" /> Transaction Management
+          </h1>
+          <p className="text-xs text-[rgba(212,175,55,0.5)] mt-1">{txns.length} total transactions</p>
+        </div>
+        <Link
+          to="/admin/requests"
+          className="btn-royal-gold px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 self-start sm:self-auto"
+        >
+          <ArrowDownLeft className="w-4 h-4" /> Go to Payment Requests Queue →
+        </Link>
       </div>
 
       {/* Filters */}

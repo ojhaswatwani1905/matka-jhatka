@@ -179,3 +179,35 @@ export interface GameConfig {
   odds: Record<string, number>;
   timerDuration?: number; // seconds
 }
+
+// Payment / Fund Requests (Demo Flow)
+export type PaymentRequestType = 'deposit' | 'withdrawal';
+export type PaymentRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PaymentRequestAccountDetails {
+  id?: string;
+  accountHolder?: string;
+  accountNumber?: string;
+  bankName?: string;
+  ifscCode?: string;
+  upiId?: string;
+  type?: 'bank' | 'upi';
+  label?: string;
+}
+
+export interface PaymentRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  type: PaymentRequestType;
+  amount: number;
+  whatsappNumber: string;
+  accountDetails?: PaymentRequestAccountDetails;
+  status: PaymentRequestStatus;
+  rejectionReason?: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  demo: boolean;
+}

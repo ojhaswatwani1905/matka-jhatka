@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Crosshair, Play, Pause } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Shield, Crosshair, Play, Pause, Sparkles } from 'lucide-react';
 import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -9,7 +9,6 @@ import { useGameControl } from '../../store/GameControlContext';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import Modal from '../../components/ui/Modal';
-import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
 import { haptics } from '../../lib/haptics';
 import { formatCurrency } from '../../lib/utils';
 
@@ -52,13 +51,13 @@ interface FloatText {
 }
 
 const FISH_CONFIGS = [
-  { name: 'Golden Crab', emoji: '🦀', multiplier: 2.0, maxHp: 2, size: 'sm' as const, color: '#F5D576' },
-  { name: 'Neon Jellyfish', emoji: '🪼', multiplier: 3.0, maxHp: 3, size: 'sm' as const, color: '#38BDF8' },
-  { name: 'Puffer Angler', emoji: '🐡', multiplier: 5.0, maxHp: 5, size: 'md' as const, color: '#F97316' },
-  { name: 'Ancient Turtle', emoji: '🐢', multiplier: 8.0, maxHp: 8, size: 'md' as const, color: '#10B981' },
-  { name: 'Kraken Octopus', emoji: '🐙', multiplier: 15.0, maxHp: 12, size: 'lg' as const, color: '#A855F7' },
-  { name: 'Great White Shark', emoji: '🦈', multiplier: 30.0, maxHp: 20, size: 'lg' as const, color: '#EF4444' },
-  { name: 'Golden Leviathan', emoji: '🐉', multiplier: 50.0, maxHp: 35, size: 'boss' as const, color: '#EAB308' },
+  { name: 'Golden Crab', emoji: '🦀', multiplier: 2.0, maxHp: 1, size: 'sm' as const, color: '#F5D576' },
+  { name: 'Neon Jellyfish', emoji: '🪼', multiplier: 3.0, maxHp: 1, size: 'sm' as const, color: '#38BDF8' },
+  { name: 'Puffer Angler', emoji: '🐡', multiplier: 5.0, maxHp: 2, size: 'md' as const, color: '#F97316' },
+  { name: 'Ancient Turtle', emoji: '🐢', multiplier: 8.0, maxHp: 3, size: 'md' as const, color: '#10B981' },
+  { name: 'Kraken Octopus', emoji: '🐙', multiplier: 15.0, maxHp: 5, size: 'lg' as const, color: '#A855F7' },
+  { name: 'Great White Shark', emoji: '🦈', multiplier: 30.0, maxHp: 8, size: 'lg' as const, color: '#EF4444' },
+  { name: 'Golden Leviathan', emoji: '🐉', multiplier: 50.0, maxHp: 12, size: 'boss' as const, color: '#EAB308' },
 ];
 
 /* ─── Provably Fair SHA-256 ─────────────────────────────────────── */
@@ -103,6 +102,7 @@ export default function OceanHunterPage() {
   const [autoFire, setAutoFire] = useState(false);
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
   const [totalWon, setTotalWon] = useState(0);
+  const [captureBanner, setCaptureBanner] = useState<{ name: string; amount: number; mult: number } | null>(null);
 
   const arenaRef = useRef<HTMLDivElement>(null);
   const autoFireIntervalRef = useRef<any>(null);
@@ -132,45 +132,59 @@ export default function OceanHunterPage() {
       hp: cfg.maxHp,
       x: initialX !== undefined ? initialX : (dir === 1 ? -10 : 110),
       y: initialY !== undefined ? initialY : Math.floor(15 + Math.random() * 60),
-      speedX: (0.15 + Math.random() * 0.25) * dir,
-      speedY: (Math.random() - 0.5) * 0.1,
+      speedX: (0.4 + Math.random() * 0.5) * dir, // 3x FASTER swimming motion!
+      speedY: (Math.random() - 0.5) * 0.25,
       dir,
       waveOffset: Math.random() * Math.PI * 2,
     };
   }
 
-  // Swimming Motion Loop
+  // Real-time Live Mouse Pointer Tracking (Cannon turns where arrow moves!)
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!arenaRef.current) return;
+    const rect = arenaRef.current.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+    const clickY = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const cannonX = 50;
+    const cannonY = 92;
+    const dx = clickX - cannonX;
+    const dy = clickY - cannonY;
+    const angleRad = Math.atan2(dy, dx);
+    let angleDeg = (angleRad * 180) / Math.PI + 90;
+    setCannonAngle(Math.max(-80, Math.min(80, angleDeg)));
+  };
+
+  // Fast Swimming Motion Loop
   useEffect(() => {
     const timer = setInterval(() => {
       setCreatures(prev =>
         prev.map(c => {
           let newX = c.x + c.speedX;
           let newDir = c.dir;
-          let newSpeedX = c.speedX;
 
-          if (newX > 105) {
-            newX = -5;
-          } else if (newX < -5) {
-            newX = 105;
+          if (newX > 110) {
+            newX = -10;
+          } else if (newX < -10) {
+            newX = 110;
           }
 
-          const waveY = c.y + Math.sin(Date.now() / 800 + c.waveOffset) * 0.15;
+          const waveY = c.y + Math.sin(Date.now() / 400 + c.waveOffset) * 0.25;
 
           return {
             ...c,
             x: newX,
-            y: Math.max(10, Math.min(80, waveY)),
+            y: Math.max(12, Math.min(78, waveY)),
             dir: newDir,
-            speedX: newSpeedX,
           };
         })
       );
-    }, 50);
+    }, 35);
 
     return () => clearInterval(timer);
   }, []);
 
-  // Bullet Flight & Collision Loop
+  // Bullet Flight & Fast Impact Loop
   useEffect(() => {
     if (bullets.length === 0) return;
 
@@ -179,7 +193,7 @@ export default function OceanHunterPage() {
         const remaining: Bullet[] = [];
 
         prevBullets.forEach(b => {
-          const nextProg = b.progress + 0.25;
+          const nextProg = b.progress + 0.35; // Rapid projectile travel
           if (nextProg >= 1) {
             // Bullet Hit Target!
             handleBulletHit(b);
@@ -192,7 +206,7 @@ export default function OceanHunterPage() {
 
         return remaining;
       });
-    }, 30);
+    }, 25);
 
     return () => clearInterval(interval);
   }, [bullets]);
@@ -206,19 +220,21 @@ export default function OceanHunterPage() {
       const target = prev[idx];
       const catchMultiplier = settings?.oceanHunter?.catchRate ?? 1.0;
       const rawDmg = Math.min(target.hp, 1 * catchMultiplier);
-      // Clean integer/1-decimal HP rounding to prevent 2.0000000000000018 floating point bugs!
       const newHp = Math.max(0, Math.round((target.hp - rawDmg) * 10) / 10);
 
       // Floating damage indicator
       addFloatText(`-1`, bullet.targetX, bullet.targetY, 'damage');
 
       if (newHp <= 0) {
-        // Target Captured!
+        // Target Captured! Fast Death Explosion!
         const winAmt = Math.round(bulletCost * target.multiplier);
         addBalance(winAmt, `Ocean Hunter captured ${target.name} (${target.multiplier}x)`);
         setTotalWon(w => w + winAmt);
 
-        triggerWinCelebration({ winAmount: winAmt, multiplier: target.multiplier, gameName: 'Ocean Hunter' });
+        // In-game non-blocking capture notification banner
+        setCaptureBanner({ name: target.name, amount: winAmt, mult: target.multiplier });
+        setTimeout(() => setCaptureBanner(null), 2500);
+
         addToast({
           type: 'success',
           title: `🎯 Captured ${target.name}!`,
@@ -261,16 +277,9 @@ export default function OceanHunterPage() {
       haptics.bet();
       setShotsFired(s => s + 1);
 
-      // Calculate Cannon Angle towards Target
-      const cannonX = 50; // Cannon centered at 50% bottom
-      const cannonY = 92;
-      const dx = targetX - cannonX;
-      const dy = targetY - cannonY;
-      const angleRad = Math.atan2(dy, dx);
-      let angleDeg = (angleRad * 180) / Math.PI + 90;
-      setCannonAngle(Math.max(-75, Math.min(75, angleDeg)));
-
       // Launch Bullet Projectile
+      const cannonX = 50;
+      const cannonY = 92;
       const newBullet: Bullet = {
         id: `b_${Date.now()}_${Math.random()}`,
         startX: cannonX,
@@ -294,7 +303,6 @@ export default function OceanHunterPage() {
     const clickX = ((e.clientX - rect.left) / rect.width) * 100;
     const clickY = ((e.clientY - rect.top) / rect.height) * 100;
 
-    // Find nearest creature or fire at click point
     let closestId = '';
     let minDist = 999;
     creatures.forEach(c => {
@@ -305,7 +313,7 @@ export default function OceanHunterPage() {
       }
     });
 
-    if (closestId && minDist < 20) {
+    if (closestId && minDist < 25) {
       setLockedTargetId(closestId);
       const target = creatures.find(c => c.id === closestId);
       if (target) fireCannonAt(target.x, target.y, target.id);
@@ -347,10 +355,10 @@ export default function OceanHunterPage() {
             <span className="text-2xl animate-pulse">🌊</span>
             <h1 className="text-xl font-black text-[#E8C97A] font-heading">Ocean Hunter Arcade</h1>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
-              AAA 3D Arena
+              Live Mouse Aiming
             </span>
           </div>
-          <p className="text-xs text-[rgba(212,175,55,0.6)] mt-0.5">Aim cannon & shoot sea creatures to capture payout multipliers up to 50x!</p>
+          <p className="text-xs text-[rgba(212,175,55,0.6)] mt-0.5">Move mouse arrow to aim cannon & shoot fast sea creatures!</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -360,6 +368,7 @@ export default function OceanHunterPage() {
           </div>
 
           <button
+            type="button"
             onClick={() => setIsFairnessOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[rgba(212,175,55,0.3)] text-[#E8C97A] text-xs font-bold hover:bg-[rgba(212,175,55,0.1)] transition-all cursor-pointer"
           >
@@ -382,26 +391,30 @@ export default function OceanHunterPage() {
           <div
             ref={arenaRef}
             onClick={handleArenaClick}
+            onMouseMove={handleMouseMove}
             className="relative w-full h-[440px] sm:h-[500px] rounded-3xl border-2 border-[rgba(212,175,55,0.35)] overflow-hidden bg-gradient-to-b from-[#02131b] via-[#04282c] to-[#010e11] cursor-crosshair shadow-[0_0_50px_rgba(0,0,0,0.8)] select-none"
           >
-            {/* Animated Caustic Water Rays & Rays */}
+            {/* Animated Water Background */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.15),transparent_70%)] pointer-events-none" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(16,185,129,0.1),transparent_60%)] pointer-events-none" />
 
-            {/* Rising Bubbles */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {[...Array(12)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full bg-cyan-300/30 border border-cyan-200/50 animate-ping"
-                  style={{
-                    left: `${(i * 8.5) % 100}%`,
-                    top: `${(i * 13) % 90}%`,
-                    animationDuration: `${3 + (i % 4)}s`,
-                  }}
-                />
-              ))}
-            </div>
+            {/* In-Game Non-Blocking Victory Banner */}
+            <AnimatePresence>
+              {captureBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  className="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-gradient-to-r from-amber-500/90 via-gold to-amber-600/90 px-6 py-2 rounded-2xl border-2 border-white text-[#0B2318] shadow-[0_0_30px_rgba(212,175,55,0.8)] flex items-center gap-3 pointer-events-none"
+                >
+                  <Sparkles className="w-5 h-5 text-[#0B2318] animate-spin" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider">🎉 CAPTURED {captureBanner.name.toUpperCase()}!</p>
+                    <p className="text-sm font-black font-mono">+₹{formatCurrency(captureBanner.amount)} ({captureBanner.mult}x Payout)</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* HUD Status Header */}
             <div className="absolute top-3 left-4 right-4 flex items-center justify-between z-20 pointer-events-none">
@@ -413,7 +426,7 @@ export default function OceanHunterPage() {
               </span>
             </div>
 
-            {/* SWIMMING SEA CREATURES */}
+            {/* FAST SWIMMING SEA CREATURES */}
             {creatures.map(c => {
               const isLocked = lockedTargetId === c.id;
               const hpPct = (c.hp / c.maxHp) * 100;
@@ -430,9 +443,8 @@ export default function OceanHunterPage() {
                   animate={{
                     x: `${c.x}%`,
                     y: `${c.y}%`,
-                    scale: c.size === 'boss' ? 1.2 : 1,
                   }}
-                  transition={{ type: 'spring', stiffness: 80, damping: 15 }}
+                  transition={{ ease: 'linear', duration: 0.04 }}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-125 z-10 ${
                     isLocked ? 'ring-2 ring-gold rounded-full p-1 shadow-[0_0_20px_rgba(212,175,55,0.6)]' : ''
                   }`}
@@ -448,14 +460,14 @@ export default function OceanHunterPage() {
                     </span>
 
                     {/* Floating Health Bar Card */}
-                    <div className="mt-1 bg-[#061A10]/90 px-2 py-1 rounded-lg border border-[rgba(212,175,55,0.3)] shadow-xl flex flex-col items-center gap-0.5 min-w-[70px]">
+                    <div className="mt-1 bg-[#061A10]/90 px-2 py-0.5 rounded-lg border border-[rgba(212,175,55,0.3)] shadow-xl flex flex-col items-center gap-0.5 min-w-[65px]">
                       <div className="flex items-center justify-between w-full text-[9px] font-black text-[#F5F1E6]">
-                        <span className="truncate max-w-[50px]">{c.name}</span>
+                        <span className="truncate max-w-[45px]">{c.name}</span>
                         <span className="text-emerald-400 font-mono">{c.multiplier}x</span>
                       </div>
                       <div className="w-full bg-[#020e0a] h-1.5 rounded-full overflow-hidden border border-[rgba(212,175,55,0.2)]">
                         <div
-                          className="h-full transition-all duration-300 rounded-full"
+                          className="h-full transition-all duration-200 rounded-full"
                           style={{
                             width: `${hpPct}%`,
                             backgroundColor: c.color,
@@ -496,11 +508,11 @@ export default function OceanHunterPage() {
               </motion.div>
             ))}
 
-            {/* HEAVY CYBER GOLD CANNON AT BOTTOM */}
+            {/* HEAVY CYBER GOLD CANNON ROTATING TO MOUSE POINTER */}
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none">
               <motion.div
                 animate={{ rotate: cannonAngle }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                 className="w-12 h-20 origin-bottom flex flex-col items-center"
               >
                 {/* Barrel */}

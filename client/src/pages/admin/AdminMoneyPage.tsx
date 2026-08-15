@@ -161,14 +161,19 @@ export default function AdminMoneyPage() {
     localStorage.setItem(key, JSON.stringify(wallet));
 
     const activeUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
-    if (activeUser && (activeUser.id === selectedUser.id || activeUser.email === selectedUser.email)) {
+    const isCurrentActiveSession = Boolean(
+      activeUser &&
+      (activeUser.id === selectedUser.id || (activeUser.email && selectedUser.email && activeUser.email.toLowerCase() === selectedUser.email.toLowerCase()))
+    );
+
+    if (isCurrentActiveSession) {
       activeUser.balance = newBal;
       localStorage.setItem('playarena_user', JSON.stringify(activeUser));
     }
 
     // Trigger instant real-time live wallet update event across app
     window.dispatchEvent(new CustomEvent('wallet:updated', {
-      detail: { userId: selectedUser.id, balance: newBal }
+      detail: { userId: selectedUser.id, email: selectedUser.email, balance: newBal }
     }));
 
     // Add to transfer log
@@ -188,11 +193,19 @@ export default function AdminMoneyPage() {
     setLogs(updatedLogs);
     localStorage.setItem('playarena_admin_money_logs', JSON.stringify(updatedLogs.slice(0, 100)));
 
-    addToast({
-      type: 'success',
-      title: actionType === 'add' ? 'Money Credited!' : 'Money Deducted!',
-      message: `${actionType === 'add' ? '+' : '-'}₹${formatCurrency(numAmount)} applied to ${selectedUser.name}. New balance: ₹${formatCurrency(newBal)}`,
-    });
+    if (isCurrentActiveSession) {
+      addToast({
+        type: 'success',
+        title: actionType === 'add' ? 'Money Credited!' : 'Money Deducted!',
+        message: `${actionType === 'add' ? '+' : '-'}₹${formatCurrency(numAmount)} applied to your active account (${selectedUser.name}). New balance: ₹${formatCurrency(newBal)}`,
+      });
+    } else {
+      addToast({
+        type: 'success',
+        title: actionType === 'add' ? 'Money Credited to Player!' : 'Money Deducted from Player!',
+        message: `${actionType === 'add' ? '+' : '-'}₹${formatCurrency(numAmount)} applied to ${selectedUser.name}. Note: You are logged in as ${activeUser.name || 'Admin'}. Switch to ${selectedUser.name} to view their balance.`,
+      });
+    }
 
     setLoading(false);
   };
@@ -254,6 +267,9 @@ export default function AdminMoneyPage() {
             <div className="space-y-2 max-h-[360px] overflow-y-auto scrollbar-thin pr-1">
               {filteredUsers.map(u => {
                 const isSelected = selectedUser?.id === u.id;
+                const activeSessionUser = JSON.parse(localStorage.getItem('playarena_user') || '{}');
+                const isSessionUser = activeSessionUser && (activeSessionUser.id === u.id || (activeSessionUser.email && u.email && activeSessionUser.email.toLowerCase() === u.email.toLowerCase()));
+
                 return (
                   <button
                     key={u.id}
@@ -272,7 +288,14 @@ export default function AdminMoneyPage() {
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-[#F5F1E6] truncate">{u.name || 'Unnamed Player'}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-black text-[#F5F1E6] truncate">{u.name || 'Unnamed Player'}</p>
+                          {isSessionUser && (
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[8px] font-black uppercase shrink-0">
+                              Active Session
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-[rgba(212,175,55,0.5)] truncate">{u.email}</p>
                       </div>
                     </div>

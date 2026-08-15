@@ -30,28 +30,28 @@ export interface GameControlSettings {
 }
 
 const DEFAULT_SETTINGS: GameControlSettings = {
-  globalRtp: 92,
-  rigMode: 'fair',
+  globalRtp: 85, // 15% Guaranteed House Net Profit Margin
+  rigMode: 'house_profit',
   firstBetWinGuarantee: true,
   zeroLossShield: true,
   aviator: {
-    maxCrash: 50,
-    instantCrashRate: 3,
+    maxCrash: 15,
+    instantCrashRate: 8,
   },
   mines: {
-    bombBias: 0,
+    bombBias: 15,
   },
   winGo: {
-    housePoolBias: false,
+    housePoolBias: true, // Always select outcome with lowest user payout for max admin profit
   },
   teenPatti: {
-    houseWinBoost: 0,
+    houseWinBoost: 25,
   },
   oceanHunter: {
-    catchRate: 1.0,
+    catchRate: 0.75,
   },
   plinko: {
-    highMultWeight: 1.0,
+    highMultWeight: 0.5,
   },
 };
 

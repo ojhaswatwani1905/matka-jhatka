@@ -235,7 +235,7 @@ export default function AdminUsersPage() {
       }
 
       window.dispatchEvent(new CustomEvent('wallet:updated', {
-        detail: { userId: targetId, balance: nxtBal }
+        detail: { userId: targetId, email: showBalance.email, balance: nxtBal }
       }));
     } catch { /* ignore */ }
 

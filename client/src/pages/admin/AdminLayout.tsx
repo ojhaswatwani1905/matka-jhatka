@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote, LayoutTemplate } from 'lucide-react';
+import { LayoutDashboard, Users, Gamepad2, ArrowLeft, CreditCard, ShieldCheck, Settings, Tag, Megaphone, ShieldAlert, BarChart3, Banknote, LayoutTemplate, ArrowDownLeft } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import { usePaymentRequests } from '../../store/PaymentRequestsContext';
 
 const sidebarItems = [
   { path: '/admin', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', exact: true },
+  { path: '/admin/requests', icon: <ArrowDownLeft className="w-5 h-5 text-emerald-400" />, label: 'Payment Requests', badge: 'requests' },
   { path: '/admin/homepage', icon: <LayoutTemplate className="w-5 h-5" />, label: 'Homepage Content' },
   { path: '/admin/money', icon: <Banknote className="w-5 h-5" />, label: 'Add Money' },
   { path: '/admin/users', icon: <Users className="w-5 h-5" />, label: 'Users' },
@@ -20,6 +22,7 @@ const sidebarItems = [
 
 export default function AdminLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { pendingTotalCount } = usePaymentRequests();
   const location = useLocation();
 
   const isAdmin = user?.role === 'admin' || Boolean(user?.isAdmin);
@@ -55,18 +58,26 @@ export default function AdminLayout() {
         <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
           {sidebarItems.map(item => {
             const isActive = item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
+            const showBadge = item.badge === 'requests' && pendingTotalCount > 0;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   isActive
                     ? 'bg-[rgba(212,175,55,0.15)] text-gold border border-[rgba(212,175,55,0.3)]'
                     : 'text-[rgba(212,175,55,0.4)] hover:text-[#E8C97A] hover:bg-[rgba(212,175,55,0.06)]'
                 }`}
               >
-                {item.icon}
-                {item.label}
+                <div className="flex items-center gap-3">
+                  {item.icon}
+                  {item.label}
+                </div>
+                {showBadge && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-black shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+                    {pendingTotalCount}
+                  </span>
+                )}
               </Link>
             );
           })}
