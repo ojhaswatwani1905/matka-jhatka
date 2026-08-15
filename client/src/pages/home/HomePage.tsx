@@ -115,6 +115,9 @@ const LIVE_CRASH_GAMES: Game[] = [
 ];
 
 const MATKA_VARIANTS: MatkaVariant[] = [
+  { id: 'satka-1m', name: '⚡ Matka Satka 1-Min', openTime: 'LIVE (1m)', closeTime: 'Continuous', status: 'open', lastResult: '428', odds: '900x' },
+  { id: 'satka-5m', name: '⏳ Matka Satka 5-Min', openTime: 'LIVE (5m)', closeTime: 'Continuous', status: 'open', lastResult: '719', odds: '900x' },
+  { id: 'satka-30m', name: '🕒 Matka Satka 30-Min', openTime: 'LIVE (30m)', closeTime: 'Continuous', status: 'open', lastResult: '835', odds: '900x' },
   { id: '1', name: 'Mumbai Jhatka', openTime: '09:00 AM', closeTime: '10:30 AM', status: 'open', lastResult: '256', odds: '900x' },
   { id: '2', name: 'Kalyan Jhatka', openTime: '11:00 AM', closeTime: '12:30 PM', status: 'open', lastResult: '189', odds: '900x' },
   { id: '3', name: 'Rajdhani Express', openTime: '02:00 PM', closeTime: '03:30 PM', status: 'open', lastResult: '347', odds: '900x' },

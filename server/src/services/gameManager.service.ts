@@ -42,14 +42,23 @@ export class GameManagerService {
   }
 
   private initializeRounds() {
-    const gameTypes = ['wingo-1m', 'wingo-3m', 'wingo-5m', 'matka-kalyan', 'matka-mumbai', 'matka-rajdhani'];
+    const gameTypes = [
+      'wingo-30s', 'wingo-1m', 'wingo-3m', 'wingo-5m', 'wingo-10m',
+      'matka-satka-1m', 'matka-satka-5m', 'matka-satka-30m',
+      'matka-kalyan', 'matka-mumbai', 'matka-rajdhani',
+      'lottery-5d-1m', 'lottery-5d-3m', 'lottery-5d-5m', 'lottery-5d-10m'
+    ];
     const now = Date.now();
 
     gameTypes.forEach((gt) => {
-      let durationMs = 60000; // 1 min
-      if (gt.includes('3m')) durationMs = 180000;
-      if (gt.includes('5m')) durationMs = 300000;
-      if (gt.startsWith('matka')) durationMs = 120000; // 2 min demo cycle for matka markets
+      let durationMs = 60000; // default 1 min
+      if (gt.includes('30s')) durationMs = 30000;
+      else if (gt.includes('30m')) durationMs = 1800000;
+      else if (gt.includes('10m')) durationMs = 600000;
+      else if (gt.includes('5m')) durationMs = 300000;
+      else if (gt.includes('3m')) durationMs = 180000;
+      else if (gt.includes('1m')) durationMs = 60000;
+      else if (gt.startsWith('matka')) durationMs = 120000;
 
       const serverSeed = ProvablyFairService.generateServerSeed();
       const commitHash = ProvablyFairService.getCommitHash(serverSeed);
@@ -293,36 +302,26 @@ export class GameManagerService {
         numberVal = round.manualOverride.digit;
         sizeStr = round.manualOverride.size;
         console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using ADMIN MANUAL OVERRIDE digit: ${numberVal}`);
+      } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
+        const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
+          round.serverSeed,
+          round.clientSeed,
+          round.nonce
+        );
+        resultString = pfOutcome.digit.toString();
+        colorStr = pfOutcome.color;
+        numberVal = pfOutcome.digit;
+        sizeStr = pfOutcome.size;
       } else {
-        // House Profit Optimization: Check live bet stats to maximize admin profit margin
-        const stats = await this.getRoundBetsSummary(round.gameType, round.period);
-        if (stats && stats.totalBetsCount > 0) {
-          numberVal = stats.lowestPayoutDigit;
-          resultString = numberVal.toString();
-          colorStr = (numberVal === 0 || numberVal === 5) ? 'violet' : (numberVal % 2 === 0 ? 'red' : 'green');
-          sizeStr = numberVal >= 5 ? 'big' : 'small';
-          console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using HOUSE PROFIT OPTIMIZATION digit: ${numberVal} (Lowest Payout)`);
-        } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
-          const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
-            round.serverSeed,
-            round.clientSeed,
-            round.nonce
-          );
-          resultString = pfOutcome.digit.toString();
-          colorStr = pfOutcome.color;
-          numberVal = pfOutcome.digit;
-          sizeStr = pfOutcome.size;
-        } else {
-          const matkaOutcome: MatkaOutcomeResult = ProvablyFairService.calculateMatkaOutcome(
-            round.serverSeed,
-            round.clientSeed,
-            round.nonce
-          );
-          resultString = matkaOutcome.singleDigit.toString();
-          numberVal = matkaOutcome.singleDigit;
-          colorStr = 'matka';
-          sizeStr = matkaOutcome.jodiDigit;
-        }
+        const matkaOutcome: MatkaOutcomeResult = ProvablyFairService.calculateMatkaOutcome(
+          round.serverSeed,
+          round.clientSeed,
+          round.nonce
+        );
+        resultString = matkaOutcome.singleDigit.toString();
+        numberVal = matkaOutcome.singleDigit;
+        colorStr = 'matka';
+        sizeStr = matkaOutcome.jodiDigit;
       }
 
       // Persist GameResult in database (graceful fallback if DB offline)

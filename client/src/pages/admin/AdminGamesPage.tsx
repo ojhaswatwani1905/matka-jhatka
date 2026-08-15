@@ -32,12 +32,17 @@ interface RoundData {
 }
 
 const GAME_LABELS: Record<string, string> = {
-  'matka-kalyan': '🎰 Kalyan Matka',
-  'matka-mumbai': '🌆 Mumbai Matka',
-  'matka-rajdhani': '🚂 Rajdhani Matka',
+  'wingo-30s': '⚡ WinGo 30-Sec',
   'wingo-1m': '⚡ WinGo 1-Min',
   'wingo-3m': '🕒 WinGo 3-Min',
   'wingo-5m': '⏳ WinGo 5-Min',
+  'wingo-10m': '🕙 WinGo 10-Min',
+  'matka-satka-1m': '⚡ Matka Satka 1-Min',
+  'matka-satka-5m': '⏳ Matka Satka 5-Min',
+  'matka-satka-30m': '🕒 Matka Satka 30-Min',
+  'matka-kalyan': '🎰 Kalyan Matka',
+  'matka-mumbai': '🌆 Mumbai Matka',
+  'matka-rajdhani': '🚂 Rajdhani Matka',
 };
 
 export default function AdminGamesPage() {
