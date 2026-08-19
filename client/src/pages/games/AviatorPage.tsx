@@ -14,6 +14,7 @@ import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay
 import { haptics } from '../../lib/haptics';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+import { aviatorSync, type AviatorLiveBet } from '../../lib/aviatorSync';
 
 const aviatorBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -48,15 +49,14 @@ function seedToCrashPoint(seed: string, maxCrash = 50, instantCrashRate = 3): nu
 }
 
 /* ─── Types ────────────────────────────────────────────────────── */
-interface LiveBet {
-  id: string; user: string; bet: number; cashedAt?: number; status: 'active' | 'won' | 'lost';
-}
+type LiveBet = AviatorLiveBet;
 
 interface RoundHistory {
   multiplier: number; crashed: boolean;
 }
 
 const MOCK_USERS = ['Raj***91', 'Priya***42', 'Amit***77', 'Sona***15', 'Vikram***33', 'Neha***08', 'Rohit***66'];
+
 
 /* ─── Color Tier Helper for Multiplier Chips ──────────────────── */
 function getMultiplierChipClass(mult: number): string {
@@ -357,6 +357,7 @@ export default function AviatorPage() {
   const { requireAuth } = useAuthGate();
   const { settings, checkIsFirstBet, consumeFirstBet } = useGameControl();
 
+  const [roundId, setRoundId] = useState(() => generateId());
   const [phase, setPhase] = useState<'betting' | 'flying' | 'crashed'>('betting');
   const [multiplier, setMultiplier] = useState(1.00);
   const [betAmount, setBetAmount] = useState(100);
@@ -377,6 +378,8 @@ export default function AviatorPage() {
   myBetRef.current = myBet;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const multiplierRef = useRef(multiplier);
+  multiplierRef.current = multiplier;
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
   const intervalRef = useRef<any>(null);
@@ -390,7 +393,7 @@ export default function AviatorPage() {
     }));
   }
 
-  const stopFlight = useCallback((cp: number, didCrash: boolean) => {
+  const stopFlight = useCallback((cp: number, didCrash: boolean, isManualCrash: boolean = false) => {
     // Single-execution guard
     if (isStoppingRef.current) return;
     isStoppingRef.current = true;
@@ -401,12 +404,21 @@ export default function AviatorPage() {
 
     setPhase('crashed');
     setMultiplier(cp);
+    multiplierRef.current = cp;
     setHistory(prev => [{ multiplier: cp, crashed: didCrash }, ...prev].slice(0, 20));
+
+    if (soundOnRef.current) {
+      try { sounds.playLoss(); } catch {}
+    }
 
     // Handle loss toast DIRECTLY on ref, NOT inside state updater callback
     const activeBet = myBetRef.current;
     if (activeBet && !activeBet.cashedAt) {
-      addToast({ type: 'error', title: `Crashed at ${cp.toFixed(2)}×`, message: `Lost ₹${activeBet.amount}` });
+      addToast({
+        type: 'error',
+        title: isManualCrash ? `💥 Admin Terminated at ${cp.toFixed(2)}×` : `Crashed at ${cp.toFixed(2)}×`,
+        message: `Lost ₹${activeBet.amount}`,
+      });
     }
     setMyBet(null);
 
@@ -417,6 +429,17 @@ export default function AviatorPage() {
       const newSeed = generateSeed();
       const hash = await hashSeed(newSeed);
       let cp2 = seedToCrashPoint(newSeed, settings.aviator.maxCrash, settings.aviator.instantCrashRate);
+
+      // Check Admin Overrides
+      const override = aviatorSync.getAdminOverride();
+      if (override.forceNext100xCrash) {
+        cp2 = 1.00;
+        aviatorSync.clearAdminOverride();
+      } else if (override.forcedTargetMultiplier) {
+        cp2 = override.forcedTargetMultiplier;
+        aviatorSync.clearAdminOverride();
+      }
+
       if (checkIsFirstBet()) {
         consumeFirstBet();
         cp2 = Math.max(3.5, cp2); // Guaranteed high multiplier flight on 1st bet!
@@ -426,25 +449,66 @@ export default function AviatorPage() {
       setCommitHash(hash);
       setCrashPoint(cp2);
       setMultiplier(1.00);
+      multiplierRef.current = 1.00;
+      setRoundId(generateId());
       isStoppingRef.current = false;
       setPhase('betting');
       setCountdown(5);
       setLiveBets(generateMockBets());
     }, 4000);
-  }, [addToast]);
+  }, [addToast, settings.aviator.maxCrash, settings.aviator.instantCrashRate, checkIsFirstBet, consumeFirstBet]);
+
+  // Real-time synchronization broadcast
+  useEffect(() => {
+    aviatorSync.publishState({
+      roundId,
+      phase,
+      multiplier,
+      crashPoint,
+      countdown,
+      commitHash,
+      liveBets,
+    });
+  }, [roundId, phase, multiplier, crashPoint, countdown, commitHash, liveBets]);
+
+  // Subscribe to Admin Instant Crash command
+  useEffect(() => {
+    const handleCrashSignal = (data: { multiplier?: number; timestamp?: number }) => {
+      if (phaseRef.current === 'flying') {
+        const targetMult = data.multiplier ?? multiplierRef.current;
+        stopFlight(targetMult, true, true);
+      } else if (phaseRef.current === 'betting') {
+        stopFlight(1.00, true, true);
+      }
+    };
+
+    const unsubscribe = aviatorSync.subscribeToAdminCrash(handleCrashSignal);
+
+    const onCustomEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      handleCrashSignal(customEvt.detail || {});
+    };
+    window.addEventListener('playarena_aviator_admin_crash_evt', onCustomEvent);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('playarena_aviator_admin_crash_evt', onCustomEvent);
+    };
+  }, [stopFlight]);
+
 
   // Init
   useEffect(() => {
     (async () => {
       const s = generateSeed();
       const h = await hashSeed(s);
-      const cp = seedToCrashPoint(s);
+      const cp = seedToCrashPoint(s, settings.aviator.maxCrash, settings.aviator.instantCrashRate);
       setSeed(s);
       setCommitHash(h);
       setCrashPoint(cp);
       setLiveBets(generateMockBets());
     })();
-  }, []);
+  }, [settings.aviator.maxCrash, settings.aviator.instantCrashRate]);
 
   // Countdown timer
   useEffect(() => {
@@ -469,6 +533,7 @@ export default function AviatorPage() {
       const elapsed = (Date.now() - start) / 1000;
       const m = Math.round(Math.pow(1.0023, elapsed * 60) * 100) / 100;
       setMultiplier(m);
+      multiplierRef.current = m;
 
       // Check crash condition
       if (m >= crashPoint) {
@@ -495,6 +560,7 @@ export default function AviatorPage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [phase, crashPoint, autoCashout, stopFlight]);
+
 
   const placeBet = () => {
     requireAuth(() => {

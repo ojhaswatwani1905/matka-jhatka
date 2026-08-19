@@ -31,6 +31,16 @@ export interface DigitBetStat {
 
 export class GameManagerService {
   private activeRounds: Map<string, ActiveRound> = new Map();
+  private liveBetsList: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    gameType: string;
+    period: string;
+    selection: string;
+    amount: number;
+    createdAt: string;
+  }> = [];
   private ioServer: any = null;
 
   constructor() {
@@ -39,6 +49,31 @@ export class GameManagerService {
 
   public setSocketServer(io: any) {
     this.ioServer = io;
+  }
+
+  public recordLiveBet(bet: {
+    id?: string;
+    userId: string;
+    userName?: string;
+    gameType: string;
+    period: string;
+    selection: string;
+    amount: number;
+  }) {
+    const record = {
+      id: bet.id || `bet_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      userId: bet.userId,
+      userName: bet.userName || 'Player',
+      gameType: bet.gameType,
+      period: bet.period,
+      selection: String(bet.selection),
+      amount: Number(bet.amount),
+      createdAt: new Date().toISOString(),
+    };
+    this.liveBetsList.unshift(record);
+    if (this.liveBetsList.length > 200) {
+      this.liveBetsList = this.liveBetsList.slice(0, 200);
+    }
   }
 
   private initializeRounds() {
@@ -128,19 +163,55 @@ export class GameManagerService {
     const round = this.activeRounds.get(gameType);
     const activePeriod = period || round?.period || '';
 
-    let bets: any[] = [];
+    let dbBets: any[] = [];
     try {
-      bets = await prisma.bet.findMany({
+      dbBets = await prisma.bet.findMany({
         where: {
           gameType,
           period: activePeriod,
         },
+        include: {
+          user: {
+            select: { name: true, phone: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
       });
     } catch {
       // Graceful fallback if database offline
-      bets = [];
+      dbBets = [];
     }
 
+    // Merge in-memory live bets (deduplicating)
+    const inMem = this.liveBetsList.filter(
+      (b) => b.gameType === gameType && b.period === activePeriod
+    );
+
+    const mergedBetsMap = new Map<string, any>();
+    dbBets.forEach((b) => {
+      mergedBetsMap.set(b.id, {
+        id: b.id,
+        user: b.user?.name || b.user?.phone || `Player_${b.userId?.slice(-4) || '99'}`,
+        amount: b.amount,
+        selection: String(b.selection),
+        createdAt: b.createdAt ? new Date(b.createdAt).toLocaleTimeString() : 'Just now',
+      });
+    });
+
+
+    inMem.forEach((b) => {
+      if (!mergedBetsMap.has(b.id)) {
+        mergedBetsMap.set(b.id, {
+          id: b.id,
+          user: b.userName || `Player_${b.userId.slice(-4)}`,
+          amount: b.amount,
+          selection: String(b.selection),
+          createdAt: new Date(b.createdAt).toLocaleTimeString(),
+        });
+      }
+    });
+
+    const bets = Array.from(mergedBetsMap.values());
     const totalVolume = bets.reduce((sum, b) => sum + (b.amount || 0), 0);
 
     const digitStats: DigitBetStat[] = [];
@@ -226,6 +297,7 @@ export class GameManagerService {
       lowestPayoutDigit,
       manualOverride: round?.manualOverride,
       digitStats,
+      betsList: bets.slice(0, 50),
     };
   }
 
@@ -296,32 +368,20 @@ export class GameManagerService {
       let sizeStr = '';
 
       if (round.manualOverride) {
-        // Use Admin manual override decision
+        // 1. ADMIN MANUALLY PICKED WINNING DIGIT
         resultString = round.manualOverride.resultString;
         colorStr = round.manualOverride.color;
         numberVal = round.manualOverride.digit;
         sizeStr = round.manualOverride.size;
         console.log(`[GameManager] Resolving ${round.gameType} round ${round.period} using ADMIN MANUAL OVERRIDE digit: ${numberVal}`);
-      } else if (round.gameType.startsWith('wingo') || round.gameType.startsWith('color')) {
-        const pfOutcome: ProvablyFairResult = ProvablyFairService.calculateWinGoOutcome(
-          round.serverSeed,
-          round.clientSeed,
-          round.nonce
-        );
-        resultString = pfOutcome.digit.toString();
-        colorStr = pfOutcome.color;
-        numberVal = pfOutcome.digit;
-        sizeStr = pfOutcome.size;
       } else {
-        const matkaOutcome: MatkaOutcomeResult = ProvablyFairService.calculateMatkaOutcome(
-          round.serverSeed,
-          round.clientSeed,
-          round.nonce
-        );
-        resultString = matkaOutcome.singleDigit.toString();
-        numberVal = matkaOutcome.singleDigit;
-        colorStr = 'matka';
-        sizeStr = matkaOutcome.jodiDigit;
+        // 2. ADMIN DID NOT PICK: Auto-pick the digit with the LEAST BET / LOWEST PAYOUT for max house profit!
+        const summary = await this.getRoundBetsSummary(round.gameType, round.period);
+        numberVal = summary.lowestPayoutDigit ?? 0;
+        resultString = numberVal.toString();
+        colorStr = numberVal === 0 ? 'violet-red' : numberVal === 5 ? 'violet-green' : numberVal % 2 === 0 ? 'red' : 'green';
+        sizeStr = numberVal >= 5 ? 'big' : 'small';
+        console.log(`[GameManager] No manual pick for ${round.gameType} round ${round.period}. Auto-selected LEAST BET digit: ${numberVal} (Payout: ₹${summary.digitStats[numberVal]?.totalPayoutIfWins || 0})`);
       }
 
       // Persist GameResult in database (graceful fallback if DB offline)
@@ -429,7 +489,24 @@ export class GameManagerService {
       console.error('Failed to resolve round:', err);
     }
   }
+
+  public triggerAviatorCrash(multiplier?: number) {
+    if (this.ioServer) {
+      this.ioServer.emit('aviator-instant-crash', {
+        multiplier,
+        timestamp: Date.now(),
+        isManual: true,
+      });
+      this.ioServer.to('game:aviator').emit('aviator-instant-crash', {
+        multiplier,
+        timestamp: Date.now(),
+        isManual: true,
+      });
+    }
+    return { success: true, multiplier, timestamp: Date.now() };
+  }
 }
 
 export const gameManager = new GameManagerService();
+
 

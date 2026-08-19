@@ -117,8 +117,8 @@ export default function AppLayout() {
       <IconRail />
 
       {/* Independently Scrolling Content Container */}
-      <div ref={contentContainerRef} className="flex-1 h-full w-full overflow-y-auto pt-16 lg:pl-16 relative z-10">
-        <main className="w-full pb-16 pt-4">
+      <div ref={contentContainerRef} className="flex-1 h-full w-full overflow-y-auto pt-16 lg:pl-16 relative z-10 scrollbar-thin">
+        <main className="w-full pb-24 lg:pb-16 pt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <Outlet />
           </div>
@@ -127,6 +127,7 @@ export default function AppLayout() {
         {/* Footer */}
         <Footer />
       </div>
+
 
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden relative z-50">

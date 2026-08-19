@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+
 import { Dice1, Clock, LockKeyhole, Unlock, Volume2, VolumeX, ShieldCheck, Check } from 'lucide-react';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
@@ -42,14 +43,12 @@ interface Market {
 }
 
 const markets: Market[] = [
-  { id: 'satka-1m', name: '⚡ Matka Satka 1-Min', openTime: 'LIVE (1m)', closeTime: 'Continuous', status: 'open', lastResult: '428', commitHash: '9a8b7c...4f2e' },
-  { id: 'satka-5m', name: '⏳ Matka Satka 5-Min', openTime: 'LIVE (5m)', closeTime: 'Continuous', status: 'open', lastResult: '719', commitHash: '2e4d6f...8a1c' },
-  { id: 'satka-30m', name: '🕒 Matka Satka 30-Min', openTime: 'LIVE (30m)', closeTime: 'Continuous', status: 'open', lastResult: '835', commitHash: '5c1b9a...3f7d' },
-  { id: '1', name: 'Mumbai Jhatka', openTime: '09:00', closeTime: '10:30', status: 'open', lastResult: '256', commitHash: '7a8b9c...d1e2' },
-  { id: '2', name: 'Kalyan Jhatka', openTime: '11:00', closeTime: '12:30', status: 'open', lastResult: '189', commitHash: '3f4e5d...6c7b' },
-  { id: '3', name: 'Rajdhani Express', openTime: '14:00', closeTime: '15:30', status: 'open', lastResult: '347', commitHash: '1a2b3c...4d5e' },
-  { id: '4', name: 'Night Jhatka', openTime: '20:00', closeTime: '21:30', status: 'closed', lastResult: '492', commitHash: '9f8e7d...6c5b' },
-  { id: '5', name: 'Main Bazar Jhatka', openTime: '22:00', closeTime: '23:30', status: 'closed', lastResult: '715', commitHash: '0a1b2c...3d4e' },
+  { id: 'matka-kalyan', name: '🎰 Kalyan Matka', openTime: 'LIVE 2m', closeTime: 'Continuous', status: 'open', lastResult: '189', commitHash: '3f4e5d...6c7b' },
+  { id: 'matka-mumbai', name: '🌆 Mumbai Main Bazar', openTime: 'LIVE 2m', closeTime: 'Continuous', status: 'open', lastResult: '256', commitHash: '7a8b9c...d1e2' },
+  { id: 'matka-rajdhani', name: '🚂 Rajdhani Express', openTime: 'LIVE 2m', closeTime: 'Continuous', status: 'open', lastResult: '347', commitHash: '1a2b3c...4d5e' },
+  { id: 'matka-satka-1m', name: '⚡ Matka Satka 1-Min', openTime: 'LIVE 1m', closeTime: 'Continuous', status: 'open', lastResult: '428', commitHash: '9a8b7c...4f2e' },
+  { id: 'matka-satka-5m', name: '⏳ Matka Satka 5-Min', openTime: 'LIVE 5m', closeTime: 'Continuous', status: 'open', lastResult: '719', commitHash: '2e4d6f...8a1c' },
+  { id: 'matka-satka-30m', name: '🕒 Matka Satka 30-Min', openTime: 'LIVE 30m', closeTime: 'Continuous', status: 'open', lastResult: '835', commitHash: '5c1b9a...3f7d' },
 ];
 
 export default function MatkaPage() {
@@ -64,7 +63,28 @@ export default function MatkaPage() {
   const [betAmount, setBetAmount] = useState(100);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
+  const [currentPeriod, setCurrentPeriod] = useState(`20260731${Math.floor(Math.random() * 9000 + 1000)}`);
   const [results, setResults] = useState<{ market: string; number: string; type: string; won: boolean; payout: number }[]>([]);
+
+  // Fetch active period from backend
+  const fetchActivePeriod = useCallback(async () => {
+    if (!selectedMarket) return;
+    try {
+      const res = await fetch(`/api/games/active-round/${selectedMarket.id}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setCurrentPeriod(json.data.period);
+      }
+    } catch {
+      // fallback
+    }
+  }, [selectedMarket]);
+
+  useEffect(() => {
+    fetchActivePeriod();
+    const interval = setInterval(fetchActivePeriod, 5000);
+    return () => clearInterval(interval);
+  }, [fetchActivePeriod]);
 
   const requiredCount = marketType === 'single' ? 1 : marketType === 'jodi' ? 2 : 3;
   const currentMultiplier = marketType === 'single' ? 9 : marketType === 'jodi' ? 90 : 900;
@@ -92,7 +112,7 @@ export default function MatkaPage() {
     });
   };
 
-  const placeBet = () => {
+  const placeBet = async () => {
     if (!selectedMarket) {
       addToast({ type: 'warning', title: 'Market Required', message: 'Please select an open market first.' });
       return;
@@ -116,8 +136,28 @@ export default function MatkaPage() {
 
     if (soundEnabled) sounds.playSpin();
 
+    const selectionStr = selectedNumbers.join('');
+
+    // Submit live bet to backend so Admin Panel sees it in real-time
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
+      fetch('/api/games/bet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          gameType: selectedMarket.id,
+          period: currentPeriod,
+          selection: selectionStr,
+          amount: betAmount,
+        }),
+      }).catch(() => {});
+    } catch {}
+
     // Check for Admin live manual number override
-    const marketKey = selectedMarket.id === '1' ? 'matka-mumbai' : selectedMarket.id === '2' ? 'matka-kalyan' : 'matka-rajdhani';
+    const marketKey = selectedMarket.id;
     const manualDigit = getManualOverrideForGame(marketKey) ?? getManualOverrideForGame('matka-kalyan') ?? getManualOverrideForGame('matka');
 
     const resultNum = (marketType === 'single' && manualDigit !== undefined)
@@ -128,7 +168,6 @@ export default function MatkaPage() {
       ? getRandomNumber(0, 99)
       : getRandomNumber(0, 999);
 
-    const selectionStr = selectedNumbers.join('');
     const resultNumStr = String(resultNum).padStart(requiredCount, '0');
 
     const won = resultNumStr === selectionStr.padStart(requiredCount, '0');
@@ -154,6 +193,7 @@ export default function MatkaPage() {
 
     setSelectedNumbers([]);
   };
+
 
   return (
     <div className="space-y-4 pb-4">

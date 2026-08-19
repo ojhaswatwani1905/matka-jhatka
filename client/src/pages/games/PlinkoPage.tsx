@@ -5,7 +5,9 @@ import { useWallet } from '../../store/WalletContext';
 import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { sounds } from '../../lib/sound';
+
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
@@ -42,11 +44,17 @@ async function generatePlinkoSeed(): Promise<{ seed: string; hash: string }> {
   return { seed, hash };
 }
 
-function seedToPath(seed: string, rows: number): ('L' | 'R')[] {
+function seedToPath(seed: string, rows: number, highMultWeight: number = 0.5): ('L' | 'R')[] {
   const path: ('L' | 'R')[] = [];
+  let rightCount = 0;
   for (let i = 0; i < rows; i++) {
     const byte = parseInt(seed.slice((i * 2) % seed.length, (i * 2) % seed.length + 2), 16);
-    path.push(byte % 2 === 0 ? 'L' : 'R');
+    const rand = byte / 255;
+    // Bias towards balancing L and R if deviation grows
+    const targetRightProb = highMultWeight > 0.7 ? 0.5 : (rightCount > i / 2 ? 0.42 : 0.58);
+    const isRight = rand < targetRightProb;
+    if (isRight) rightCount++;
+    path.push(isRight ? 'R' : 'L');
   }
   return path;
 }
@@ -144,6 +152,7 @@ export default function PlinkoPage() {
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
   const { requireAuth } = useAuthGate();
+  const { settings } = useGameControl();
 
   const [risk, setRisk] = useState<'low' | 'medium' | 'high'>('medium');
   const [betAmount, setBetAmount] = useState(100);
@@ -170,12 +179,14 @@ export default function PlinkoPage() {
 
       const { seed, hash } = await generatePlinkoSeed();
       setCommitHash(hash);
-      const fullPath = seedToPath(seed, ROWS);
+      const highMultWeight = settings.plinko?.highMultWeight ?? 0.5;
+      const fullPath = seedToPath(seed, ROWS, highMultWeight);
       setPath(fullPath);
       const slot = pathToSlot(fullPath);
       setLandedSlot(null);
       setAnimPath([]);
       setGameState('dropping');
+
 
       // Animate ball step by step with acoustic peg ticks
       let step = 0;

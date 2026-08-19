@@ -192,7 +192,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && typeof json.data?.balance === 'number' && json.data.balance > 0) {
+          if (json.success && typeof json.data?.balance === 'number') {
             dispatch({ type: 'SET_BALANCE', payload: json.data.balance });
             const savedUserStr = localStorage.getItem('playarena_user');
             if (savedUserStr) {
@@ -206,6 +206,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       } catch { /* offline fallback */ }
     };
+
 
     syncUserWallet();
     window.addEventListener('storage', syncUserWallet);
@@ -441,16 +442,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return true;
   }, [addTransaction, state.transactions]);
 
-  const deposit = useCallback((amount: number) => {
-    dispatch({ type: 'SET_BALANCE', payload: balanceRef.current + amount });
-    addTransaction({
-      userId: 'demo',
-      type: 'deposit',
-      amount,
-      status: 'completed',
-      description: `Instant Deposit — ₹${amount}`,
-    });
-  }, [addTransaction]);
+  const deposit = useCallback((amount: number, description?: string) => {
+    addBalance(amount, description || `Instant Deposit — ₹${amount}`, 'deposit');
+  }, [addBalance]);
+
 
   const withdraw = useCallback((amount: number, selectedAccountLabel?: string): string | null => {
     if (balanceRef.current < amount) return null;

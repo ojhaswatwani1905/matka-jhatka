@@ -400,5 +400,21 @@ router.post('/clear-round-result', authenticate, requireAdmin, async (req: AuthR
   }
 });
 
+// POST /api/admin/aviator-crash (Trigger instant crash killswitch)
+router.post('/aviator-crash', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { multiplier } = req.body;
+    const result = gameManager.triggerAviatorCrash(multiplier ? Number(multiplier) : undefined);
+    res.json({
+      success: true,
+      data: result,
+      message: `Aviator flight instantly terminated at ${multiplier ? `${multiplier}x` : 'current multiplier'}!`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || 'Failed to trigger Aviator crash' });
+  }
+});
+
 export default router;
+
 

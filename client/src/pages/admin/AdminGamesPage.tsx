@@ -3,6 +3,8 @@ import { Sliders, Shield, Zap, TrendingUp, DollarSign, Award, Gift, Lock, Refres
 import { useGameControl, type RigMode } from '../../store/GameControlContext';
 import { useToast } from '../../components/ui/Toast';
 import { formatCurrency } from '../../lib/utils';
+import { AviatorAdminLiveMonitor } from '../../components/admin/AviatorAdminLiveMonitor';
+
 
 interface DigitStat {
   digit: number;
@@ -11,6 +13,15 @@ interface DigitStat {
   projectedHouseProfit: number;
   isLowestPayout: boolean;
 }
+
+interface LiveUserBetItem {
+  id: string;
+  user: string;
+  amount: number;
+  selection: string;
+  createdAt: string;
+}
+
 
 interface RoundData {
   gameType: string;
@@ -28,8 +39,10 @@ interface RoundData {
       size: string;
     };
     digitStats: DigitStat[];
+    betsList?: LiveUserBetItem[];
   };
 }
+
 
 const GAME_LABELS: Record<string, string> = {
   'wingo-30s': '⚡ WinGo 30-Sec',
@@ -517,11 +530,69 @@ export default function AdminGamesPage() {
               );
             })}
           </div>
+
+          {/* Real-Time Live User Bets List for this Market */}
+          <div className="border-t border-white/10 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                <span>👥 Live Player Bets for Round {selectedRound?.period || '10001'}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {selectedRound?.stats?.betsList?.length || 0} Bets Placed
+                </span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono">Real-time live synced</span>
+            </div>
+
+            <div className="bg-[#04140D] rounded-xl border border-white/10 overflow-hidden">
+              <div className="max-h-56 overflow-y-auto divide-y divide-white/5 scrollbar-thin">
+                {selectedRound?.stats?.betsList && selectedRound.stats.betsList.length > 0 ? (
+                  selectedRound.stats.betsList.map((b) => (
+                    <div key={b.id} className="flex items-center justify-between p-3 text-xs hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gold/10 border border-gold/30 text-gold flex items-center justify-center font-black text-xs">
+                          {b.user[0]?.toUpperCase() || 'P'}
+                        </div>
+                        <div>
+                          <span className="font-bold text-white block">{b.user}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{b.createdAt}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 block font-mono">Selection</span>
+                          <span className="font-mono font-bold text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                            {b.selection}
+                          </span>
+                        </div>
+                        <div className="text-right min-w-[70px]">
+                          <span className="text-[10px] text-slate-400 block font-mono">Amount</span>
+                          <span className="font-mono font-black text-emerald-400 text-xs">{formatCurrency(b.amount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-xs text-slate-500 space-y-1">
+                    <p className="font-mono">No live bets placed yet for Round {selectedRound?.period || '10001'}.</p>
+                    <p className="text-[10px] text-slate-600">When users place bets in this market, they appear here live with full breakdown.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
+
+      {/* ========================================================================= */}
+      {/* FEATURE 2: AVIATOR LIVE REAL-TIME RADAR PREVIEW & INSTANT KILLSWITCH     */}
+      {/* ========================================================================= */}
+      <AviatorAdminLiveMonitor />
+
       {/* Smart Risk & Welcome Protections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
         {/* Protection 1: First-Bet Win Guarantee */}
         <div
           onClick={toggleFirstBetGuarantee}

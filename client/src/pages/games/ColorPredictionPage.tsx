@@ -6,6 +6,7 @@ import Modal from '../../components/ui/Modal';
 import { ProvablyFairModal } from '../../components/ui/ProvablyFairModal';
 import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { useGameControl } from '../../store/GameControlContext';
 import { useWallet } from '../../store/WalletContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
@@ -52,6 +53,7 @@ const mockNames = ['User***920', 'User***184', 'User***592', 'User***301', 'User
 export default function ColorPredictionPage() {
   const { balance, deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
+  const { getManualOverrideForGame } = useGameControl();
   const { requireAuth, isOpen: authGateOpen, onSuccess: authGateSuccess, onClose: authGateClose } = useAuthGate();
   const [period, setPeriod] = useState<string>('202607310001');
   const [commitHash, setCommitHash] = useState<string>('');
@@ -72,6 +74,7 @@ export default function ColorPredictionPage() {
   const [isFairnessOpen, setIsFairnessOpen] = useState(false);
   const [roundKey, setRoundKey] = useState(0);
 
+
   const totalBetAmount = baseAmount * multiplier;
   const gameType = timerMode === '30s'
     ? 'wingo-30s'
@@ -82,6 +85,7 @@ export default function ColorPredictionPage() {
     : timerMode === '5min'
     ? 'wingo-5m'
     : 'wingo-10m';
+
 
   // Fetch active round details from backend
   const fetchActiveRound = useCallback(async () => {
@@ -195,9 +199,13 @@ export default function ColorPredictionPage() {
 
     // Call server endpoint
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
       await fetch('/api/games/bet', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           gameType,
           period,
@@ -212,7 +220,7 @@ export default function ColorPredictionPage() {
     addToast({
       type: 'success',
       title: 'Bet Placed Successfully!',
-      message: `${selectedValue.toUpperCase()} — $${totalBetAmount} for Period ${period}`,
+      message: `${selectedValue.toUpperCase()} — ₹${totalBetAmount} for Period ${period}`,
     });
 
     setSelectedBetType(null);
@@ -227,7 +235,8 @@ export default function ColorPredictionPage() {
     setTimeout(() => {
       fetchResults();
 
-      const resultNumber = Math.floor(Math.random() * 10);
+      const manualDigit = getManualOverrideForGame(gameType) ?? getManualOverrideForGame('wingo');
+      const resultNumber = manualDigit !== undefined ? manualDigit : Math.floor(Math.random() * 10);
       const resultColor = resultNumber === 0 ? 'violet-red' : resultNumber === 5 ? 'violet-green' : [1,3,7,9].includes(resultNumber) ? 'green' : 'red';
       const resultSize = resultNumber >= 5 ? 'big' : 'small';
 
@@ -237,6 +246,7 @@ export default function ColorPredictionPage() {
         color: resultColor as any,
         size: resultSize,
       };
+
 
       setLastResult(result);
       setShowResult(true);

@@ -111,11 +111,10 @@ router.post('/verify', (req: Request, res: Response) => {
 
 // POST /api/games/bet
 router.post('/bet', authenticate, betRateLimiter, async (req: AuthRequest, res: Response) => {
-
   try {
     const { gameType, period, selection, amount } = req.body;
     
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { balance: true } });
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { balance: true, name: true, phone: true } });
     if (!user || user.balance < amount) { res.status(400).json({ success: false, message: 'Insufficient balance' }); return; }
 
     const activeRound = gameManager.getActiveRound(gameType);
@@ -132,9 +131,22 @@ router.post('/bet', authenticate, betRateLimiter, async (req: AuthRequest, res: 
       prisma.transaction.create({ data: { userId: req.userId!, type: 'bet', amount: Number(amount), status: 'completed', description: `${gameType} bet on ${selection}` } }),
     ]);
 
+    // Record live bet in gameManager for instant live admin telemetry
+    gameManager.recordLiveBet({
+      id: bet.id,
+      userId: req.userId!,
+      userName: user.name || user.phone || 'Player',
+      gameType,
+      period: targetPeriod,
+      selection: String(selection),
+      amount: Number(amount),
+    });
+
+
     res.json({ success: true, data: bet });
   } catch { res.status(500).json({ success: false, message: 'Bet failed' }); }
 });
+
 
 // GET /api/games/history
 router.get('/history', authenticate, async (req: AuthRequest, res: Response) => {
