@@ -76,6 +76,28 @@ export class GameManagerService {
     }
   }
 
+  private seedInitialRoundBets(gameType: string, period: string) {
+    const users = ['Raj***91', 'Priya***42', 'Amit***77', 'Sona***15', 'Vikram***33', 'Neha***08', 'Rohit***66', 'Karan***99', 'Pooja***21', 'Dev***55'];
+    const betCount = 5 + Math.floor(Math.random() * 6);
+    const amounts = [100, 200, 500, 1000, 2000, 5000];
+
+    for (let i = 0; i < betCount; i++) {
+      const user = users[Math.floor(Math.random() * users.length)];
+      const digit = Math.floor(Math.random() * 10).toString();
+      const amount = amounts[Math.floor(Math.random() * amounts.length)];
+      
+      this.recordLiveBet({
+        id: `bot_bet_${period}_${i}`,
+        userId: `usr_${user}`,
+        userName: user,
+        gameType,
+        period,
+        selection: digit,
+        amount,
+      });
+    }
+  }
+
   private initializeRounds() {
     const gameTypes = [
       'wingo-30s', 'wingo-1m', 'wingo-3m', 'wingo-5m', 'wingo-10m',
@@ -110,6 +132,8 @@ export class GameManagerService {
         nonce: 1,
         status: 'active',
       });
+
+      this.seedInitialRoundBets(gt, period);
     });
 
     // Start timer loop tick every 1000ms
@@ -353,9 +377,26 @@ export class GameManagerService {
           status: 'active',
         });
 
+        this.seedInitialRoundBets(gt, newPeriod);
+
         if (this.ioServer) {
           this.ioServer.to(`game:${gt}`).emit('new-round', this.activeRounds.get(gt));
         }
+      } else if (remainingSec > 6 && Math.random() < 0.15) {
+        // Dynamic live player incoming bet tick
+        const users = ['Raj***91', 'Priya***42', 'Amit***77', 'Sona***15', 'Vikram***33', 'Neha***08', 'Rohit***66', 'Karan***99', 'Pooja***21', 'Dev***55'];
+        const user = users[Math.floor(Math.random() * users.length)];
+        const digit = Math.floor(Math.random() * 10).toString();
+        const amounts = [100, 200, 500, 1000];
+        this.recordLiveBet({
+          id: `bot_live_${Date.now()}`,
+          userId: `usr_${user}`,
+          userName: user,
+          gameType: gt,
+          period: round.period,
+          selection: digit,
+          amount: amounts[Math.floor(Math.random() * amounts.length)],
+        });
       }
     }
   }
