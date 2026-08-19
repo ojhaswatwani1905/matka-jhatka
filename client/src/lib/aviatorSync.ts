@@ -1,5 +1,5 @@
-// Real-time synchronization service for Aviator Crash Game
-// Supports BroadcastChannel, storage events, and WebSocket bridges
+// Real-time synchronization & autonomous round engine for Aviator Crash Game
+// Cross-tab BroadcastChannel, LocalStorage triggers, and self-sustaining live simulator
 
 export interface AviatorLiveBet {
   id: string;
@@ -31,11 +31,29 @@ const STORAGE_STATE_KEY = 'playarena_aviator_live_state';
 const STORAGE_CRASH_TRIGGER_KEY = 'playarena_aviator_admin_crash_cmd';
 const STORAGE_OVERRIDE_KEY = 'playarena_aviator_admin_override';
 
+const MOCK_PILOTS = ['Raj***91', 'Priya***42', 'Amit***77', 'Sona***15', 'Vikram***33', 'Neha***08', 'Rohit***66', 'Karan***99', 'Pooja***21', 'Dev***55'];
+
+function generateMockBets(): AviatorLiveBet[] {
+  const count = 4 + Math.floor(Math.random() * 4);
+  const selected = [...MOCK_PILOTS].sort(() => 0.5 - Math.random()).slice(0, count);
+  const amounts = [100, 200, 500, 1000, 2500, 5000];
+  return selected.map((u, i) => ({
+    id: `bet_${Date.now()}_${i}`,
+    user: u,
+    bet: amounts[Math.floor(Math.random() * amounts.length)],
+    status: 'active' as const,
+  }));
+}
+
 class AviatorSyncService {
   private channel: BroadcastChannel | null = null;
   private stateListeners: Set<(state: AviatorLiveState) => void> = new Set();
   private crashListeners: Set<(data: { multiplier?: number; timestamp: number }) => void> = new Set();
   private lastState: AviatorLiveState | null = null;
+  private isPlayerMasterActive = false;
+  private lastPlayerHeartbeat = 0;
+  private autonomousTimer: any = null;
+  private autonomousFlightRaf: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -50,7 +68,7 @@ class AviatorSyncService {
         console.warn('[AviatorSync] BroadcastChannel unsupported:', err);
       }
 
-      // Storage event listener for fallback cross-tab sync
+      // Storage event listener for cross-tab sync
       window.addEventListener('storage', (e) => {
         if (e.key === STORAGE_CRASH_TRIGGER_KEY && e.newValue) {
           try {
@@ -62,12 +80,28 @@ class AviatorSyncService {
         } else if (e.key === STORAGE_STATE_KEY && e.newValue) {
           try {
             const state = JSON.parse(e.newValue);
+            this.lastPlayerHeartbeat = Date.now();
             this.notifyStateListeners(state);
           } catch {
             // ignore
           }
         }
       });
+
+      // Initial state
+      const saved = this.getCurrentState();
+      if (!saved) {
+        this.lastState = {
+          roundId: `rd_${Date.now().toString(36)}`,
+          phase: 'betting',
+          multiplier: 1.00,
+          crashPoint: 2.35,
+          countdown: 5,
+          commitHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          liveBets: generateMockBets(),
+          timestamp: Date.now(),
+        };
+      }
     }
   }
 
@@ -75,9 +109,17 @@ class AviatorSyncService {
     if (!data || typeof data !== 'object') return;
 
     if (data.type === 'AVIATOR_STATE_UPDATE' && data.payload) {
+      if (data.fromPlayer) {
+        this.isPlayerMasterActive = true;
+        this.lastPlayerHeartbeat = Date.now();
+        this.stopAutonomousEngine();
+      }
       this.notifyStateListeners(data.payload);
     } else if (data.type === 'ADMIN_INSTANT_CRASH') {
       this.notifyCrashListeners(data.payload || { timestamp: Date.now() });
+      if (!this.isPlayerMasterActive && this.lastState && this.lastState.phase === 'flying') {
+        this.crashAutonomousFlight(data.payload?.multiplier || this.lastState.multiplier);
+      }
     }
   }
 
@@ -102,19 +144,23 @@ class AviatorSyncService {
     });
   }
 
-  // Publish live state from the active game page
+  // Publish live state from the player page (Marked as player master)
   public publishState(state: Omit<AviatorLiveState, 'timestamp'>) {
+    this.isPlayerMasterActive = true;
+    this.lastPlayerHeartbeat = Date.now();
+    this.stopAutonomousEngine();
+
     const fullState: AviatorLiveState = {
       ...state,
       timestamp: Date.now(),
     };
     this.lastState = fullState;
 
-    // 1. BroadcastChannel
     if (this.channel) {
       try {
         this.channel.postMessage({
           type: 'AVIATOR_STATE_UPDATE',
+          fromPlayer: true,
           payload: fullState,
         });
       } catch {
@@ -122,7 +168,6 @@ class AviatorSyncService {
       }
     }
 
-    // 2. LocalStorage for persistence & cross-tab
     try {
       localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify(fullState));
     } catch {
@@ -130,7 +175,7 @@ class AviatorSyncService {
     }
   }
 
-  // Get current or cached state
+  // Get current state
   public getCurrentState(): AviatorLiveState | null {
     if (this.lastState) return this.lastState;
     try {
@@ -145,21 +190,26 @@ class AviatorSyncService {
     return null;
   }
 
-  // Subscribe to live state updates (for Admin Live Preview)
+  // Subscribe to live state updates
   public subscribeToState(callback: (state: AviatorLiveState) => void): () => void {
     this.stateListeners.add(callback);
-    if (this.lastState) {
-      callback(this.lastState);
-    } else {
-      const current = this.getCurrentState();
-      if (current) callback(current);
-    }
+    
+    // Send immediate snapshot
+    const current = this.getCurrentState();
+    if (current) callback(current);
+
+    // If no player has emitted recently, start the autonomous ticker so admin panel runs live
+    this.checkAndStartAutonomousEngine();
+
     return () => {
       this.stateListeners.delete(callback);
+      if (this.stateListeners.size === 0 && !this.isPlayerMasterActive) {
+        this.stopAutonomousEngine();
+      }
     };
   }
 
-  // Subscribe to Instant Crash command (for active game tabs)
+  // Subscribe to Instant Crash command
   public subscribeToAdminCrash(
     callback: (data: { multiplier?: number; timestamp: number }) => void
   ): () => void {
@@ -171,13 +221,13 @@ class AviatorSyncService {
 
   // Trigger Instant Crash from Admin Panel
   public triggerAdminInstantCrash(multiplier?: number) {
+    const targetMult = multiplier ?? (this.lastState?.multiplier || 1.00);
     const payload = {
-      multiplier,
+      multiplier: targetMult,
       timestamp: Date.now(),
       nonce: Math.random(),
     };
 
-    // 1. BroadcastChannel (cross-tab zero latency)
     if (this.channel) {
       try {
         this.channel.postMessage({
@@ -189,7 +239,6 @@ class AviatorSyncService {
       }
     }
 
-    // 2. Custom DOM event (same window / iframes)
     if (typeof window !== 'undefined') {
       try {
         window.dispatchEvent(
@@ -200,36 +249,21 @@ class AviatorSyncService {
       }
     }
 
-    // 3. LocalStorage trigger (guaranteed storage event in other tabs)
     try {
       localStorage.setItem(STORAGE_CRASH_TRIGGER_KEY, JSON.stringify(payload));
     } catch {
       // ignore
     }
 
-    // 4. In-memory local listeners
     this.notifyCrashListeners(payload);
 
-    // 5. Send API request to server backend to notify all network-connected clients
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
-      fetch('/api/admin/aviator-crash', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ multiplier, timestamp: payload.timestamp }),
-      }).catch(() => {
-        // graceful if offline
-      });
-    } catch {
-      // ignore
+    // If autonomous engine is running, crash immediately
+    if (this.lastState && (this.lastState.phase === 'flying' || this.lastState.phase === 'betting')) {
+      this.crashAutonomousFlight(targetMult);
     }
   }
 
-
-  // Set / Get Admin overrides (Force 1.00x next round or custom target)
+  // Admin Overrides
   public setAdminOverride(override: AviatorAdminOverride) {
     try {
       localStorage.setItem(STORAGE_OVERRIDE_KEY, JSON.stringify(override));
@@ -254,6 +288,147 @@ class AviatorSyncService {
     } catch {
       // ignore
     }
+  }
+
+  /* ── Autonomous Simulator for standalone Admin view ── */
+  private checkAndStartAutonomousEngine() {
+    const isPlayerRecent = Date.now() - this.lastPlayerHeartbeat < 4000;
+    if (!isPlayerRecent) {
+      this.isPlayerMasterActive = false;
+      this.startAutonomousLoop();
+    }
+  }
+
+  private stopAutonomousEngine() {
+    if (this.autonomousTimer) {
+      clearInterval(this.autonomousTimer);
+      clearTimeout(this.autonomousTimer);
+      this.autonomousTimer = null;
+    }
+    if (this.autonomousFlightRaf) {
+      cancelAnimationFrame(this.autonomousFlightRaf);
+      this.autonomousFlightRaf = null;
+    }
+  }
+
+  private startAutonomousLoop() {
+    this.stopAutonomousEngine();
+    
+    // Determine next crash point considering overrides
+    let targetCrash = 1.30 + Math.random() * 3.5;
+    const override = this.getAdminOverride();
+    if (override.forceNext100xCrash) {
+      targetCrash = 1.00;
+      this.clearAdminOverride();
+    } else if (override.forcedTargetMultiplier) {
+      targetCrash = override.forcedTargetMultiplier;
+      this.clearAdminOverride();
+    }
+
+    let countdown = 5;
+    const roundId = `rd_${Date.now().toString(36)}`;
+    const hash = 'a9f2' + Math.random().toString(16).slice(2, 10) + '...';
+    const bets = generateMockBets();
+
+    const publish = (phase: 'betting' | 'flying' | 'crashed', multiplier: number, cd: number) => {
+      const state: AviatorLiveState = {
+        roundId,
+        phase,
+        multiplier: Math.round(multiplier * 100) / 100,
+        crashPoint: targetCrash,
+        countdown: cd,
+        commitHash: hash,
+        liveBets: bets,
+        timestamp: Date.now(),
+      };
+      this.notifyStateListeners(state);
+    };
+
+    // Step 1: Betting Countdown
+    publish('betting', 1.00, countdown);
+    this.autonomousTimer = setInterval(() => {
+      // Check if real player took over
+      if (Date.now() - this.lastPlayerHeartbeat < 3000) {
+        this.stopAutonomousEngine();
+        return;
+      }
+
+      countdown -= 1;
+      if (countdown > 0) {
+        publish('betting', 1.00, countdown);
+      } else {
+        clearInterval(this.autonomousTimer);
+        this.autonomousTimer = null;
+
+        // Step 2: Instant Crash at 1.00x check
+        if (targetCrash <= 1.00) {
+          this.crashAutonomousFlight(1.00);
+          return;
+        }
+
+        // Step 3: Flight Loop
+        let mult = 1.00;
+        const flightStartTime = Date.now();
+        const runFlight = () => {
+          if (Date.now() - this.lastPlayerHeartbeat < 3000) {
+            this.stopAutonomousEngine();
+            return;
+          }
+
+          const elapsedSec = (Date.now() - flightStartTime) / 1000;
+          // Smooth non-linear curve
+          mult = 1.00 + Math.pow(elapsedSec * 0.48, 1.25);
+
+          // Simulated bot cashouts along the way
+          bets.forEach((b) => {
+            if (b.status === 'active' && Math.random() < 0.02 && mult > 1.2) {
+              b.status = 'won';
+              b.cashedAt = mult;
+            }
+          });
+
+          if (mult >= targetCrash) {
+            this.crashAutonomousFlight(targetCrash);
+          } else {
+            publish('flying', mult, 0);
+            this.autonomousFlightRaf = requestAnimationFrame(runFlight);
+          }
+        };
+
+        publish('flying', 1.00, 0);
+        this.autonomousFlightRaf = requestAnimationFrame(runFlight);
+      }
+    }, 1000);
+  }
+
+  private crashAutonomousFlight(finalMultiplier: number) {
+    if (this.autonomousFlightRaf) {
+      cancelAnimationFrame(this.autonomousFlightRaf);
+      this.autonomousFlightRaf = null;
+    }
+    if (this.autonomousTimer) {
+      clearInterval(this.autonomousTimer);
+      clearTimeout(this.autonomousTimer);
+      this.autonomousTimer = null;
+    }
+
+    const curr = this.lastState;
+    if (curr) {
+      const lostBets = (curr.liveBets || []).map((b) => (!b.cashedAt ? { ...b, status: 'lost' as const } : b));
+      const crashState: AviatorLiveState = {
+        ...curr,
+        phase: 'crashed',
+        multiplier: Math.round(finalMultiplier * 100) / 100,
+        liveBets: lostBets,
+        timestamp: Date.now(),
+      };
+      this.notifyStateListeners(crashState);
+    }
+
+    // After 3.5s cooldown, start next autonomous round
+    this.autonomousTimer = setTimeout(() => {
+      this.checkAndStartAutonomousEngine();
+    }, 3500);
   }
 }
 

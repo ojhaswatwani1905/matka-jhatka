@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, AlertOctagon, Eye, Activity } from 'lucide-react';
+import { Zap, AlertOctagon, Eye, Activity, RotateCcw } from 'lucide-react';
 import { aviatorSync, type AviatorLiveState } from '../../lib/aviatorSync';
-
 import { useToast } from '../ui/Toast';
 import { formatCurrency } from '../../lib/utils';
 import { RedPlaneIcon } from '../../pages/games/AviatorPage';
@@ -49,91 +48,155 @@ export function AviatorAdminLiveMonitor() {
     const parent = canvas.parentElement;
     if (!parent) return;
 
-    const W = parent.clientWidth || 480;
-    const H = parent.clientHeight || 220;
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
-    }
+    let animId: number;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, W, H);
+    const render = () => {
+      const W = parent.clientWidth || 480;
+      const H = parent.clientHeight || 220;
+      if (canvas.width !== W || canvas.height !== H) {
+        canvas.width = W;
+        canvas.height = H;
+      }
 
-    const phase = liveState?.phase || 'betting';
-    const multiplier = liveState?.multiplier || 1.00;
-    const crashed = phase === 'crashed';
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, W, H);
 
-    const originX = 0;
-    const originY = H;
+      const phase = liveState?.phase || 'betting';
+      const multiplier = liveState?.multiplier || 1.00;
+      const crashed = phase === 'crashed';
 
-    if (phase === 'betting') {
+      const originX = 0;
+      const originY = H;
+
+      if (phase === 'betting') {
+        // Flat runway line
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(212,175,55,0.4)';
+        ctx.lineWidth = 3;
+        ctx.moveTo(0, H - 20);
+        ctx.lineTo(80, H - 20);
+        ctx.stroke();
+
+        // Small stationary plane
+        ctx.save();
+        ctx.translate(75, H - 24);
+        ctx.fillStyle = '#FF1744';
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(-12, -7);
+        ctx.lineTo(-6, 0);
+        ctx.lineTo(-12, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      if (startTimeRef.current === 0) startTimeRef.current = Date.now();
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+
+      const progressX = Math.min(0.90, 0.20 + (elapsed / 3.0) * 0.70);
+      const rawRatio = Math.max(0, (multiplier - 1.0) / 2.2);
+      const progressY = Math.min(0.82, Math.pow(rawRatio, 0.52) * 0.72 + 0.10);
+
+      const targetX = progressX * W;
+      const targetY = H - progressY * H;
+      const controlX = targetX * 0.60;
+      const controlY = originY;
+
+      // Fill area under flight curve
       ctx.beginPath();
-      ctx.strokeStyle = 'rgba(212,175,55,0.35)';
-      ctx.lineWidth = 2;
-      ctx.moveTo(0, H - 15);
-      ctx.lineTo(60, H - 15);
+      ctx.moveTo(originX, originY);
+      ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
+      ctx.lineTo(targetX, originY);
+      ctx.closePath();
+
+      const fillGrad = ctx.createLinearGradient(0, targetY, 0, originY);
+      if (crashed) {
+        fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.65)');
+        fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.05)');
+      } else {
+        fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.65)');
+        fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.05)');
+      }
+      ctx.fillStyle = fillGrad;
+      ctx.fill();
+
+      // Dash drop line to floor
+      ctx.beginPath();
+      ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.7)' : 'rgba(212, 175, 55, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.moveTo(targetX, targetY);
+      ctx.lineTo(targetX, originY);
       ctx.stroke();
-      return;
-    }
+      ctx.setLineDash([]);
 
-    if (startTimeRef.current === 0) startTimeRef.current = Date.now();
-    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      // Glowing flight curve
+      ctx.beginPath();
+      ctx.strokeStyle = crashed ? '#FF4D6D' : '#FFE57F';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.moveTo(originX, originY);
+      ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
+      ctx.stroke();
 
-    const progressX = Math.min(0.92, 0.25 + (elapsed / 2.8) * 0.67);
-    const rawRatio = Math.max(0, (multiplier - 1.0) / 2.2);
-    const progressY = Math.min(0.85, Math.pow(rawRatio, 0.5) * 0.72 + 0.08);
+      // Jet icon on trajectory tip
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      const angle = Math.atan2(targetY - controlY, targetX - controlX) * 0.5 - 0.2;
+      ctx.rotate(angle);
 
-    const targetX = progressX * W;
-    const targetY = H - progressY * H;
-    const controlX = targetX * 0.62;
-    const controlY = originY;
+      // Jet flame
+      if (!crashed) {
+        ctx.beginPath();
+        ctx.moveTo(-16, -2);
+        ctx.lineTo(-24 - Math.random() * 8, 0);
+        ctx.lineTo(-16, 2);
+        ctx.closePath();
+        ctx.fillStyle = '#FF9100';
+        ctx.shadowColor = '#FF6D00';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
 
-    // Fill curve
-    ctx.beginPath();
-    ctx.moveTo(originX, originY);
-    ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
-    ctx.lineTo(targetX, originY);
-    ctx.closePath();
+      // Jet body
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.quadraticCurveTo(6, -6, -14, -4);
+      ctx.lineTo(-14, 4);
+      ctx.quadraticCurveTo(6, 6, 18, 0);
+      ctx.closePath();
+      ctx.fillStyle = crashed ? '#990022' : '#FF1744';
+      ctx.shadowColor = crashed ? 'rgba(255, 77, 109, 0.8)' : 'rgba(255, 23, 68, 0.8)';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
 
-    const fillGrad = ctx.createLinearGradient(0, targetY, 0, originY);
-    if (crashed) {
-      fillGrad.addColorStop(0, 'rgba(255, 77, 109, 0.7)');
-      fillGrad.addColorStop(1, 'rgba(255, 77, 109, 0.05)');
-    } else {
-      fillGrad.addColorStop(0, 'rgba(212, 175, 55, 0.7)');
-      fillGrad.addColorStop(1, 'rgba(212, 175, 55, 0.05)');
-    }
-    ctx.fillStyle = fillGrad;
-    ctx.fill();
+      // Jet wing
+      ctx.beginPath();
+      ctx.moveTo(4, -1);
+      ctx.lineTo(-8, -14);
+      ctx.lineTo(-11, -12);
+      ctx.lineTo(-4, -1);
+      ctx.closePath();
+      ctx.fillStyle = '#CC0029';
+      ctx.fill();
 
-    // Dash drop line
-    ctx.beginPath();
-    ctx.strokeStyle = crashed ? 'rgba(255, 77, 109, 0.6)' : 'rgba(212, 175, 55, 0.6)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([3, 3]);
-    ctx.moveTo(targetX, targetY);
-    ctx.lineTo(targetX, originY);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      ctx.restore();
 
-    // Curve line
-    ctx.beginPath();
-    ctx.strokeStyle = crashed ? '#FF4D6D' : '#FFE57F';
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = 'round';
-    ctx.moveTo(originX, originY);
-    ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
-    ctx.stroke();
+      if (phase === 'flying') {
+        animId = requestAnimationFrame(render);
+      }
+    };
 
-    // Jet tip marker
-    ctx.beginPath();
-    ctx.arc(targetX, targetY, 5, 0, Math.PI * 2);
-    ctx.fillStyle = crashed ? '#FF1744' : '#FFD700';
-    ctx.shadowColor = crashed ? '#FF1744' : '#FFD700';
-    ctx.shadowBlur = 10;
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    render();
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
   }, [liveState]);
 
   // Handle Instant Crash
@@ -155,14 +218,13 @@ export function AviatorAdminLiveMonitor() {
     }, 1200);
   };
 
-
   // Toggle Force 1.00x next round
   const handleToggleForce100x = () => {
     const nextVal = !force100x;
     setForce100x(nextVal);
     aviatorSync.setAdminOverride({
       forceNext100xCrash: nextVal,
-      forcedTargetMultiplier: nextVal ? 1.00 : (customTarget ? parseFloat(customTarget) : null),
+      forcedTargetMultiplier: nextVal ? 1.00 : customTarget ? parseFloat(customTarget) : null,
     });
 
     addToast({
@@ -242,8 +304,8 @@ export function AviatorAdminLiveMonitor() {
         {/* Live Status Badge */}
         <div className="flex items-center gap-2">
           {isFlying && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-black shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
               <span>IN FLIGHT · {multiplier.toFixed(2)}×</span>
             </div>
           )}
@@ -287,7 +349,10 @@ export function AviatorAdminLiveMonitor() {
               </div>
               <div className="flex items-center gap-3">
                 <span>
-                  Secret Target: <strong className="text-gold font-bold">{liveState?.crashPoint ? `${liveState.crashPoint.toFixed(2)}×` : 'Auto'}</strong>
+                  Secret Target:{' '}
+                  <strong className="text-gold font-bold">
+                    {liveState?.crashPoint ? `${liveState.crashPoint.toFixed(2)}×` : 'Auto'}
+                  </strong>
                 </span>
                 <span>
                   Pool: <strong className="text-emerald-400 font-bold">{formatCurrency(totalBetsVolume)}</strong>
@@ -360,7 +425,7 @@ export function AviatorAdminLiveMonitor() {
               disabled={!isFlying || isCrashing}
               className={`w-full py-4 px-4 rounded-2xl font-heading font-black text-base transition-all duration-200 flex items-center justify-center gap-3 shadow-2xl cursor-pointer ${
                 isFlying
-                  ? 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white hover:from-red-500 hover:to-rose-600 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.6)] animate-pulse active:scale-[0.98]'
+                  ? 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white hover:from-red-500 hover:to-rose-600 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.7)] animate-pulse active:scale-[0.98]'
                   : 'bg-[#14231b] text-[rgba(212,175,55,0.3)] border border-[rgba(212,175,55,0.1)] cursor-not-allowed opacity-60'
               }`}
             >
@@ -376,7 +441,7 @@ export function AviatorAdminLiveMonitor() {
                 <div className="text-[10px] font-normal opacity-80 font-sans">
                   {isFlying
                     ? 'Instantly terminate flight & crash all player bets!'
-                    : 'Armed and ready. Enables when plane takes off.'}
+                    : 'Armed and ready. Enables automatically upon takeoff.'}
                 </div>
               </div>
             </button>
@@ -394,9 +459,9 @@ export function AviatorAdminLiveMonitor() {
               {(force100x || customTarget) && (
                 <button
                   onClick={handleClearOverride}
-                  className="text-[10px] text-rose-400 hover:underline cursor-pointer"
+                  className="text-[10px] text-rose-400 hover:underline cursor-pointer flex items-center gap-1"
                 >
-                  Reset Overrides
+                  <RotateCcw className="w-3 h-3" /> Reset Overrides
                 </button>
               )}
             </div>
@@ -413,7 +478,7 @@ export function AviatorAdminLiveMonitor() {
                 onClick={handleToggleForce100x}
                 className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                   force100x
-                    ? 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                    ? 'bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.7)] ring-2 ring-red-300'
                     : 'bg-[#061510] text-[rgba(212,175,55,0.6)] border border-[rgba(212,175,55,0.2)] hover:text-gold'
                 }`}
               >
@@ -427,13 +492,13 @@ export function AviatorAdminLiveMonitor() {
                 Pre-Set Next Max Multiplier Cap:
               </label>
               <div className="grid grid-cols-4 gap-1.5">
-                {[1.10, 1.25, 1.50, 2.00].map((val) => (
+                {[1.1, 1.25, 1.5, 2.0].map((val) => (
                   <button
                     key={val}
                     onClick={() => handleApplyCustomTarget(val)}
                     className={`py-1.5 rounded-lg text-xs font-mono font-black transition-all cursor-pointer ${
                       customTarget === String(val) && !force100x
-                        ? 'btn-royal-gold'
+                        ? 'btn-royal-gold shadow-[0_0_10px_rgba(212,175,55,0.4)]'
                         : 'bg-[#0d2419] border border-[rgba(212,175,55,0.15)] text-[rgba(212,175,55,0.7)] hover:text-gold'
                     }`}
                   >
@@ -452,11 +517,15 @@ export function AviatorAdminLiveMonitor() {
             </div>
             <div className="p-2 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.1)]">
               <span className="text-[10px] text-[rgba(212,175,55,0.5)] block">Active Bet Pool</span>
-              <span className="font-mono font-black text-emerald-400 text-sm">{formatCurrency(totalBetsVolume)}</span>
+              <span className="font-mono font-black text-emerald-400 text-sm">
+                {formatCurrency(totalBetsVolume)}
+              </span>
             </div>
             <div className="p-2 rounded-xl bg-[#061510] border border-[rgba(212,175,55,0.1)]">
               <span className="text-[10px] text-[rgba(212,175,55,0.5)] block">House Liability</span>
-              <span className="font-mono font-black text-rose-400 text-sm">{formatCurrency(currentHouseLiability)}</span>
+              <span className="font-mono font-black text-rose-400 text-sm">
+                {formatCurrency(currentHouseLiability)}
+              </span>
             </div>
           </div>
         </div>
