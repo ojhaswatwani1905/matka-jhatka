@@ -24,6 +24,10 @@ import ColorPredictionPage from './pages/games/ColorPredictionPage';
 import MatkaPage from './pages/games/MatkaPage';
 import WinGoPage from './pages/games/WinGoPage';
 import LotteryPage from './pages/games/LotteryPage';
+import K3Page from './pages/games/K3Page';
+import TrxWingoPage from './pages/games/TrxWingoPage';
+import MiniDicePage from './pages/games/MiniDicePage';
+import MiniRoulettePage from './pages/games/MiniRoulettePage';
 import AviatorPage from './pages/games/AviatorPage';
 import MinesPage from './pages/games/MinesPage';
 import PlinkoPage from './pages/games/PlinkoPage';
@@ -194,6 +198,10 @@ export default function App() {
                             <Route path="/games/matka" element={<MatkaPage />} />
                             <Route path="/games/wingo" element={<WinGoPage />} />
                             <Route path="/games/lottery" element={<LotteryPage />} />
+                            <Route path="/games/k3" element={<K3Page />} />
+                            <Route path="/games/trx" element={<TrxWingoPage />} />
+                            <Route path="/games/mini-dice" element={<MiniDicePage />} />
+                            <Route path="/games/mini-roulette" element={<MiniRoulettePage />} />
                             <Route path="/games/aviator" element={<AviatorPage />} />
                             <Route path="/games/mines" element={<MinesPage />} />
                             <Route path="/games/plinko" element={<PlinkoPage />} />

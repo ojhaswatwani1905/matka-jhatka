@@ -11,11 +11,13 @@ import { useAuthGate } from '../../hooks/useAuthGate';
 import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
 import { useGameControl } from '../../store/GameControlContext';
-import { formatCurrency, getRandomNumber, generateId, generatePeriod } from '../../lib/utils';
+import { formatCurrency, getRandomNumber, generatePeriod } from '../../lib/utils';
 import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
 import { haptics } from '../../lib/haptics';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const ROUND_DURATION = 45;
 const BET_AMOUNTS = [10, 50, 100, 500, 1000];
@@ -71,6 +73,15 @@ export default function WinGoPage() {
         const won = b.selection === resultNumber;
         const payout = won ? b.amount * 9 : 0;
         if (won) totalWin += payout;
+
+        // Record in Order Ledger
+        orderLedger.updateOrder(b.id, {
+          resultOutcome: `Number ${resultNumber}`,
+          multiplier: 9,
+          winAmount: payout,
+          status: won ? 'won' : 'lost',
+        });
+
         return { ...b, result: (won ? 'win' : 'loss') as 'win' | 'loss', payout };
       });
 
@@ -94,7 +105,7 @@ export default function WinGoPage() {
         setRoundKey(prev => prev + 1);
       }, 4000);
     }, 2000);
-  }, [period, bets, addBalance]);
+  }, [period, bets, addBalance, checkIsFirstBet, consumeFirstBet, getManualOverrideForGame]);
 
   useEffect(() => { callbackRef.current = handleRoundComplete; }, [handleRoundComplete]);
 
@@ -103,8 +114,22 @@ export default function WinGoPage() {
       if (selectedNumber === null || isLocked) return;
       if (!deductBalance(betAmount, `WinGo - Number ${selectedNumber}`)) return;
       haptics.bet();
+      const betId = `TXN_WINGO_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      orderLedger.recordOrder({
+        id: betId,
+        gameId: 'wingo',
+        gameName: 'Win Go',
+        period,
+        userId: 'player',
+        userName: 'You',
+        selection: `Number ${selectedNumber}`,
+        betAmount,
+        status: 'pending',
+      });
+
       setBets(prev => [{
-        id: generateId(),
+        id: betId,
         period,
         selection: selectedNumber,
         amount: betAmount,
@@ -261,6 +286,9 @@ export default function WinGoPage() {
           return won ? payout - amount : -amount;
         }}
       />
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="wingo" gameName="Win Go" currentPeriod={period} />
 
       <GameChat gameId="wingo" />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />

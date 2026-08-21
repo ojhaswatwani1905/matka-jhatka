@@ -8,13 +8,15 @@ import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useAuth } from '../../store/AuthContext';
 import { useWallet } from '../../store/WalletContext';
-import { formatCurrency, getRandomNumber, generateId } from '../../lib/utils';
+import { formatCurrency, getRandomNumber } from '../../lib/utils';
 import { sounds } from '../../lib/sound';
 import confetti from 'canvas-confetti';
 import { AutoBetPanel } from '../../components/ui/AutoBetPanel';
 import { GameChat } from '../../components/ui/GameChat';
 import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
 import { haptics } from '../../lib/haptics';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const TICKET_PRICE = 50;
 const JACKPOT = 500000;
@@ -68,9 +70,25 @@ export default function LotteryPage() {
       if (selectedNumbers.length !== MAX_NUMBERS) return;
       if (!deductBalance(TICKET_PRICE, 'Lottery ticket')) return;
       haptics.bet();
+
+      const ticketId = `TXN_LOTTERY_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const sortedNumbers = [...selectedNumbers].sort((a, b) => a - b);
+
+      orderLedger.recordOrder({
+        id: ticketId,
+        gameId: 'lottery',
+        gameName: 'Lottery 5D',
+        period: Date.now().toString().slice(-6),
+        userId: 'player',
+        userName: 'You',
+        selection: `Numbers: ${sortedNumbers.join(', ')}`,
+        betAmount: TICKET_PRICE,
+        status: 'pending',
+      });
+
       setTickets(prev => [{
-        id: generateId(),
-        numbers: [...selectedNumbers].sort((a, b) => a - b),
+        id: ticketId,
+        numbers: sortedNumbers,
         timestamp: new Date().toISOString(),
       }, ...prev]);
       setSelectedNumbers([]);
@@ -107,6 +125,13 @@ export default function LotteryPage() {
         else if (matched === 5) payout = 10000;
         else if (matched === 4) payout = 1000;
         else if (matched === 3) payout = 100;
+
+        orderLedger.updateOrder(t.id, {
+          resultOutcome: `Drawn: [${drawn.join(', ')}] (${matched} matched)`,
+          multiplier: matched > 0 ? Math.round(payout / TICKET_PRICE) : 0,
+          winAmount: payout,
+          status: payout > 0 ? 'won' : 'lost',
+        });
 
         if (payout > 0) {
           totalPayout += payout;
@@ -288,6 +313,9 @@ export default function LotteryPage() {
           return won ? payout - amount : -amount;
         }}
       />
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="lottery" gameName="Lottery 5D" />
 
       <GameChat gameId="lottery" />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />

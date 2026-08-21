@@ -7,9 +7,10 @@ import AnimatedCounter from '../ui/AnimatedCounter';
 interface WalletCardProps {
   onDeposit?: () => void;
   onWithdraw?: () => void;
+  className?: string;
 }
 
-export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
+export default function WalletCard({ onDeposit, onWithdraw, className = '' }: WalletCardProps) {
   const { balance, bonusBalance, bonusWagerRequired, bonusWagerProgress } = useWallet();
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [glare, setGlare] = useState({ x: 50, y: 50 });
@@ -34,7 +35,7 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative overflow-hidden rounded-3xl select-none cursor-default"
+      className={`relative overflow-hidden rounded-3xl select-none cursor-default flex flex-col justify-between h-full ${className}`}
       style={{
         transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
         transition: tilt.x === 0 ? 'transform 0.5s ease' : 'transform 0.1s ease',
@@ -74,10 +75,12 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FFE57F] to-transparent" />
 
       {/* ── Content ──────────────────────────────────────── */}
-      <div className="relative z-10 p-5 sm:p-6">
+      <div className="relative z-10 p-5 sm:p-6 flex flex-col justify-between flex-1 h-full">
 
-        {/* Row 1 — label + verified */}
-        <div className="flex items-center justify-between mb-5">
+        {/* Top Content Group */}
+        <div>
+          {/* Row 1 — label + verified */}
+          <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <motion.div
               className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -103,11 +106,11 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
         </div>
 
         {/* Row 2 — Big balance number */}
-        <div className="mb-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black text-[rgba(212,175,55,0.5)]">₹</span>
+        <div className="mb-2">
+          <div className="flex items-baseline gap-1.5 sm:gap-2">
+            <span className="text-lg sm:text-xl font-black text-[rgba(212,175,55,0.5)]">₹</span>
             <span
-              className="text-5xl sm:text-6xl font-black font-heading tabular-nums leading-none"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black font-heading tabular-nums leading-none tracking-tight"
               style={{ color: '#FFE57F', textShadow: '0 0 28px rgba(212,175,55,0.55), 0 2px 0 rgba(0,0,0,0.4)' }}
             >
               <AnimatedCounter value={balance} decimals={2} />
@@ -151,12 +154,15 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
             )}
           </div>
         )}
+        </div>
 
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.22)] to-transparent my-4" />
+        {/* Bottom Action Group */}
+        <div className="mt-4">
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.22)] to-transparent mb-4" />
 
-        {/* Row 3 — Buttons */}
-        <div className="flex gap-3">
+          {/* Row 3 — Buttons */}
+          <div className="flex gap-3">
           <motion.button
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.96 }}
@@ -193,10 +199,11 @@ export default function WalletCard({ onDeposit, onWithdraw }: WalletCardProps) {
             Withdraw
           </motion.button>
         </div>
+        </div>
 
         {/* Watermark */}
         <motion.div
-          className="absolute bottom-4 right-5 flex items-center gap-1 text-[9px] font-black"
+          className="absolute bottom-4 right-5 flex items-center gap-1 text-[9px] font-black pointer-events-none"
           style={{ color: 'rgba(212,175,55,0.25)' }}
           animate={{ opacity: [0.25, 0.6, 0.25] }}
           transition={{ duration: 3.5, repeat: Infinity }}

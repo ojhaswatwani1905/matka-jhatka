@@ -234,15 +234,16 @@ export default function HomePage() {
         className="space-y-6 pb-8 max-w-7xl mx-auto"
       >
         {/* 1. Hero Banner + Wallet Card */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <motion.div variants={item} className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+          <motion.div variants={item} className="h-full flex flex-col">
             <WalletCard
+              className="h-full"
               onDeposit={() => window.location.href = '/wallet'}
               onWithdraw={() => window.location.href = '/wallet'}
             />
           </motion.div>
-          <motion.div variants={item} className="lg:col-span-2">
-            <BannerSlider />
+          <motion.div variants={item} className="h-full flex flex-col">
+            <BannerSlider className="h-full" />
           </motion.div>
         </div>
 

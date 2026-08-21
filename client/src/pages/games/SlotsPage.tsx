@@ -18,6 +18,8 @@ import { evaluateAdaptiveSpinOutcome, recordSlotPayoutToProfile } from '../../li
 import Modal from '../../components/ui/Modal';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const slotsBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -89,30 +91,6 @@ const VARIANT_PAYTABLES: Record<string, SymbolPayoutRule[]> = {
     { symbol: '🍇', name: 'Royal Grapes', threeMatch: 8, fiveMatch: 30, twoMatch: 1.5, color: '#9C27B0' },
     { symbol: '🍌', name: 'Banana Split', threeMatch: 4, fiveMatch: 15, twoMatch: 1.2, color: '#FFEB3B' },
     { symbol: '🍒', name: 'Arcade Cherry', threeMatch: 2, fiveMatch: 10, twoMatch: 1.0, color: '#F44336' },
-  ],
-  'diamond-deluxe': [
-    { symbol: '💎', name: 'Diamond Deluxe', threeMatch: 150, fiveMatch: 600, twoMatch: 6, color: '#00E5FF' },
-    { symbol: '👑', name: 'Deluxe Crown', threeMatch: 60, fiveMatch: 250, twoMatch: 4, color: '#FFD700' },
-    { symbol: '🔮', name: 'Mystic Orb', threeMatch: 30, fiveMatch: 120, twoMatch: 2.5, color: '#E040FB' },
-    { symbol: '✨', name: 'Sparkle Gem', threeMatch: 15, fiveMatch: 50, twoMatch: 1.8, color: '#FFF' },
-    { symbol: '💙', name: 'Sapphire Heart', threeMatch: 8, fiveMatch: 30, twoMatch: 1.4, color: '#2979FF' },
-    { symbol: '💍', name: 'Diamond Ring', threeMatch: 4, fiveMatch: 15, twoMatch: 1.0, color: '#B2EBF2' },
-  ],
-  'wild-safari': [
-    { symbol: '🦁', name: 'Lion King Jackpot', threeMatch: 30, fiveMatch: 300, twoMatch: 5, color: '#FF9800' },
-    { symbol: '🐘', name: 'Safari Elephant', threeMatch: 20, fiveMatch: 120, twoMatch: 3.5, color: '#90A4AE' },
-    { symbol: '🦏', name: 'Rhino Stampede', threeMatch: 12, fiveMatch: 60, twoMatch: 2.5, color: '#78909C' },
-    { symbol: '🦒', name: 'Tall Giraffe', threeMatch: 8, fiveMatch: 30, twoMatch: 2.0, color: '#FFB74D' },
-    { symbol: '🦓', name: 'Wild Zebra', threeMatch: 5, fiveMatch: 15, twoMatch: 1.5, color: '#ECEFF1' },
-    { symbol: '🃏', name: 'Wild Safari Joker', threeMatch: 25, fiveMatch: 200, twoMatch: 4, color: '#E91E63' },
-  ],
-  'golden-pharaoh': [
-    { symbol: '𓀾', name: 'Pharaoh Flagship', threeMatch: 50, fiveMatch: 500, twoMatch: 8, color: '#FFD700' },
-    { symbol: '👁️', name: 'Eye of Horus', threeMatch: 30, fiveMatch: 200, twoMatch: 5, color: '#00E5FF' },
-    { symbol: '𓆣', name: 'Golden Scarab', threeMatch: 20, fiveMatch: 100, twoMatch: 3.5, color: '#FFB300' },
-    { symbol: '🪙', name: 'Ancient Coin', threeMatch: 12, fiveMatch: 50, twoMatch: 2.5, color: '#FFA000' },
-    { symbol: '🏺', name: 'Relic Urn', threeMatch: 8, fiveMatch: 25, twoMatch: 1.8, color: '#D7CCC8' },
-    { symbol: '📜', name: 'Papyrus Scroll', threeMatch: 5, fiveMatch: 15, twoMatch: 1.2, color: '#FFF8E1' },
   ],
 };
 
@@ -373,6 +351,20 @@ export default function SlotsPage() {
         return;
       }
 
+      const orderId = `TXN_SLOTS_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      orderLedger.recordOrder({
+        id: orderId,
+        gameId: 'slots',
+        gameName: activeSlot.name || 'Royal 777 Slots',
+        period: Date.now().toString().slice(-6),
+        userId: user?.id || 'player',
+        userName: user?.name || 'You',
+        selection: `${activeSlot.name} (${activeSlot.reels}R × 4)`,
+        betAmount,
+        status: 'pending',
+      });
+
       setSpinning(true);
       setStopIndex(-1);
       setWinningCells([]);
@@ -435,6 +427,13 @@ export default function SlotsPage() {
               await initSeed();
 
               const { winCells, winningRows, totalPayout, maxMultiplier } = evaluateWins(newReels, columnsCount, betAmount);
+
+              orderLedger.updateOrder(orderId, {
+                resultOutcome: winCells.length > 0 ? `${maxMultiplier}× Match Win` : 'No Match',
+                multiplier: maxMultiplier,
+                winAmount: totalPayout,
+                status: winCells.length > 0 ? 'won' : 'lost',
+              });
 
               recordWagerAndPayout(activeSlot.id, betAmount, totalPayout);
               redisCache.set(`slot:last_spin:${activeSlot.id}`, { winMultiplier: maxMultiplier, payout: totalPayout, timestamp: Date.now() }, 3600);
@@ -921,6 +920,9 @@ export default function SlotsPage() {
             <GameChat gameId="slots" />
           </div>
         </div>
+
+        {/* Comprehensive Game Order Ledger & Transactions */}
+        <GameOrderLedger gameId="slots" gameName={activeSlot.name || 'Royal 777 Slots'} />
 
         {/* Related Games */}
         <RelatedGamesSection currentGameId="slots" />

@@ -2,8 +2,17 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Play, LockKeyhole } from 'lucide-react';
+import { SEOHead } from '../../components/shared/SEOHead';
 
-/* ─── Game Data ──────────────────────────────────────────────────── */
+const gamesBreadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://playarena.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Games Lobby', item: 'https://playarena.com/games' },
+  ],
+};
+
 interface Game {
   id: string;
   name: string;
@@ -19,26 +28,80 @@ interface Game {
 
 const TOP_GAMES: Game[] = [
   {
+    id: 'k3',
+    name: 'K3 3-Dice Lottery',
+    sub: 'Sum, Pairs & Triples',
+    img: '/games/lottery.png',
+    path: '/games/k3',
+    badge: '🎲 207× HOT',
+    badgeColor: 'bg-amber-500',
+    hot: true,
+    players: 7890,
+  },
+  {
+    id: 'trx',
+    name: 'TRX Hash WinGo',
+    sub: 'Blockchain Block Hash',
+    img: '/games/color.png',
+    path: '/games/trx',
+    badge: '⚡ CRYPTO',
+    badgeColor: 'bg-rose-600',
+    hot: true,
+    players: 6420,
+  },
+  {
+    id: 'mini-dice',
+    name: 'Mini Slider Dice',
+    sub: 'Dynamic Multiplier Odds',
+    img: '/games/plinko.png',
+    path: '/games/mini-dice',
+    badge: '🎯 99× MAX',
+    badgeColor: 'bg-blue-600',
+    hot: true,
+    players: 4120,
+  },
+  {
+    id: 'mini-roulette',
+    name: 'Mini Roulette 12',
+    sub: 'European 12-Pocket Wheel',
+    img: '/games/slots-hero.png',
+    path: '/games/mini-roulette',
+    badge: '🎡 12× WIN',
+    badgeColor: 'bg-purple-600',
+    players: 3890,
+  },
+  {
+    id: 'matka',
+    name: 'Matka Jhatka',
+    sub: 'Kalyan & Mumbai Bazaars',
+    img: '/games/matka.png',
+    path: '/games/matka',
+    badge: '🔥 10,000×',
+    badgeColor: 'bg-amber-600',
+    hot: true,
+    players: 8940,
+  },
+  {
     id: 'slots',
-    name: 'Slot Machines',
-    sub: 'Royal 777 & Custom Slots',
+    name: 'Royal 777 Slots',
+    sub: 'Vegas Multi-Line Machines',
     img: '/games/slots-hero.png',
     path: '/games/slots',
-    badge: '🎰 NEW',
+    badge: '🎰 777× JACKPOT',
     badgeColor: 'bg-amber-500',
     hot: true,
     players: 5930,
   },
   {
-    id: 'matka',
-    name: 'Matka Jhatka',
-    sub: 'Kalyan & Mumbai',
-    img: '/games/matka.png',
-    path: '/games/matka',
-    badge: '🔥 Popular',
+    id: 'aviator',
+    name: 'Aviator Crash',
+    sub: 'Supersonic Jet Multiplier',
+    img: '/games/aviator.png',
+    path: '/games/aviator',
+    badge: '🚀 HOT',
     badgeColor: 'bg-rose-600',
     hot: true,
-    players: 4892,
+    players: 9120,
   },
   {
     id: 'color',
@@ -46,165 +109,170 @@ const TOP_GAMES: Game[] = [
     sub: 'Win Go 1Min / 3Min',
     img: '/games/color.png',
     path: '/games/color-prediction',
-    badge: '⚡ Live',
+    badge: '⚡ LIVE',
     badgeColor: 'bg-emerald-600',
     players: 5284,
   },
   {
-    id: 'aviator',
-    name: 'Aviator',
-    sub: 'Crash Multiplier',
-    img: '/games/aviator.png',
-    path: '/games/aviator',
-    badge: '🚀 HOT',
-    badgeColor: 'bg-rose-600',
-    players: 6120,
-  },
-  {
     id: 'mines',
-    name: 'Mines',
-    sub: 'Strategy · Dodge Bombs',
+    name: 'Mines Strategy',
+    sub: 'Dodge Bombs & Gems',
     img: '/games/mines.png',
     path: '/games/mines',
-    badge: '💣 NEW',
+    badge: '💣 1000×',
     badgeColor: 'bg-amber-600',
-    players: 2890,
+    players: 3890,
   },
   {
     id: 'plinko',
     name: 'Plinko Gold',
-    sub: 'Physics Drop',
+    sub: '60FPS Real Physics',
     img: '/games/plinko.png',
     path: '/games/plinko',
-    badge: '🪙 NEW',
+    badge: '🪙 29×',
     badgeColor: 'bg-blue-600',
-    players: 1740,
+    players: 4740,
   },
   {
     id: 'teen_patti',
     name: 'Teen Patti',
-    sub: 'Indian Card Game',
+    sub: 'Royal 3-Card Poker',
     img: '/games/teen_patti.png',
     path: '/games/teen-patti',
-    badge: '🃏 NEW',
+    badge: '🃏 PROVABLE',
     badgeColor: 'bg-purple-600',
     players: 3210,
   },
+  {
+    id: 'ocean_hunter',
+    name: 'Ocean Hunter',
+    sub: '2D Arcade Fish Hunter',
+    img: '/games/ocean_hunter.png',
+    path: '/games/ocean-hunter',
+    badge: '🐟 50× BOSS',
+    badgeColor: 'bg-cyan-600',
+    players: 2840,
+  },
 ];
 
-const COLOR_GAMES: Game[] = [
+const LOTTERY_DICE_GAMES: Game[] = [
+  {
+    id: 'k3-2',
+    name: 'K3 3-Dice Lottery',
+    sub: 'Sum, Pairs & Triples',
+    img: '/games/lottery.png',
+    path: '/games/k3',
+    badge: '🎲 207× HOT',
+    badgeColor: 'bg-amber-500',
+    players: 7890,
+  },
+  {
+    id: 'matka2',
+    name: 'Matka Jhatka',
+    sub: 'Kalyan & Mumbai Bazaars',
+    img: '/games/matka.png',
+    path: '/games/matka',
+    badge: '🔥 10,000×',
+    badgeColor: 'bg-rose-600',
+    hot: true,
+    players: 8940,
+  },
+  {
+    id: 'lottery2',
+    name: 'Lottery 5D',
+    sub: '5-Digit Tumbler Draw',
+    img: '/games/lottery.png',
+    path: '/games/lottery',
+    badge: '💰 JACKPOT',
+    badgeColor: 'bg-amber-600',
+    players: 3341,
+  },
+];
+
+const CRYPTO_WINGO_GAMES: Game[] = [
+  {
+    id: 'trx2',
+    name: 'TRX Hash WinGo',
+    sub: 'Tron Block Hash Draw',
+    img: '/games/color.png',
+    path: '/games/trx',
+    badge: '⚡ BLOCKCHAIN',
+    badgeColor: 'bg-rose-600',
+    players: 6420,
+  },
   {
     id: 'color2',
     name: 'Color Prediction',
     sub: 'Win Go 1Min',
     img: '/games/color.png',
     path: '/games/color-prediction',
-    badge: '⚡ Live',
+    badge: '⚡ LIVE',
     badgeColor: 'bg-emerald-600',
     players: 5284,
   },
   {
     id: 'wingo2',
     name: 'Win Go 3Min',
-    sub: 'Number & Color',
+    sub: 'Number & Color Draw',
     img: '/games/wingo.png',
     path: '/games/wingo',
     badge: 'HOT',
     badgeColor: 'bg-rose-600',
-    players: 1943,
+    players: 2943,
   },
 ];
 
-const MATKA_GAMES: Game[] = [
+const MINI_GAMES_LIST: Game[] = [
   {
-    id: 'matka2',
-    name: 'Matka Jhatka',
-    sub: 'Kalyan & Mumbai',
-    img: '/games/matka.png',
-    path: '/games/matka',
-    badge: '🔥 Popular',
-    badgeColor: 'bg-rose-600',
-    hot: true,
-    players: 4892,
+    id: 'mini-dice2',
+    name: 'Mini Slider Dice',
+    sub: 'Dynamic Multiplier Odds',
+    img: '/games/plinko.png',
+    path: '/games/mini-dice',
+    badge: '🎯 99× MAX',
+    badgeColor: 'bg-blue-600',
+    players: 4120,
   },
   {
-    id: 'lottery2',
-    name: 'Lottery 5D',
-    sub: '5D & K3 Draw',
-    img: '/games/lottery.png',
-    path: '/games/lottery',
-    badge: '💰 Jackpot',
-    badgeColor: 'bg-amber-600',
-    players: 2341,
-  },
-];
-
-const CRASH_CARD_GAMES: Game[] = [
-  {
-    id: 'aviator2',
-    name: 'Aviator',
-    sub: 'Crash Multiplier',
-    img: '/games/aviator.png',
-    path: '/games/aviator',
-    badge: '🚀 HOT',
-    badgeColor: 'bg-rose-600',
-    players: 6120,
-  },
-  {
-    id: 'mines2',
-    name: 'Mines',
-    sub: 'Strategy · Dodge Bombs',
-    img: '/games/mines.png',
-    path: '/games/mines',
-    badge: '💣 NEW',
-    badgeColor: 'bg-amber-600',
-    players: 2890,
+    id: 'mini-roulette2',
+    name: 'Mini Roulette 12',
+    sub: 'European 12-Pocket Wheel',
+    img: '/games/slots-hero.png',
+    path: '/games/mini-roulette',
+    badge: '🎡 12× WIN',
+    badgeColor: 'bg-purple-600',
+    players: 3890,
   },
   {
     id: 'plinko2',
     name: 'Plinko Gold',
-    sub: 'Physics Drop',
+    sub: '60FPS Real Physics',
     img: '/games/plinko.png',
     path: '/games/plinko',
-    badge: '🪙 NEW',
+    badge: '🪙 29×',
     badgeColor: 'bg-blue-600',
-    players: 1740,
+    players: 4740,
   },
   {
-    id: 'teen2',
-    name: 'Teen Patti',
-    sub: 'Indian Card Game',
-    img: '/games/teen_patti.png',
-    path: '/games/teen-patti',
-    badge: '🃏 LIVE',
-    badgeColor: 'bg-purple-600',
-    players: 3210,
+    id: 'mines2',
+    name: 'Mines Strategy',
+    sub: 'Dodge Bombs & Gems',
+    img: '/games/mines.png',
+    path: '/games/mines',
+    badge: '💣 1000×',
+    badgeColor: 'bg-amber-600',
+    players: 3890,
   },
 ];
 
-const FISHING_GAMES: Game[] = [
-  {
-    id: 'fishing',
-    name: 'Ocean Hunter',
-    sub: 'Arcade Fishing',
-    img: '/games/fishing.png',
-    path: '/games/ocean-hunter',
-    badge: '🐟 LIVE',
-    badgeColor: 'bg-emerald-600',
-  },
-];
-
-/* ─── Category tabs ─────────────────────────────────────────────── */
 const CATS = [
   { id: 'all', label: '🔥 All Games' },
   { id: 'top', label: '⚡ TOP' },
-  { id: 'color', label: '🎨 Color' },
-  { id: 'matka', label: '🎲 Matka' },
-  { id: 'crash', label: '🚀 Crash & Cards' },
-  { id: 'fishing', label: '🌊 Fishing' },
+  { id: 'lottery', label: '🎲 K3 & Matka' },
+  { id: 'crypto', label: '⚡ TRX & WinGo' },
+  { id: 'mini', label: '🎯 Mini Games' },
 ];
 
-/* ─── Single Photo-Card ─────────────────────────────────────────── */
 function GamePhotoCard({ game, size = 'md' }: { game: Game; size?: 'sm' | 'md' }) {
   const imgH = size === 'sm' ? 'h-28 sm:h-32' : 'h-36 sm:h-40';
 
@@ -212,7 +280,7 @@ function GamePhotoCard({ game, size = 'md' }: { game: Game; size?: 'sm' | 'md' }
     <motion.div
       whileHover={game.locked ? {} : { y: -4, scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className={`group relative rounded-xl overflow-hidden border border-[rgba(212,175,55,0.18)] bg-[#0a1e12] shadow-lg ${game.locked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-[rgba(212,175,55,0.55)] hover:shadow-[0_8px_30px_rgba(212,175,55,0.18)]'} transition-all duration-300`}
+      className={`group relative rounded-2xl overflow-hidden border border-[rgba(212,175,55,0.2)] bg-[#0a1e12] shadow-lg ${game.locked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-gold hover:shadow-[0_8px_30px_rgba(212,175,55,0.25)]'} transition-all duration-300`}
     >
       {/* Thumbnail */}
       <div className={`relative ${imgH} overflow-hidden`}>
@@ -223,12 +291,11 @@ function GamePhotoCard({ game, size = 'md' }: { game: Game; size?: 'sm' | 'md' }
           loading="lazy"
         />
 
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/15" />
 
         {/* Badge */}
         {game.badge && (
-          <span className={`absolute top-2 left-2 ${game.badgeColor ?? 'bg-[#8B6914]'} text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md`}>
+          <span className={`absolute top-2 left-2 ${game.badgeColor ?? 'bg-[#8B6914]'} text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md`}>
             {game.badge}
           </span>
         )}
@@ -243,25 +310,25 @@ function GamePhotoCard({ game, size = 'md' }: { game: Game; size?: 'sm' | 'md' }
         {/* Hover Play overlay */}
         {!game.locked && (
           <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-            <div className="w-11 h-11 rounded-full btn-royal-gold flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300 shadow-xl">
-              <Play className="w-4 h-4 fill-[#0B2318] ml-0.5" />
+            <div className="w-12 h-12 rounded-full btn-royal-gold flex items-center justify-center scale-75 group-hover:scale-100 transition-transform duration-300 shadow-xl">
+              <Play className="w-5 h-5 fill-[#0B2318] ml-0.5" />
             </div>
           </div>
         )}
 
         {/* Online dot */}
         {game.players && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 rounded-full px-1.5 py-0.5">
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/70 rounded-full px-2 py-0.5 backdrop-blur-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[9px] text-emerald-300 font-bold">{(game.players / 1000).toFixed(1)}k</span>
+            <span className="text-[9px] text-emerald-300 font-bold font-mono">{(game.players / 1000).toFixed(1)}k live</span>
           </div>
         )}
       </div>
 
       {/* Name bar */}
-      <div className="px-3 py-2 bg-[#0d2419] border-t border-[rgba(212,175,55,0.1)]">
-        <p className="text-xs font-black text-[#F5F1E6] truncate group-hover:text-[#F5D576] transition-colors">{game.name}</p>
-        <p className="text-[10px] text-[rgba(212,175,55,0.45)] truncate mt-0.5">{game.sub}</p>
+      <div className="px-3.5 py-2.5 bg-[#0d2419] border-t border-[rgba(212,175,55,0.15)]">
+        <p className="text-xs font-black text-[#F5F1E6] truncate group-hover:text-gold transition-colors">{game.name}</p>
+        <p className="text-[10px] text-[rgba(212,175,55,0.5)] truncate mt-0.5 font-medium">{game.sub}</p>
       </div>
     </motion.div>
   );
@@ -269,12 +336,11 @@ function GamePhotoCard({ game, size = 'md' }: { game: Game; size?: 'sm' | 'md' }
   return game.locked ? inner : <Link to={game.path}>{inner}</Link>;
 }
 
-/* ─── Section Header ─────────────────────────────────────────────── */
 function SectionHeader({ emoji, title, to }: { emoji: string; title: string; to?: string }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-black text-rose-500 uppercase tracking-widest">{emoji}</span>
+        <span className="text-xs font-black text-gold uppercase tracking-widest">{emoji}</span>
         <h2 className="text-base font-black text-[#E8C97A] font-heading">{title}</h2>
       </div>
       {to && (
@@ -286,14 +352,18 @@ function SectionHeader({ emoji, title, to }: { emoji: string; title: string; to?
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────────── */
 export default function GamesPage() {
   const [active, setActive] = useState('all');
-
   const showAll = active === 'all';
 
   return (
     <div className="space-y-7 pb-8">
+      <SEOHead
+        title="Royal Games Lobby — K3 Dice, TRX WinGo, Slots, Aviator & Mini Games"
+        description="Explore PlayArena's luxury games suite. Play K3 3-Dice Lottery, TRX Block Hash WinGo, Royal 777 Slots, Aviator Crash, Mini Slider Dice, and Mini Roulette."
+        jsonLd={gamesBreadcrumbLd}
+      />
+
       {/* Category pills */}
       <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
         {CATS.map((c) => (
@@ -310,54 +380,43 @@ export default function GamesPage() {
       {/* TOP Section */}
       {(showAll || active === 'top') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <SectionHeader emoji="TOP" title="Top Games" to="/games" />
+          <SectionHeader emoji="⚡ TOP" title="Featured Flagship Games" to="/games" />
           <div className="gold-divider mb-4" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {TOP_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}
 
-      {/* Color Section */}
-      {(showAll || active === 'color') && (
+      {/* Lottery & Dice Section */}
+      {(showAll || active === 'lottery') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
-          <SectionHeader emoji="🎨" title="Color Prediction" to="/games/color-prediction" />
+          <SectionHeader emoji="🎲" title="K3 3-Dice & Matka Lotteries" to="/games/k3" />
           <div className="gold-divider mb-4" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {COLOR_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {LOTTERY_DICE_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}
 
-      {/* Matka Section */}
-      {(showAll || active === 'matka') && (
+      {/* Crypto & WinGo Section */}
+      {(showAll || active === 'crypto') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.08 }}>
-          <SectionHeader emoji="🎲" title="Matka & Lottery" to="/games/matka" />
+          <SectionHeader emoji="⚡" title="TRX Block Hash & WinGo Color" to="/games/trx" />
           <div className="gold-divider mb-4" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {MATKA_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {CRYPTO_WINGO_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}
 
-      {/* Crash & Cards Section */}
-      {(showAll || active === 'crash') && (
+      {/* Mini Games Section */}
+      {(showAll || active === 'mini') && (
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
-          <SectionHeader emoji="🚀" title="Crash & Cards" />
+          <SectionHeader emoji="🎯" title="Provably Fair Mini Games" />
           <div className="gold-divider mb-4" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {CRASH_CARD_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
-          </div>
-        </motion.section>
-      )}
-
-      {/* Fishing Section */}
-      {(showAll || active === 'fishing') && (
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}>
-          <SectionHeader emoji="🌊" title="Fishing Games" />
-          <div className="gold-divider mb-4" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {FISHING_GAMES.map((g) => <GamePhotoCard key={g.id} game={g} />)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {MINI_GAMES_LIST.map((g) => <GamePhotoCard key={g.id} game={g} />)}
           </div>
         </motion.section>
       )}

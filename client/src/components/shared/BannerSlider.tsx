@@ -50,16 +50,11 @@ const rewardTiles = [
   { label: 'First Deposit', reward: '+37% BONUS', icon: '💰', detail: 'Welcome reward' },
 ];
 
-// Coin component
-function FloatingCoin({ style }: { style: React.CSSProperties }) {
-  return (
-    <div className="absolute pointer-events-none select-none text-xl coin-float opacity-75" style={style}>
-      🪙
-    </div>
-  );
+interface BannerSliderProps {
+  className?: string;
 }
 
-export default function BannerSlider() {
+export default function BannerSlider({ className = '' }: BannerSliderProps) {
   const [slides, setSlides] = useState<Slide[]>(() => {
     try {
       const saved = localStorage.getItem('playarena_promo_slides');
@@ -114,151 +109,154 @@ export default function BannerSlider() {
   const slide = slides[current] || DEFAULT_SLIDES[0];
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.35)] shadow-[0_0_40px_rgba(212,175,55,0.15)]"
-         style={{ minHeight: '240px' }}>
-
+    <div
+      className={`relative w-full h-full overflow-hidden rounded-3xl border border-[rgba(212,175,55,0.45)] shadow-[0_0_60px_rgba(212,175,55,0.15),0_20px_60px_rgba(0,0,0,0.6)] flex flex-col ${className}`}
+      style={{ minHeight: '260px' }}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={slide.id || current}
-          initial={{ opacity: 0, x: 30 }}
+          initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -30 }}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
-          className="relative min-h-[240px] sm:min-h-[270px] flex items-center"
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.35, ease: 'easeInOut' }}
+          className="relative w-full h-full flex-1 flex items-center overflow-hidden"
           style={{ background: slide.bgImage ? `url(${slide.bgImage}) center/cover` : slide.bgGradient || 'linear-gradient(135deg, #061A10 0%, #0B2318 40%, #1A4A2C 100%)' }}
         >
           {/* Ornate gold border glow */}
-          <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{
+          <div className="absolute inset-0 rounded-3xl pointer-events-none z-10" style={{
             boxShadow: 'inset 0 0 0 1px rgba(212,175,55,0.2), inset 0 0 40px rgba(212,175,55,0.05)'
           }} />
 
-          {/* Palace column overlay on right */}
-          <div className="absolute right-0 top-0 bottom-0 w-2/5 overflow-hidden opacity-30">
-            <div className="absolute inset-0 bg-gradient-to-l from-[rgba(212,175,55,0.1)] to-transparent" />
-          </div>
-
-          {/* Character image — right third */}
-          <div className="absolute right-0 bottom-0 h-full w-2/5 sm:w-1/3 pointer-events-none select-none flex items-end justify-center overflow-hidden">
+          {/* Character image with seamless gradient feathering (No hard cut) */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-3/5 sm:w-1/2 lg:w-3/5 pointer-events-none select-none flex items-end justify-end overflow-hidden z-0"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.2) 20%, rgba(0,0,0,0.85) 55%, black 90%)',
+              maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.2) 20%, rgba(0,0,0,0.85) 55%, black 90%)',
+            }}
+          >
             <img
               src="/royal-queen-hero.png"
               alt="Royal Queen"
-              className="sm:h-full sm:w-full sm:object-cover sm:object-top h-[85%] w-auto object-contain object-bottom opacity-90 max-h-full"
+              className="h-full w-full object-cover object-right-top opacity-90 sm:opacity-95"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B2318]/90 via-transparent to-transparent" />
           </div>
 
-          {/* Floating coins */}
-          <FloatingCoin style={{ top: '15%', left: '55%', animationDelay: '0s', fontSize: '18px' }} />
-          <FloatingCoin style={{ top: '60%', left: '60%', animationDelay: '1.2s', fontSize: '14px' }} />
-          <FloatingCoin style={{ top: '25%', left: '70%', animationDelay: '0.7s', fontSize: '22px' }} />
-          <FloatingCoin style={{ top: '70%', left: '45%', animationDelay: '2s', fontSize: '16px' }} />
+          {/* Left Content Column */}
+          <div className="relative z-10 p-4 sm:p-6 w-[70%] sm:w-[68%] flex flex-col justify-between h-full">
+            <div>
+              {/* Eyebrow & Promo Tag */}
+              <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.3)]">
+                  <Crown className="w-3 h-3 text-gold shrink-0" />
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gold truncate">
+                    {slide.eyebrow}
+                  </span>
+                </div>
+              </div>
 
-          {/* Content — left side */}
-          <div className="relative z-10 px-6 sm:px-8 py-6 w-3/5 sm:w-2/3">
-            {/* Eyebrow */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[rgba(212,175,55,0.15)] border border-[rgba(212,175,55,0.3)] mb-3">
-              <Crown className="w-3 h-3 text-gold" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-gold">{slide.eyebrow}</span>
+              {/* Headline with 3D gold bevel */}
+              <motion.h2
+                key={slide.id + '-h'}
+                initial={{ y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.08 }}
+                className="text-gold-3d text-lg sm:text-2xl md:text-3xl font-black font-heading leading-tight mb-2 sm:mb-2.5 whitespace-pre-line"
+              >
+                {slide.headline}
+              </motion.h2>
+
+              {/* Ribbon frame subtitle */}
+              <motion.div
+                key={slide.id + '-r'}
+                initial={{ y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.14 }}
+                className="inline-block mb-2.5 sm:mb-3 max-w-full"
+              >
+                <div className="ribbon-frame text-[9px] sm:text-[11px] px-2.5 sm:px-4 py-1 truncate">
+                  {slide.ribbonText}
+                </div>
+              </motion.div>
+
+              {/* Reward tiles — clean side-by-side or stacked without overlapping artwork */}
+              <motion.div
+                key={slide.id + '-t'}
+                initial={{ y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 mb-3"
+              >
+                {rewardTiles.map((tile) => (
+                  <div
+                    key={tile.label}
+                    className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-[#061510]/85 border border-[rgba(212,175,55,0.25)] shadow-sm backdrop-blur-sm"
+                  >
+                    <span className="text-xs sm:text-sm shrink-0">{tile.icon}</span>
+                    <div className="min-w-0">
+                      <div className="text-[7px] sm:text-[8px] text-[rgba(212,175,55,0.7)] font-bold uppercase truncate leading-none mb-0.5">
+                        {tile.label}
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] font-black text-gold truncate leading-tight whitespace-nowrap">
+                        {tile.reward}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
             </div>
 
-            {/* Headline with 3D gold bevel */}
-            <motion.h2
-              key={slide.id + '-h'}
-              initial={{ y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-gold-3d text-2xl sm:text-3xl md:text-4xl font-black font-heading leading-tight mb-3 whitespace-pre-line"
-            >
-              {slide.headline}
-            </motion.h2>
-
-            {/* Ribbon frame subtitle */}
-            <motion.div
-              key={slide.id + '-r'}
-              initial={{ y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.18 }}
-              className="inline-block mb-4"
-            >
-              <div className="ribbon-frame text-[11px] px-6 py-1.5">
-                {slide.ribbonText}
-              </div>
-            </motion.div>
-
-            {/* Reward tiles */}
-            <motion.div
-              key={slide.id + '-t'}
-              initial={{ y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="flex items-center gap-2 mb-4"
-            >
-              {rewardTiles.map((tile) => (
-                <div key={tile.label}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)]"
-                >
-                  <span className="text-base">{tile.icon}</span>
-                  <div>
-                    <div className="text-[9px] text-[rgba(212,175,55,0.7)] font-bold uppercase">{tile.label}</div>
-                    <div className="text-[11px] font-black text-gold">{tile.reward}</div>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-
-            {/* CTA */}
-            <motion.div
-              key={slide.id + '-c'}
-              initial={{ y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.33 }}
-            >
+            {/* Bottom Row: CTA Button & Dots */}
+            <div className="flex items-center justify-between gap-3 pt-1">
               <Link
                 to={slide.ctaLink}
-                className="btn-royal-gold inline-flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-wider"
+                className="btn-royal-gold inline-flex items-center gap-1.5 px-3.5 sm:px-5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-lg shrink-0"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 {slide.ctaText}
               </Link>
-            </motion.div>
+
+              {/* Dot indicators */}
+              <div className="flex items-center gap-1.5 shrink-0 pr-1">
+                {slides.map((_, i) => (
+                  <button key={i} onClick={() => setCurrent(i)} className="cursor-pointer">
+                    <motion.div
+                      animate={{
+                        width: i === current ? 20 : 6,
+                        backgroundColor: i === current ? '#D4AF37' : 'rgba(212,175,55,0.3)',
+                      }}
+                      transition={{ duration: 0.2 }}
+                      className="h-1.5 rounded-full"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </AnimatePresence>
 
-      {/* Nav arrows */}
-      <button
-        onClick={prev}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-[#0B2318]/80 hover:bg-[#0B2318] text-[rgba(212,175,55,0.7)] hover:text-gold flex items-center justify-center border border-[rgba(212,175,55,0.3)] backdrop-blur-md transition-all cursor-pointer z-20"
-      >
-        <ChevronLeft size={18} />
-      </button>
-      <button
-        onClick={next}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-[#0B2318]/80 hover:bg-[#0B2318] text-[rgba(212,175,55,0.7)] hover:text-gold flex items-center justify-center border border-[rgba(212,175,55,0.3)] backdrop-blur-md transition-all cursor-pointer z-20"
-      >
-        <ChevronRight size={18} />
-      </button>
-
-      {/* Dot indicators */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-        {slides.map((_, i) => (
-          <button key={i} onClick={() => setCurrent(i)} className="cursor-pointer">
-            <motion.div
-              animate={{
-                width: i === current ? 28 : 8,
-                backgroundColor: i === current ? '#D4AF37' : 'rgba(212,175,55,0.3)',
-              }}
-              transition={{ duration: 0.25 }}
-              className="h-1.5 rounded-full"
-            />
-          </button>
-        ))}
-      </div>
-
-      {/* Gift promo badge */}
-      <div className="absolute top-3 right-3 z-20 hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#0B2318]/80 border border-[rgba(212,175,55,0.4)] backdrop-blur-md">
-        <Gift className="w-3.5 h-3.5 text-gold" />
-        <span className="text-[10px] font-black text-gold uppercase tracking-wider">Bonus</span>
+      {/* Top-right sleek slide navigation controls (NO overlapping the slide body!) */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0B2318]/90 border border-[rgba(212,175,55,0.3)] backdrop-blur-md mr-1">
+          <Gift className="w-3 h-3 text-gold" />
+          <span className="text-[9px] font-black text-gold uppercase tracking-wider">Promo</span>
+        </div>
+        <button
+          onClick={prev}
+          title="Previous slide"
+          className="w-7 h-7 rounded-lg bg-[#0B2318]/90 hover:bg-[#0B2318] text-[rgba(212,175,55,0.7)] hover:text-gold flex items-center justify-center border border-[rgba(212,175,55,0.3)] backdrop-blur-md transition-all cursor-pointer shadow-md"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <button
+          onClick={next}
+          title="Next slide"
+          className="w-7 h-7 rounded-lg bg-[#0B2318]/90 hover:bg-[#0B2318] text-[rgba(212,175,55,0.7)] hover:text-gold flex items-center justify-center border border-[rgba(212,175,55,0.3)] backdrop-blur-md transition-all cursor-pointer shadow-md"
+        >
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
   );

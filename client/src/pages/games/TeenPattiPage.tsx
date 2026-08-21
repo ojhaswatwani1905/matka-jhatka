@@ -11,6 +11,8 @@ import { sounds } from '../../lib/sound';
 import { GameChat } from '../../components/ui/GameChat';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const teenPattiBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -148,6 +150,7 @@ export default function TeenPattiPage() {
   const [commitHash, setCommitHash] = useState('');
   const [seed, setSeed] = useState('');
   const [currentBet, setCurrentBet] = useState(0);
+  const [currentOrderId, setCurrentOrderId] = useState<string>('');
   const [history, setHistory] = useState<('win' | 'lose' | 'tie')[]>([]);
 
   const dealCards = () => {
@@ -156,6 +159,21 @@ export default function TeenPattiPage() {
         addToast({ type: 'error', title: 'Insufficient balance' });
         return;
       }
+      const orderId = `TXN_TP_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      setCurrentOrderId(orderId);
+
+      orderLedger.recordOrder({
+        id: orderId,
+        gameId: 'teenpatti',
+        gameName: 'Teen Patti',
+        period: Date.now().toString().slice(-6),
+        userId: 'player',
+        userName: 'You',
+        selection: `Ante Stake (₹${betAmount})`,
+        betAmount,
+        status: 'pending',
+      });
+
       setCurrentBet(betAmount);
       sounds.playChip();
 
@@ -204,15 +222,45 @@ export default function TeenPattiPage() {
       if (ph.score > dealerScore) {
         outcome = 'win';
         const win = currentBet * 3.8; // Ante + call + profit
+        
+        if (currentOrderId) {
+          orderLedger.updateOrder(currentOrderId, {
+            resultOutcome: `Won with ${ph.rank}`,
+            multiplier: 3.8,
+            winAmount: win,
+            status: 'won',
+          });
+        }
+
         addBalance(win, `Teen Patti win — ${ph.rank}`);
         triggerWinCelebration({ winAmount: win, multiplier: 3.8, gameName: 'Teen Patti' });
         addToast({ type: 'success', title: `You Win! ₹${win.toFixed(0)}`, message: ph.description });
       } else if (ph.score < dealerScore) {
         outcome = 'lose';
+        
+        if (currentOrderId) {
+          orderLedger.updateOrder(currentOrderId, {
+            resultOutcome: `House Won with ${hh.rank}`,
+            multiplier: 0,
+            winAmount: 0,
+            status: 'lost',
+          });
+        }
+
         haptics.loss();
         addToast({ type: 'error', title: `House Wins`, message: hh.description });
       } else {
         outcome = 'tie';
+
+        if (currentOrderId) {
+          orderLedger.updateOrder(currentOrderId, {
+            resultOutcome: `Tie (Stake Returned)`,
+            multiplier: 1.0,
+            winAmount: currentBet,
+            status: 'lost',
+          });
+        }
+
         addBalance(currentBet, `Teen Patti tie — ante returned`);
         addToast({ type: 'info', title: `Tie! Ante returned`, message: `${ph.description}` });
       }
@@ -225,6 +273,14 @@ export default function TeenPattiPage() {
 
   const fold = () => {
     // Fold = lose the ante
+    if (currentOrderId) {
+      orderLedger.updateOrder(currentOrderId, {
+        resultOutcome: 'Folded Hand',
+        multiplier: 0,
+        winAmount: 0,
+        status: 'lost',
+      });
+    }
     addToast({ type: 'warning', title: `Folded — lost ₹${currentBet} ante` });
     setResult('lose');
     setShowHouseCards(true);
@@ -399,6 +455,9 @@ export default function TeenPattiPage() {
           <GameChat gameId="teen-patti" />
         </div>
       </div>
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="teenpatti" gameName="Teen Patti" />
 
       {/* Internal Cross-Linking */}
       <RelatedGamesSection currentGameId="teenpatti" />

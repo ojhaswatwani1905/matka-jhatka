@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { History, TrendingUp, Volume2, VolumeX, ShieldCheck } from 'lucide-react';
 import Timer from '../../components/shared/Timer';
 import Modal from '../../components/ui/Modal';
@@ -8,14 +9,17 @@ import { AuthGateModal } from '../../components/ui/AuthGateModal';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { useGameControl } from '../../store/GameControlContext';
 import { useWallet } from '../../store/WalletContext';
+import { useAuth } from '../../store/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { sounds } from '../../lib/sound';
-import { generateId } from '../../lib/utils';
+import { realBetSync } from '../../lib/realBetSync';
 import { GameChat } from '../../components/ui/GameChat';
 import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay';
-import { haptics } from '../../lib/haptics';
+import { generateId } from '../../lib/utils';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const colorBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -51,6 +55,7 @@ interface LivePlayerBet {
 const mockNames = ['User***920', 'User***184', 'User***592', 'User***301', 'User***741', 'User***629', 'User***410'];
 
 export default function ColorPredictionPage() {
+  const { user } = useAuth();
   const { balance, deductBalance, addBalance } = useWallet();
   const { addToast } = useToast();
   const { getManualOverrideForGame } = useGameControl();
@@ -183,11 +188,9 @@ export default function ColorPredictionPage() {
       return;
     }
 
-    if (soundEnabled) sounds.playChip();
-    haptics.bet();
-
+    const betId = `TXN_COLOR_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const bet: BetRecord = {
-      id: generateId(),
+      id: betId,
       period,
       type: selectedBetType,
       selection: selectedValue,
@@ -197,25 +200,28 @@ export default function ColorPredictionPage() {
     setBets(prev => [bet, ...prev]);
     setShowBetPanel(false);
 
-    // Call server endpoint
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('playarena_token');
-      await fetch('/api/games/bet', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          gameType,
-          period,
-          selection: selectedValue,
-          amount: totalBetAmount,
-        }),
-      });
-    } catch {
-      // Handled locally
-    }
+    // Record in global order ledger
+    orderLedger.recordOrder({
+      id: betId,
+      gameId: 'color-prediction',
+      gameName: 'WinGo Color Prediction',
+      period,
+      userId: user?.id || 'demo_user',
+      userName: user?.name || user?.phone || 'You',
+      selection: `${selectedBetType.toUpperCase()}: ${selectedValue.toUpperCase()}`,
+      betAmount: totalBetAmount,
+      status: 'pending',
+    });
+
+    // Broadcast real player bet to Admin Panel & Server with 0ms latency
+    realBetSync.publishRealBet({
+      id: bet.id,
+      user: user?.name || user?.phone || 'Player_You',
+      gameType,
+      period,
+      selection: selectedValue,
+      amount: totalBetAmount,
+    });
 
     addToast({
       type: 'success',
@@ -225,7 +231,7 @@ export default function ColorPredictionPage() {
 
     setSelectedBetType(null);
     setSelectedValue(null);
-  }, [selectedBetType, selectedValue, isLocked, balance, totalBetAmount, period, deductBalance, soundEnabled, addToast, gameType]);
+  }, [selectedBetType, selectedValue, isLocked, balance, totalBetAmount, period, deductBalance, soundEnabled, addToast, gameType, user]);
 
   const handleRoundComplete = useCallback(() => {
     setIsLocked(true);
@@ -246,7 +252,6 @@ export default function ColorPredictionPage() {
         color: resultColor as any,
         size: resultSize,
       };
-
 
       setLastResult(result);
       setShowResult(true);
@@ -279,6 +284,14 @@ export default function ColorPredictionPage() {
         const payout = won ? Math.floor(bet.amount * mult) : 0;
         if (won) totalWin += payout;
 
+        // Update order ledger
+        orderLedger.updateOrder(bet.id, {
+          resultOutcome: `${resultColor.toUpperCase()} / ${resultNumber} (${resultSize.toUpperCase()})`,
+          multiplier: mult,
+          winAmount: payout,
+          status: won ? 'won' : 'lost',
+        });
+
         return { ...bet, result: (won ? 'win' : 'loss') as 'win' | 'loss', payout };
       });
 
@@ -302,7 +315,7 @@ export default function ColorPredictionPage() {
         fetchActiveRound();
       }, 4000);
     }, 1500);
-  }, [period, bets, addBalance, soundEnabled, addToast, fetchActiveRound, fetchResults]);
+  }, [period, bets, addBalance, soundEnabled, addToast, fetchActiveRound, fetchResults, gameType, getManualOverrideForGame]);
 
   return (
     <div className="py-4 space-y-5 w-full max-w-6xl mx-auto">
@@ -564,24 +577,40 @@ export default function ColorPredictionPage() {
         </div>
       </Modal>
 
-      {/* Result Outcome Overlay Modal */}
-      <Modal isOpen={showResult} onClose={() => setShowResult(false)} title="Round Result">
+      {/* Result Outcome Overlay Modal with 3D Wheel/Reel Deceleration Physics */}
+      <Modal isOpen={showResult} onClose={() => setShowResult(false)} title="🎉 Live Draw Outcome">
         {lastResult && (
-          <div className="flex flex-col items-center text-center py-4 space-y-3">
-            <div
-              className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black text-white shadow-2xl border-2 border-white/20 ${
+          <div className="flex flex-col items-center text-center py-4 space-y-4">
+            <motion.div
+              initial={{ rotate: 720, scale: 0.5 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', damping: 15, stiffness: 100, duration: 1.2 }}
+              className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black text-white shadow-[0_0_30px_rgba(212,175,55,0.4)] border-4 border-gold/60 relative ${
                 lastResult.number === 0 ? 'bg-gradient-to-tr from-violet-600 to-rose-600' :
                 lastResult.number === 5 ? 'bg-gradient-to-tr from-violet-600 to-emerald-600' :
                 [1,3,7,9].includes(lastResult.number) ? 'bg-emerald-600' : 'bg-red-600'
               }`}
             >
-              {lastResult.number}
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white font-heading">Winning Number: {lastResult.number}</h3>
-              <p className="text-xs text-slate-400 uppercase font-mono tracking-wider">
-                {lastResult.color} • {lastResult.size.toUpperCase()}
-              </p>
+              <span className="drop-shadow-lg font-heading">{lastResult.number}</span>
+              <div className="absolute -inset-1 rounded-full border border-white/40 animate-ping pointer-events-none" />
+            </motion.div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-black text-white font-heading tracking-tight">
+                Winning Number: <span className="text-gold">{lastResult.number}</span>
+              </h3>
+              <div className="flex items-center justify-center gap-2 text-xs font-mono uppercase">
+                <span className={`px-2.5 py-0.5 rounded-full font-bold text-white ${
+                  lastResult.color === 'green' ? 'bg-emerald-600' :
+                  lastResult.color === 'red' ? 'bg-rose-600' :
+                  'bg-violet-600'
+                }`}>
+                  {lastResult.color}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  {lastResult.size.toUpperCase()}
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -589,6 +618,9 @@ export default function ColorPredictionPage() {
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
       <AuthGateModal isOpen={authGateOpen} onClose={authGateClose} onSuccess={authGateSuccess} />
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="color-prediction" gameName="WinGo Color Prediction" currentPeriod={period} />
 
       {/* Internal Cross-Linking */}
       <RelatedGamesSection currentGameId="color" />

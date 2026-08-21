@@ -11,6 +11,8 @@ import { GameChat } from '../../components/ui/GameChat';
 import Modal from '../../components/ui/Modal';
 import { haptics } from '../../lib/haptics';
 import { formatCurrency } from '../../lib/utils';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 /* ─── Sea Creatures Config ────────────────────────────────────────── */
 interface Creature {
@@ -32,6 +34,7 @@ interface Creature {
 
 interface Bullet {
   id: string;
+  orderId?: string;
   startX: number;
   startY: number;
   targetX: number;
@@ -228,6 +231,16 @@ export default function OceanHunterPage() {
       if (newHp <= 0) {
         // Target Captured! Fast Death Explosion!
         const winAmt = Math.round(bulletCost * target.multiplier);
+        
+        if (bullet.orderId) {
+          orderLedger.updateOrder(bullet.orderId, {
+            resultOutcome: `Captured ${target.name} (${target.multiplier}×)`,
+            multiplier: target.multiplier,
+            winAmount: winAmt,
+            status: 'won',
+          });
+        }
+
         addBalance(winAmt, `Ocean Hunter captured ${target.name} (${target.multiplier}x)`);
         setTotalWon(w => w + winAmt);
 
@@ -248,6 +261,14 @@ export default function OceanHunterPage() {
         const replacement = spawnCreature();
         return prev.map((c, i) => (i === idx ? replacement : c));
       } else {
+        if (bullet.orderId) {
+          orderLedger.updateOrder(bullet.orderId, {
+            resultOutcome: `Damaged ${target.name} (HP: ${Math.ceil(newHp)})`,
+            multiplier: 0,
+            winAmount: 0,
+            status: 'lost',
+          });
+        }
         return prev.map((c, i) => (i === idx ? { ...c, hp: newHp } : c));
       }
     });
@@ -274,6 +295,20 @@ export default function OceanHunterPage() {
         return;
       }
 
+      const orderId = `TXN_OH_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      orderLedger.recordOrder({
+        id: orderId,
+        gameId: 'oceanhunter',
+        gameName: 'Ocean Hunter Arcade',
+        period: Date.now().toString().slice(-6),
+        userId: 'player',
+        userName: 'You',
+        selection: `Cannon Shot (₹${bulletCost})`,
+        betAmount: bulletCost,
+        status: 'pending',
+      });
+
       haptics.bet();
       setShotsFired(s => s + 1);
 
@@ -282,6 +317,7 @@ export default function OceanHunterPage() {
       const cannonY = 92;
       const newBullet: Bullet = {
         id: `b_${Date.now()}_${Math.random()}`,
+        orderId,
         startX: cannonX,
         startY: cannonY,
         targetX,
@@ -584,6 +620,9 @@ export default function OceanHunterPage() {
           <GameChat gameId="ocean-hunter" />
         </div>
       </div>
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="oceanhunter" gameName="Ocean Hunter Arcade" />
 
       <ProvablyFairModal isOpen={isFairnessOpen} onClose={() => setIsFairnessOpen(false)} />
     </div>

@@ -15,6 +15,8 @@ import { haptics } from '../../lib/haptics';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
 import { aviatorSync, type AviatorLiveBet } from '../../lib/aviatorSync';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const aviatorBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -412,8 +414,16 @@ export default function AviatorPage() {
     }
 
     // Handle loss toast DIRECTLY on ref, NOT inside state updater callback
-    const activeBet = myBetRef.current;
+    const activeBet = myBetRef.current as any;
     if (activeBet && !activeBet.cashedAt) {
+      if (activeBet.orderId) {
+        orderLedger.updateOrder(activeBet.orderId, {
+          resultOutcome: `Crashed @ ${cp.toFixed(2)}×`,
+          multiplier: cp,
+          winAmount: 0,
+          status: 'lost',
+        });
+      }
       addToast({
         type: 'error',
         title: isManualCrash ? `💥 Admin Terminated at ${cp.toFixed(2)}×` : `Crashed at ${cp.toFixed(2)}×`,
@@ -566,7 +576,23 @@ export default function AviatorPage() {
     requireAuth(() => {
       if (phase !== 'betting') { addToast({ type: 'warning', title: 'Round in progress' }); return; }
       if (!deductBalance(betAmount, `Aviator bet`)) { addToast({ type: 'error', title: 'Insufficient balance' }); return; }
-      setMyBet({ amount: betAmount });
+      
+      const orderId = `TXN_AVIATOR_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      setMyBet({ amount: betAmount, orderId } as any);
+      myBetRef.current = { amount: betAmount, orderId } as any;
+
+      orderLedger.recordOrder({
+        id: orderId,
+        gameId: 'aviator',
+        gameName: 'Aviator Crash',
+        period: roundId,
+        userId: 'player',
+        userName: 'You',
+        selection: `Flight Stake (Auto: ${autoCashout || 'Manual'})`,
+        betAmount,
+        status: 'pending',
+      });
+
       if (soundOnRef.current) sounds.playChip();
       haptics.bet();
       addToast({ type: 'info', title: `Bet placed: ₹${betAmount}`, message: 'Cash out before it crashes!' });
@@ -574,7 +600,7 @@ export default function AviatorPage() {
   };
 
   const handleCashOut = useCallback((atMultiplier?: number) => {
-    const activeBet = myBetRef.current;
+    const activeBet = myBetRef.current as any;
     if (!activeBet || activeBet.cashedAt || phaseRef.current !== 'flying') return;
 
     const m = atMultiplier ?? multiplier;
@@ -582,6 +608,15 @@ export default function AviatorPage() {
 
     myBetRef.current = { ...activeBet, cashedAt: m };
     setMyBet({ ...activeBet, cashedAt: m });
+
+    if (activeBet.orderId) {
+      orderLedger.updateOrder(activeBet.orderId, {
+        resultOutcome: `Cashed @ ${m.toFixed(2)}×`,
+        multiplier: m,
+        winAmount: win,
+        status: 'won',
+      });
+    }
 
     addBalance(win, `Aviator cashout at ${m.toFixed(2)}×`);
     triggerWinCelebration({ winAmount: win, multiplier: m, gameName: 'Aviator' });
@@ -769,6 +804,9 @@ export default function AviatorPage() {
           <GameChat gameId="aviator" />
         </div>
       </div>
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="aviator" gameName="Aviator Crash Game" currentPeriod={roundId} />
 
       {/* Internal Cross-Linking */}
       <RelatedGamesSection currentGameId="aviator" />

@@ -6,6 +6,8 @@ import { formatCurrency } from '../../lib/utils';
 import { AviatorAdminLiveMonitor } from '../../components/admin/AviatorAdminLiveMonitor';
 
 
+import { realBetSync } from '../../lib/realBetSync';
+
 interface DigitStat {
   digit: number;
   totalBetsOnDigit: number;
@@ -21,7 +23,6 @@ interface LiveUserBetItem {
   selection: string;
   createdAt: string;
 }
-
 
 interface RoundData {
   gameType: string;
@@ -42,7 +43,6 @@ interface RoundData {
     betsList?: LiveUserBetItem[];
   };
 }
-
 
 const GAME_LABELS: Record<string, string> = {
   'wingo-30s': '⚡ WinGo 30-Sec',
@@ -92,7 +92,7 @@ export default function AdminGamesPage() {
         }
       }
     } catch {
-      // Graceful fallback simulation if server API offline
+      // Offline fallback
     } finally {
       setLoadingRounds(false);
     }
@@ -100,9 +100,81 @@ export default function AdminGamesPage() {
 
   useEffect(() => {
     fetchRoundsData();
-    const timer = setInterval(() => fetchRoundsData(), 3000);
-    return () => clearInterval(timer);
-  }, []);
+    const timer = setInterval(() => fetchRoundsData(), 2000);
+
+    // Instant real-time bet broadcast listener
+    const unsub = realBetSync.subscribeToRealBets((realBet) => {
+      setActiveRounds(prev => prev.map(r => {
+        if (r.gameType === realBet.gameType || (realBet.gameType.startsWith('matka') && r.gameType === selectedGame)) {
+          const currentBets = r.stats?.betsList || [];
+          if (currentBets.some(b => b.id === realBet.id)) return r;
+
+          const updatedBets = [{
+            id: realBet.id,
+            user: realBet.user,
+            amount: realBet.amount,
+            selection: realBet.selection,
+            createdAt: realBet.createdAt,
+          }, ...currentBets];
+
+          const totalVolume = updatedBets.reduce((sum, b) => sum + b.amount, 0);
+
+          // Calculate digit stats strictly from real bets
+          const digitStats: DigitStat[] = [0,1,2,3,4,5,6,7,8,9].map(d => {
+            const resultStr = d.toString();
+            let totalBetsOnDigit = 0;
+            let totalPayout = 0;
+
+            updatedBets.forEach(b => {
+              if (b.selection === resultStr || b.selection.includes(resultStr)) {
+                totalBetsOnDigit += b.amount;
+                totalPayout += b.amount * 9;
+              }
+            });
+
+            return {
+              digit: d,
+              totalBetsOnDigit,
+              totalPayoutIfWins: totalPayout,
+              projectedHouseProfit: totalVolume - totalPayout,
+              isLowestPayout: false,
+            };
+          });
+
+          // Mark lowest payout digit
+          let minPayout = Infinity;
+          let lowestDigit = 0;
+          digitStats.forEach(st => {
+            if (st.totalPayoutIfWins < minPayout) {
+              minPayout = st.totalPayoutIfWins;
+              lowestDigit = st.digit;
+            }
+          });
+          digitStats.forEach(st => {
+            if (st.digit === lowestDigit) st.isLowestPayout = true;
+          });
+
+          return {
+            ...r,
+            stats: {
+              ...r.stats,
+              totalVolume,
+              totalBetsCount: updatedBets.length,
+              lowestPayoutDigit: lowestDigit,
+              digitStats,
+              betsList: updatedBets,
+            },
+          };
+        }
+        return r;
+      }));
+    });
+
+    return () => {
+      clearInterval(timer);
+      unsub();
+    };
+  }, [selectedGame]);
 
   const handleGlobalRtpChange = (val: number) => {
     updateSettings({ globalRtp: val });
@@ -302,16 +374,16 @@ export default function AdminGamesPage() {
   const selectedRound = activeRounds.find(r => r.gameType === selectedGame);
   const activeOverride = selectedRound?.stats?.manualOverride;
 
-  // Render mock stats if server stats not populated yet
+  // Real digit stats (0 when no user bets placed)
   const digitStatsList: DigitStat[] = selectedRound?.stats?.digitStats || [0,1,2,3,4,5,6,7,8,9].map(d => ({
     digit: d,
-    totalBetsOnDigit: d === 3 ? 1200 : d === 7 ? 850 : 0,
-    totalPayoutIfWins: d === 3 ? 10800 : d === 7 ? 7650 : 0,
-    projectedHouseProfit: d === 3 ? -8750 : d === 7 ? -5600 : 2050,
+    totalBetsOnDigit: 0,
+    totalPayoutIfWins: 0,
+    projectedHouseProfit: 0,
     isLowestPayout: d === 0,
   }));
 
-  const totalBetVolume = selectedRound?.stats?.totalVolume ?? 2050;
+  const totalBetVolume = selectedRound?.stats?.totalVolume ?? 0;
   const lowestDigitRec = selectedRound?.stats?.lowestPayoutDigit ?? 0;
 
   return (

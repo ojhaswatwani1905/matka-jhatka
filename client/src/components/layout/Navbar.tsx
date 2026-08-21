@@ -25,20 +25,20 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#0d2419]/97 backdrop-blur-xl border-b border-[rgba(212,175,55,0.22)] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-      <div className="w-full max-w-[1400px] mx-auto pl-4 lg:pl-20 pr-4 sm:pr-6 h-16 flex items-center justify-between gap-4">
+      <div className="w-full max-w-[1400px] mx-auto pl-3 sm:pl-4 lg:pl-20 pr-3 sm:pr-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
 
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5D576] via-[#D4AF37] to-[#B8860B] flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.4)] group-hover:shadow-[0_0_22px_rgba(212,175,55,0.6)] transition-all">
-            <Crown className="w-5 h-5 text-[#0B2318]" strokeWidth={2.5} />
+        <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#F5D576] via-[#D4AF37] to-[#B8860B] flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.4)] group-hover:shadow-[0_0_22px_rgba(212,175,55,0.6)] transition-all shrink-0">
+            <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[#0B2318]" strokeWidth={2.5} />
           </div>
-          <div>
-            <span className="text-xl font-black font-heading text-gradient-gold tracking-tight block leading-none" style={{
+          <div className="truncate">
+            <span className="text-base sm:text-xl font-black font-heading text-gradient-gold tracking-tight block leading-none truncate" style={{
               textShadow: '0 1px 0 #B8860B, 0 2px 4px rgba(0,0,0,0.4)'
             }}>
               PLAYARENA
             </span>
-            <span className="text-[9px] font-bold text-[rgba(212,175,55,0.6)] block tracking-widest uppercase mt-0.5">
+            <span className="hidden xs:block text-[8px] sm:text-[9px] font-bold text-[rgba(212,175,55,0.6)] tracking-widest uppercase mt-0.5">
               ROYAL CASINO
             </span>
           </div>
@@ -71,48 +71,48 @@ export default function Navbar() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Admin Panel Quick Link — only visible to admin accounts */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Admin Panel Quick Link — only visible to admin accounts on tablet/desktop */}
           {(user?.role === 'admin' || user?.isAdmin) && (
             <Link
               to="/admin"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold text-xs hover:bg-amber-500/25 transition-all shadow-md"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold text-xs hover:bg-amber-500/25 transition-all shadow-md"
             >
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Admin Panel</span>
+              <span>Admin</span>
             </Link>
           )}
 
-          {/* Provably Fair Badge */}
+          {/* Provably Fair Badge — desktop only */}
           <button
             onClick={() => setIsFairnessOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl gold-badge hover:bg-[rgba(212,175,55,0.2)] transition-all cursor-pointer"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[rgba(212,175,55,0.12)] border border-[rgba(212,175,55,0.35)] text-[#E8C97A] text-[10px] font-bold uppercase tracking-wider hover:bg-[rgba(212,175,55,0.2)] transition-all cursor-pointer"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline text-[10px]">Provably Fair</span>
+            <span>Provably Fair</span>
           </button>
 
           {/* Wallet Balance Chip — only when authenticated */}
           {isAuthenticated && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <Link
                 to="/wallet"
-                className="flex items-center bg-[#0d2419] border border-[rgba(212,175,55,0.35)] rounded-xl px-3 py-1.5 hover:border-[rgba(212,175,55,0.65)] transition-all shadow-inner group"
+                className="flex items-center bg-[#0d2419] border border-[rgba(212,175,55,0.35)] rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 hover:border-[rgba(212,175,55,0.65)] transition-all shadow-inner group shrink-0"
               >
-                <div className="w-6 h-6 rounded-lg bg-[rgba(212,175,55,0.15)] flex items-center justify-center mr-2">
-                  <Wallet className="w-3.5 h-3.5 text-gold" />
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-[rgba(212,175,55,0.15)] flex items-center justify-center mr-1.5 sm:mr-2 shrink-0">
+                  <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-[rgba(212,175,55,0.6)] uppercase leading-none">Balance</span>
+                  <span className="text-[8px] sm:text-[9px] font-bold text-[rgba(212,175,55,0.6)] uppercase leading-none">Balance</span>
                   <AnimatedCounter
                     value={balance}
                     prefix="₹"
                     decimals={2}
-                    className="text-sm font-black text-gold font-heading leading-tight tabular-nums"
+                    className="text-xs sm:text-sm font-black text-gold font-heading leading-tight tabular-nums"
                   />
                 </div>
-                <div className="ml-2.5 w-5 h-5 rounded-md bg-[rgba(46,204,113,0.2)] text-[#2ECC71] flex items-center justify-center group-hover:bg-[#2ECC71] group-hover:text-[#062312] transition-colors">
-                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <div className="ml-1.5 sm:ml-2.5 w-4 h-4 sm:w-5 sm:h-5 rounded-md bg-[rgba(46,204,113,0.2)] text-[#2ECC71] flex items-center justify-center group-hover:bg-[#2ECC71] group-hover:text-[#062312] transition-colors shrink-0">
+                  <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />
                 </div>
               </Link>
 
@@ -120,7 +120,7 @@ export default function Navbar() {
                 <Link
                   to="/wallet"
                   title="Bonus Balance (5x Wagering Unlocks Cash)"
-                  className="hidden sm:flex flex-col px-2.5 py-1 rounded-xl bg-[rgba(245,158,11,0.08)] border border-amber-500/35 hover:border-amber-400 transition-all text-right"
+                  className="hidden md:flex flex-col px-2.5 py-1 rounded-xl bg-[rgba(245,158,11,0.08)] border border-amber-500/35 hover:border-amber-400 transition-all text-right"
                 >
                   <span className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Bonus</span>
                   <span className="text-xs font-black text-amber-300 font-mono">₹{bonusBalance.toFixed(0)}</span>
@@ -133,12 +133,12 @@ export default function Navbar() {
           {isAuthenticated && (
             <Link
               to="/notifications"
-              className="relative p-2 rounded-xl bg-[#0d2419] border border-[rgba(212,175,55,0.2)] text-[rgba(212,175,55,0.6)] hover:text-gold hover:border-[rgba(212,175,55,0.45)] transition-colors"
+              className="relative p-1.5 sm:p-2 rounded-xl bg-[#0d2419] border border-[rgba(212,175,55,0.2)] text-[rgba(212,175,55,0.6)] hover:text-gold hover:border-[rgba(212,175,55,0.45)] transition-colors shrink-0"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-rose-500 ring-2 ring-[#0d2419] flex items-center justify-center text-[9px] font-black text-white px-0.5">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-rose-500 ring-2 ring-[#0d2419] flex items-center justify-center text-[8px] font-black text-white px-0.5">
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </Link>
@@ -155,11 +155,11 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Sign Up gold pill button */}
+          {/* Sign Up gold pill button (guest) vs Desktop Profile Avatar */}
           {!isAuthenticated ? (
             <Link
               to="/auth/register"
-              className="btn-royal-gold px-5 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-1.5"
+              className="btn-royal-gold px-3 sm:px-5 py-1.5 sm:py-2 text-xs font-black uppercase tracking-wider flex items-center gap-1.5"
             >
               <UserPlus className="w-3.5 h-3.5" />
               Sign Up
@@ -167,7 +167,7 @@ export default function Navbar() {
           ) : (
             <Link
               to="/profile"
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5D576] via-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#0B2318] font-black text-xs shadow-lg hover:scale-105 hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all"
+              className="hidden sm:flex w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5D576] via-[#D4AF37] to-[#B8860B] items-center justify-center text-[#0B2318] font-black text-xs shadow-lg hover:scale-105 hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all"
               title="User Profile"
             >
               <Crown className="w-4 h-4" strokeWidth={2.5} />

@@ -25,6 +25,8 @@ interface TransferLog {
   timestamp: string;
 }
 
+import { getGatewaySettings, saveGatewaySettings, type GatewaySettings } from '../../lib/gatewaySettings';
+
 const PRESET_AMOUNTS = [500, 1000, 2000, 5000, 10000, 50000, 100000];
 const MAX_SINGLE_TRANSFER = 100000000; // 10 Crores max limit
 
@@ -38,6 +40,24 @@ export default function AdminMoneyPage() {
   const [reason, setReason] = useState('Admin Direct Deposit');
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<TransferLog[]>([]);
+
+  // Gateway Settings State
+  const [gateway, setGateway] = useState<GatewaySettings>(getGatewaySettings());
+  const [savingGateway, setSavingGateway] = useState(false);
+
+  const handleSaveGateway = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGateway(true);
+    saveGatewaySettings(gateway);
+    setTimeout(() => {
+      setSavingGateway(false);
+      addToast({
+        type: 'success',
+        title: 'Merchant Gateway Updated!',
+        message: 'Deposit UPI ID, Bank details, and Crypto address are now live for all players.',
+      });
+    }, 400);
+  };
 
   // Load all users from DB & local storage
   const loadUsers = async (showToast = false) => {
@@ -499,6 +519,142 @@ export default function AdminMoneyPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ─── Platform Official Deposit Banking Gateway Config ──────── */}
+      <div className="bg-[#0d2419] p-6 rounded-2xl border border-gold/30 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-white font-heading">
+                ⚙️ Platform Official Deposit UPI & Banking Gateway Config
+              </h2>
+              <p className="text-xs text-slate-400">
+                Configure your official merchant UPI ID, Bank details, and Crypto address shown to all players on the Deposit Page.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveGateway} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 text-xs">
+          {/* UPI ID */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Official Merchant UPI ID</label>
+            <input
+              type="text"
+              value={gateway.upiId}
+              onChange={(e) => setGateway({ ...gateway, upiId: e.target.value })}
+              placeholder="e.g. playarena.pay@icici"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-gold font-mono focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* Merchant Name */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Merchant Business Name</label>
+            <input
+              type="text"
+              value={gateway.merchantName}
+              onChange={(e) => setGateway({ ...gateway, merchantName: e.target.value })}
+              placeholder="PLAYARENA CASINO"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* Bank Name */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Bank Name</label>
+            <input
+              type="text"
+              value={gateway.bankName}
+              onChange={(e) => setGateway({ ...gateway, bankName: e.target.value })}
+              placeholder="HDFC Bank Ltd"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* Account Holder */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Bank Account Holder Name</label>
+            <input
+              type="text"
+              value={gateway.accountHolder}
+              onChange={(e) => setGateway({ ...gateway, accountHolder: e.target.value })}
+              placeholder="PLAYARENA ENTERTAINMENT"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* Account Number */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Bank Account Number</label>
+            <input
+              type="text"
+              value={gateway.accountNumber}
+              onChange={(e) => setGateway({ ...gateway, accountNumber: e.target.value })}
+              placeholder="50200084920194"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-gold font-mono focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* IFSC */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">Bank IFSC Code</label>
+            <input
+              type="text"
+              value={gateway.ifscCode}
+              onChange={(e) => setGateway({ ...gateway, ifscCode: e.target.value.toUpperCase() })}
+              placeholder="HDFC0000128"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-gold font-mono uppercase focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* USDT TRC-20 */}
+          <div className="space-y-1.5 lg:col-span-2">
+            <label className="text-slate-300 font-bold block">USDT (TRC-20) Deposit Address</label>
+            <input
+              type="text"
+              value={gateway.usdtTrc20Address}
+              onChange={(e) => setGateway({ ...gateway, usdtTrc20Address: e.target.value })}
+              placeholder="TQ8bX2nL9pRtWm4yK6sJv3hFcGz1aD9"
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-emerald-400 font-mono focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* USDT Rate in INR */}
+          <div className="space-y-1.5">
+            <label className="text-slate-300 font-bold block">1 USDT Rate (₹)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={gateway.usdtRateInr}
+              onChange={(e) => setGateway({ ...gateway, usdtRateInr: parseFloat(e.target.value) || 91.5 })}
+              className="w-full bg-[#061510] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold"
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="lg:col-span-3 pt-2">
+            <button
+              type="submit"
+              disabled={savingGateway}
+              className="btn-royal-gold px-8 py-3 rounded-xl font-black text-xs uppercase tracking-wider cursor-pointer shadow-lg"
+            >
+              {savingGateway ? 'Saving Changes...' : '💾 Save & Publish Banking Details to All Players'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

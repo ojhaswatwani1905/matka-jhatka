@@ -14,6 +14,8 @@ import { triggerWinCelebration } from '../../components/ui/WinCelebrationOverlay
 import { haptics } from '../../lib/haptics';
 import { SEOHead } from '../../components/shared/SEOHead';
 import { RelatedGamesSection } from '../../components/shared/RelatedGamesSection';
+import { orderLedger } from '../../lib/orderLedger';
+import { GameOrderLedger } from '../../components/shared/GameOrderLedger';
 
 const minesBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -116,6 +118,8 @@ export default function MinesPage() {
   const [commitHash, setCommitHash] = useState('');
   const [, setSeed] = useState('');
 
+  const [currentOrderId, setCurrentOrderId] = useState<string>('');
+
   const currentMultiplier = revealed > 0 ? calcMultiplier(revealed, gridSize, mineCount) : 1;
 
   const startGame = useCallback(() => {
@@ -126,6 +130,21 @@ export default function MinesPage() {
       }
       const { seed: s, hash: h } = await generateMineSeed();
       const pos = seedToMinePositions(s, gridSize, mineCount);
+      const orderId = `TXN_MINES_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      orderLedger.recordOrder({
+        id: orderId,
+        gameId: 'mines',
+        gameName: 'Mines Strategy',
+        period: Date.now().toString().slice(-6),
+        userId: 'player',
+        userName: 'You',
+        selection: `${gridSize === 25 ? '5×5' : '4×4'} (${mineCount} Mines)`,
+        betAmount,
+        status: 'pending',
+      });
+
+      setCurrentOrderId(orderId);
       setSeed(s);
       setCommitHash(h);
       setMinePositions(pos);
@@ -144,6 +163,16 @@ export default function MinesPage() {
     if (r === 0) { addToast({ type: 'warning', title: 'Reveal at least one tile first' }); return; }
     const m = calcMultiplier(r, gridSize, mineCount);
     const win = Math.floor(currentBet * m * 100) / 100;
+
+    if (currentOrderId) {
+      orderLedger.updateOrder(currentOrderId, {
+        resultOutcome: `${r} Gems Safe (${m.toFixed(2)}×)`,
+        multiplier: m,
+        winAmount: win,
+        status: 'won',
+      });
+    }
+
     addBalance(win, `Mines cashout — ${r} gems found (${m.toFixed(2)}×)`);
     triggerWinCelebration({ winAmount: win, multiplier: m, gameName: 'Mines' });
     addToast({ type: 'success', title: `Won ₹${win.toFixed(2)}!`, message: `${r} gems × ${m.toFixed(2)}×` });
@@ -154,7 +183,7 @@ export default function MinesPage() {
       minePositions.forEach(m => { if (next[m] === 'hidden') next[m] = 'mine'; });
       return next;
     });
-  }, [revealed, gridSize, mineCount, currentBet, addBalance, addToast, minePositions]);
+  }, [revealed, gridSize, mineCount, currentBet, currentOrderId, addBalance, addToast, minePositions]);
 
   const handleTileClick = useCallback((idx: number) => {
     if (gameState !== 'playing' || tiles[idx] !== 'hidden') return;
@@ -173,6 +202,14 @@ export default function MinesPage() {
 
     if (hitMine) {
       // BUSTED
+      if (currentOrderId) {
+        orderLedger.updateOrder(currentOrderId, {
+          resultOutcome: `Hit Bomb on tile #${idx + 1}`,
+          multiplier: 0,
+          winAmount: 0,
+          status: 'lost',
+        });
+      }
       sounds.playLoss();
       haptics.loss();
       setGameState('busted');
@@ -195,7 +232,7 @@ export default function MinesPage() {
         cashOut(newRevealed);
       }
     }
-  }, [gameState, tiles, minePositions, revealed, currentBet, gridSize, mineCount, settings.mines.bombBias, checkIsFirstBet, consumeFirstBet, addToast, cashOut]);
+  }, [gameState, tiles, minePositions, revealed, currentBet, currentOrderId, gridSize, mineCount, settings.mines.bombBias, checkIsFirstBet, consumeFirstBet, addToast, cashOut]);
 
   const cols = gridSize === 25 ? 5 : 4;
 
@@ -323,6 +360,9 @@ export default function MinesPage() {
           <GameChat gameId="mines" />
         </div>
       </div>
+
+      {/* Comprehensive Game Order Ledger & Transactions */}
+      <GameOrderLedger gameId="mines" gameName="Mines Strategy" />
 
       {/* Internal Cross-Linking */}
       <RelatedGamesSection currentGameId="mines" />
